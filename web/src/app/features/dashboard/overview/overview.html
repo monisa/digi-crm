@@ -1,0 +1,156 @@
+<div class="head">
+  <div>
+    <h1>{{ greeting }}, {{ firstName() }} 👋</h1>
+    <p>
+      Here’s how DigiFox Pro is doing
+      @if (data(); as d) { · <b>{{ d.period.label }}</b> }
+    </p>
+  </div>
+  <div class="seg" role="tablist" aria-label="Period">
+    @for (p of periods; track p.key) {
+      <button role="tab" [class.on]="period() === p.key" [attr.aria-selected]="period() === p.key" (click)="pick(p.key)">{{ p.label }}</button>
+    }
+  </div>
+</div>
+
+@if (error()) {
+  <div class="card err-card">
+    <b>Couldn’t load the dashboard.</b> {{ error() }}
+    <button class="btn" (click)="load()">Try again</button>
+  </div>
+} @else if (data(); as d) {
+  <div class="kpis" [class.refreshing]="loading()">
+    @let cl = trend(d.kpis.clients.new, d.kpis.clients.prev_new);
+    <a class="card kpi" routerLink="/clients" style="--tint:#fdf1e3;--tone:#c2620f;--glow:#ed8f21">
+      <span class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg></span>
+      <span class="lbl">Total clients</span>
+      <b class="val" [countUp]="d.kpis.clients.total"></b>
+      <span class="chip neutral">+{{ d.kpis.clients.new }} new
+        @if (cl) { <em [class.good]="cl.good" [class.bad]="!cl.good">{{ cl.text }}</em> }
+      </span>
+    </a>
+
+    <a class="card kpi" routerLink="/employees" style="--tint:#eaf1fd;--tone:#2f6fde;--glow:#2f6fde">
+      <span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4" /><path d="M2 21v-1a6 6 0 0 1 12 0v1M17 11a3 3 0 1 0 0-6M22 21v-1a5 5 0 0 0-4-4.9" /></svg></span>
+      <span class="lbl">Employees</span>
+      <b class="val" [countUp]="d.kpis.employees.total"></b>
+      <span class="chip neutral">{{ d.kpis.employees.on_leave_today }} on leave today</span>
+    </a>
+
+    @let rv = trend(d.kpis.revenue.amount, d.kpis.revenue.prev);
+    <div class="card kpi" style="--tint:#e6f6f2;--tone:#0f7f72;--glow:#16a394">
+      <span class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h12M6 8h12M14 21 6 13h3a5 5 0 0 0 0-10" /></svg></span>
+      <span class="lbl">Revenue received</span>
+      <b class="val" [countUp]="d.kpis.revenue.amount" [format]="money"></b>
+      @if (rv) { <span class="chip" [class.good]="rv.good" [class.bad]="!rv.good">{{ rv.text }} <small>vs same point last period</small></span> }
+      @else { <span class="chip neutral">No earlier figure to compare</span> }
+    </div>
+
+    @let ex = trend(d.kpis.expenses.amount, d.kpis.expenses.prev, false);
+    <a class="card kpi" routerLink="/expenses" style="--tint:#fdecec;--tone:#b42318;--glow:#dc2626">
+      <span class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20M6 15h4" /></svg></span>
+      <span class="lbl">Expenses</span>
+      <b class="val" [countUp]="d.kpis.expenses.amount" [format]="money"></b>
+      @if (ex) { <span class="chip" [class.good]="ex.good" [class.bad]="!ex.good">{{ ex.text }} <small>vs same point last period</small></span> }
+      @else { <span class="chip neutral">No earlier figure to compare</span> }
+    </a>
+  </div>
+
+  <div class="strip card">
+    <div><span>Net (revenue − expenses)</span><b [class.neg]="d.kpis.net < 0" [countUp]="d.kpis.net" [format]="money"></b></div>
+    <div><span>Outstanding invoices</span><b [countUp]="d.kpis.outstanding.amount" [format]="money"></b></div>
+    <div><span>Overdue invoices</span><b [class.neg]="d.kpis.outstanding.overdue > 0">{{ d.kpis.outstanding.overdue }}</b></div>
+  </div>
+
+  <div class="row two">
+    <section class="card" style="animation-delay:.15s">
+      <h3>Revenue vs expenses</h3>
+      <p class="sub">Monthly</p>
+      <app-revenue-chart [data]="d.trend" />
+    </section>
+
+    <section class="card" style="animation-delay:.2s">
+      <h3>Lead funnel</h3>
+      <p class="sub">Leads received · {{ d.period.label }}</p>
+      @if (d.funnel.stages[0]!.count === 0) {
+        <p class="empty">No leads in this period yet. Leads from Meta ads will appear here.</p>
+      } @else {
+        <div class="funnel">
+          @for (s of d.funnel.stages; track s.key; let i = $index) {
+            <div class="frow">
+              <div class="fmeta"><span>{{ s.label }}</span><b>{{ count(s.count) }} <small>· {{ (s.count / funnelMax() * 100).toFixed(0) }}%</small></b></div>
+              <div class="track"><div class="fill" [style.width.%]="(s.count / funnelMax()) * 100" [style.transition-delay.s]="0.2 + i * 0.1"></div></div>
+            </div>
+          }
+          <p class="sub lost">{{ d.funnel.lost }} marked lost</p>
+        </div>
+      }
+    </section>
+  </div>
+
+  <div class="row three">
+    <section class="card" style="animation-delay:.25s">
+      <div class="card-h">
+        <div><h3>Uncontacted leads</h3><p class="sub">Waiting more than {{ d.uncontacted.sla_minutes }} min</p></div>
+        @if (d.uncontacted.count) { <span class="badge b-crit"><span class="live"></span> {{ d.uncontacted.count }} waiting</span> }
+        @else { <span class="badge b-good">All caught up</span> }
+      </div>
+      <div class="list">
+        @for (l of d.uncontacted.items; track l.id) {
+          <div class="item">
+            <span class="ini o">{{ initials(l.name) }}</span>
+            <div class="grow"><b>{{ l.name }}</b><small>{{ l.campaign || 'No campaign' }}@if (l.platform) { · {{ l.platform }} }</small></div>
+            <div class="end">
+              <span class="badge" [class.b-crit]="l.waiting_minutes >= 120" [class.b-warn]="l.waiting_minutes < 120">{{ waited(l.waiting_minutes) }}</span>
+              <small>{{ l.assignee || 'Unassigned' }}</small>
+            </div>
+          </div>
+        } @empty {
+          <p class="empty">Every new lead has been contacted on time. 🎉</p>
+        }
+      </div>
+    </section>
+
+    <section class="card" style="animation-delay:.3s">
+      <div class="card-h"><div><h3>Tickets</h3><p class="sub">Open client requests</p></div></div>
+      <div class="minis">
+        <div class="mini"><b>{{ d.tickets.open }}</b><span>Open</span></div>
+        <div class="mini"><b [class.neg]="d.tickets.high > 0">{{ d.tickets.high }}</b><span>High priority</span></div>
+      </div>
+      <div class="list">
+        @for (t of d.tickets.items; track t.id) {
+          <div class="item">
+            <div class="grow"><b>{{ t.subject }}</b><small>{{ t.client }}</small></div>
+            <span class="badge cap" [class.b-crit]="t.priority === 'high'" [class.b-warn]="t.priority === 'medium'" [class.b-info]="t.priority === 'low'">{{ t.priority }}</span>
+          </div>
+        } @empty {
+          <p class="empty">No open tickets.</p>
+        }
+      </div>
+    </section>
+
+    <section class="card" style="animation-delay:.35s">
+      <div class="card-h">
+        <div><h3>Leave requests</h3><p class="sub">Awaiting approval</p></div>
+        @if (d.leave.pending) { <span class="badge b-warn">{{ d.leave.pending }} pending</span> }
+      </div>
+      <div class="list">
+        @for (r of d.leave.items; track r.id) {
+          <div class="item">
+            <span class="ini b">{{ initials(r.employee) }}</span>
+            <div class="grow"><b>{{ r.employee }}</b><small>{{ r.type }} · {{ dateRange(r.from, r.to) }} · {{ r.days }} day{{ r.days === 1 ? '' : 's' }}</small></div>
+          </div>
+        } @empty {
+          <p class="empty">No leave requests waiting.</p>
+        }
+      </div>
+    </section>
+  </div>
+} @else {
+  <div class="kpis">
+    @for (i of [1, 2, 3, 4]; track i) { <div class="card kpi skel"><span></span><span></span><span></span></div> }
+  </div>
+  <div class="row two">
+    <div class="card skel tall"></div><div class="card skel tall"></div>
+  </div>
+}

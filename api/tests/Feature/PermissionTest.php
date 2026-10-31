@@ -18,7 +18,7 @@ class PermissionTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->assertTrue($admin->hasPermission('expenses.delete'));
-        $this->assertCount(11 * 6, $admin->permissionKeys());
+        $this->assertCount(count(config('crm.modules')) * 6, $admin->permissionKeys());
     }
 
     public function test_employee_gets_role_defaults(): void

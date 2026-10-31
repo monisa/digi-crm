@@ -1,44 +1,37 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
-import { Health, HealthService } from '../../core/health.service';
-
-interface Phase {
-  name: string;
-  scope: string;
-  done: boolean;
-}
+import { Overview } from './overview/overview';
 
 /**
- * Phase 0 landing page: confirms the Angular app can reach the Laravel API
- * and shows the build roadmap. Replaced by the real Admin Dashboard in Phase 2.
+ * Users with the "Business Overview" permission (admins, or anyone the admin
+ * grants it to) see company figures; everyone else gets a personal welcome
+ * until their own dashboards arrive in later phases.
  */
 @Component({
   selector: 'app-dashboard',
-  templateUrl: './dashboard.html',
-  styleUrl: './dashboard.scss',
+  imports: [Overview],
+  template: `
+    @if (auth.canView('overview')) {
+      <app-overview />
+    } @else {
+      <div class="head">
+        <h1>Welcome, {{ auth.user()?.name }}</h1>
+        <p>Here’s your DigiFox Pro workspace.</p>
+      </div>
+      <div class="card soon">
+        <h3>Your workspace is being set up</h3>
+        <p>Your sections are in the menu. Their content will appear here as each part of the CRM goes live.</p>
+      </div>
+    }
+  `,
+  styles: `
+    .head { margin: 12px 0 22px; }
+    .head h1 { font-size: 26px; letter-spacing: -0.02em; }
+    .head p { color: var(--ink-2); margin-top: 4px; }
+    h3 { font-size: 16px; margin-bottom: 8px; }
+    .soon p { color: var(--ink-2); line-height: 1.6; }
+  `,
 })
 export class Dashboard {
   protected readonly auth = inject(AuthService);
-  protected readonly health = signal<Health | null>(null);
-  protected readonly apiError = signal(false);
-
-  protected readonly phases: Phase[] = [
-    { name: 'Phase 0 · Setup', scope: 'Angular + Laravel projects, Hostinger deployment', done: true },
-    { name: 'Phase 1 · Foundation', scope: 'Login, register, forgot password, roles & permissions', done: true },
-    { name: 'Phase 2 · Admin Dashboard', scope: 'Clients, employees, revenue, expenses, charts', done: false },
-    { name: 'Phase 3 · Employees + Leave', scope: 'Details, salary & payslips, leave requests', done: false },
-    { name: 'Phase 4 · Leads + Meta', scope: 'Meta Lead Ads sync, pipeline, follow-ups', done: false },
-    { name: 'Phase 5 · Clients + Portal', scope: 'Onboarding, campaigns, invoices, tickets', done: false },
-    { name: 'Phase 6 · Notifications', scope: 'Uncontacted leads, tickets, leave alerts', done: false },
-    { name: 'Phase 7 · Expenses', scope: 'Expenses, categories, receipts', done: false },
-  ];
-
-  constructor() {
-    inject(HealthService)
-      .check()
-      .subscribe({
-        next: (h) => this.health.set(h),
-        error: () => this.apiError.set(true),
-      });
-  }
 }

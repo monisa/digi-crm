@@ -1,0 +1,34 @@
+:host { display: block; }
+.head { display: flex; justify-content: flex-end; align-items: center; gap: 14px; margin: -38px 0 10px; }
+.legend { display: flex; gap: 14px; font-size: 13px; color: var(--ink-2); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.sw.rev { background: var(--s1); }
+.sw.exp { background: var(--s2); }
+.toggle { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.toggle:hover { border-color: var(--brand); color: var(--brand-deep); }
+.plot { position: relative; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grid { stroke: var(--line); stroke-width: 1; }
+.base { stroke: #c9cdd6; }
+.axis { fill: var(--ink-3); font-size: 11px; }
+.bar { transform-box: fill-box; transform-origin: bottom; transform: scaleY(0); transition: transform 0.9s var(--ease), opacity 0.2s; }
+.drawn .bar { transform: scaleY(1); }
+.bar.rev { fill: var(--s1); }
+.bar.exp { fill: var(--s2); }
+.dim g .bar { opacity: 0.35; }
+.dim g.on .bar { opacity: 1; }
+.hit { fill: transparent; cursor: pointer; }
+.tip {
+  position: absolute; transform: translate(-50%, calc(-100% - 8px)); pointer-events: none; z-index: 2;
+  background: var(--ink); color: #fff; font-size: 12.5px; padding: 10px 12px; border-radius: 10px; white-space: nowrap;
+  display: flex; flex-direction: column; gap: 3px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); animation: fadein 0.15s;
+}
+.tip .net { color: #9aa0ad; }
+@keyframes fadein { from { opacity: 0; } }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink-3); font-weight: 600; font-size: 12px; }
+td.neg { color: var(--crit); }
+@media (max-width: 560px) { .legend { display: none; } .head { margin-top: -36px; } }

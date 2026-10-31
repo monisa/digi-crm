@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Signed-in and active.
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
+    Route::get('/dashboard/overview', [DashboardController::class, 'overview'])->middleware('permission:overview.view');
+
     Route::prefix('admin')->group(function () {
         Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:settings.view');
         Route::put('/roles/{role}/permissions', [PermissionController::class, 'updateRole'])->middleware('permission:settings.edit');

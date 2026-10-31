@@ -1,0 +1,52 @@
+<div class="head">
+  <div class="legend" aria-hidden="true">
+    <span><i class="sw rev"></i>Revenue</span><span><i class="sw exp"></i>Expenses</span>
+  </div>
+  <button class="toggle" type="button" (click)="asTable.update((v) => !v)">{{ asTable() ? 'Chart' : 'Table' }}</button>
+</div>
+
+@if (asTable()) {
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net</th></tr></thead>
+      <tbody>
+        @for (p of data(); track p.month) {
+          <tr><td>{{ p.label }} {{ p.month.slice(0, 4) }}</td><td>{{ money(p.revenue) }}</td><td>{{ money(p.expenses) }}</td>
+            <td [class.neg]="p.revenue < p.expenses">{{ money(p.revenue - p.expenses) }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <div class="plot" (mouseleave)="hover.set(null)">
+    <svg [attr.viewBox]="'0 0 ' + W() + ' ' + H()" role="img" [attr.aria-label]="'Revenue and expenses for the last ' + points().length + ' months'">
+      @for (t of scale().ticks; track t) {
+        <line class="grid" [attr.x1]="padL" [attr.x2]="W() - padR" [attr.y1]="y(t)" [attr.y2]="y(t)" />
+        <text class="axis" [attr.x]="padL - 8" [attr.y]="y(t) + 4" text-anchor="end">{{ axis(t) }}</text>
+      }
+      <g class="bars" [class.drawn]="drawn()" [class.dim]="hover() !== null">
+        @for (b of bars(); track b.month; let i = $index) {
+          <g [class.on]="hover() === i">
+            <path class="bar rev" [attr.d]="b.rev.d" [style.transition-delay]="b.rev.delay" />
+            <path class="bar exp" [attr.d]="b.exp.d" [style.transition-delay]="b.exp.delay" />
+          </g>
+          <text class="axis" [attr.x]="b.cx" [attr.y]="H() - 8" text-anchor="middle">{{ b.label }}</text>
+        }
+      </g>
+      <line class="base" [attr.x1]="padL" [attr.x2]="W() - padR" [attr.y1]="baseline" [attr.y2]="baseline" />
+      @for (b of bars(); track b.month; let i = $index) {
+        <rect class="hit" [attr.x]="b.x0" y="0" [attr.width]="b.cw" [attr.height]="baseline"
+              (mouseenter)="hover.set(i)" (click)="hover.set(i)" />
+      }
+    </svg>
+    @if (hover() !== null) {
+      @let b = bars()[hover()!];
+      <div class="tip" [style.left.%]="(b.cx / W()) * 100" [style.top.%]="(b.top / H()) * 100">
+        <b>{{ b.label }} {{ b.month.slice(0, 4) }}</b>
+        <span><i class="sw rev"></i>Revenue {{ money(b.revenue) }}</span>
+        <span><i class="sw exp"></i>Expenses {{ money(b.expenses) }}</span>
+        <span class="net">Net {{ money(b.revenue - b.expenses) }}</span>
+      </div>
+    }
+  </div>
+}

@@ -16,6 +16,8 @@ return [
     // key => [name, client_allowed]
     'modules' => [
         'dashboard' => ['Dashboard', true],
+        // Company-wide figures on the dashboard: revenue, expenses, all leads, tickets, leave.
+        'overview' => ['Business Overview', false],
         'leads' => ['Leads', false],
         'clients' => ['Clients', false],
         'employees' => ['Employees', false],
@@ -27,6 +29,9 @@ return [
         'notifications' => ['Notifications', false],
         'settings' => ['Settings', false],
     ],
+
+    // A new lead counts as "uncontacted" once it has waited this long.
+    'lead_sla_minutes' => (int) env('CRM_LEAD_SLA_MINUTES', 30),
 
     // Admins always have every permission; these are the starting points for the other roles.
     'role_defaults' => [
