@@ -3,11 +3,12 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FieldErrors, readErrors } from '../../core/http-errors';
 import { AuthService } from '../../core/auth/auth.service';
+import { GoogleButton } from './google-button';
 import { PasswordField } from './password-field';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink, PasswordField],
+  imports: [ReactiveFormsModule, RouterLink, PasswordField, GoogleButton],
   template: `
     <h2 class="auth-h">Get Started Now!</h2>
     @if (expired) { <div class="alert info">Your session has ended. Please log in again.</div> }
@@ -30,6 +31,8 @@ import { PasswordField } from './password-field';
         </button>
       </div>
     </form>
+
+    <app-google-button text="signin_with" />
 
     <div class="auth-links">
       <a class="link-u" routerLink="/register">New client? Create an account</a>

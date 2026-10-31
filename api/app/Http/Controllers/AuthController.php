@@ -63,6 +63,12 @@ class AuthController extends Controller
 
         RateLimiter::clear($throttleKey);
 
+        return $this->completeLogin($user, $request, (bool) ($data['remember'] ?? false));
+    }
+
+    /** Shared by password and Google sign-in: status checks, then a token. */
+    public function completeLogin(User $user, Request $request, bool $remember): JsonResponse
+    {
         if (in_array($user->status, [User::STATUS_INACTIVE, User::STATUS_PENDING_APPROVAL], true)) {
             return response()->json([
                 'message' => $user->status === User::STATUS_INACTIVE
@@ -74,7 +80,7 @@ class AuthController extends Controller
 
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return $this->tokenResponse($user, $request, 200, (bool) ($data['remember'] ?? false));
+        return $this->tokenResponse($user, $request, 200, $remember);
     }
 
     public function logout(Request $request): JsonResponse
@@ -89,7 +95,7 @@ class AuthController extends Controller
         return response()->json($this->profile($request->user()));
     }
 
-    private function tokenResponse(User $user, Request $request, int $status, bool $remember = false): JsonResponse
+    public function tokenResponse(User $user, Request $request, int $status, bool $remember = false): JsonResponse
     {
         $expires = $remember ? now()->addDays(30) : now()->addDay();
         $device = Str::limit((string) $request->userAgent(), 100, '') ?: 'web';

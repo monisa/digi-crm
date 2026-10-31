@@ -3,12 +3,13 @@ import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { FieldErrors, readErrors } from '../../core/http-errors';
 import { AuthService } from '../../core/auth/auth.service';
+import { GoogleButton } from './google-button';
 import { PasswordField } from './password-field';
 
 /** Client self-registration. Employee accounts are created by the admin. */
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink, PasswordField],
+  imports: [ReactiveFormsModule, RouterLink, PasswordField, GoogleButton],
   template: `
     <h2 class="auth-h">Create your account</h2>
     <p class="auth-sub">For DigiFox Pro clients. Team members get their login from the admin.</p>
@@ -51,6 +52,8 @@ import { PasswordField } from './password-field';
         </button>
       </div>
     </form>
+
+    <app-google-button text="signup_with" />
 
     <div class="auth-links center">
       <a class="link-u" routerLink="/login">Already have an account? Log in</a>

@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+
+    // "Sign in with Google": OAuth client ID from Google Cloud Console
+    // (Credentials -> OAuth client ID -> Web application).
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
 ];

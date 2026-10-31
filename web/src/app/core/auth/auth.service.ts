@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, firstValueFrom, map, of, tap } from 'rxjs';
+import { Observable, catchError, firstValueFrom, map, of, shareReplay, tap } from 'rxjs';
 import { API_BASE } from '../api.config';
 import { AuthUser, Profile, TokenResponse } from './auth.models';
 
@@ -41,6 +41,21 @@ export class AuthService {
   login(email: string, password: string, remember: boolean): Observable<Profile> {
     return this.http
       .post<TokenResponse>(`${API_BASE}/auth/login`, { email, password, remember })
+      .pipe(tap((r) => this.startSession(r)));
+  }
+
+  /** Google client ID from the server, or null when Google sign-in is switched off. */
+  readonly googleClientId$ = this.http
+    .get<{ google_client_id: string | null }>(`${API_BASE}/auth/config`)
+    .pipe(
+      map((c) => c.google_client_id),
+      catchError(() => of(null)),
+      shareReplay(1),
+    );
+
+  loginWithGoogle(credential: string): Observable<Profile> {
+    return this.http
+      .post<TokenResponse>(`${API_BASE}/auth/google`, { credential })
       .pipe(tap((r) => this.startSession(r)));
   }
 

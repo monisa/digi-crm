@@ -81,6 +81,23 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
 - **Clients**: register themselves at `/register`, must complete the onboarding form, then only see Dashboard, Campaigns, Invoices & Payments and Tickets (never internal sections).
 - 5 wrong passwords lock the login for 15 minutes. Password reset links are emailed from `info@digifoxprosolutions.com` and expire after 60 minutes.
 
+## Turning on "Sign in with Google"
+
+1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").
+2. **APIs & Services → OAuth consent screen**: External, app name "DigiFox Pro CRM", support email `info@digifoxprosolutions.com`, add the logo, then publish.
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID** → *Web application*.
+   - Authorised JavaScript origins: `https://crm.digifoxprosolutions.com` (and `http://localhost:4200` for local testing)
+   - No redirect URI is needed.
+4. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) into `api/.env` on the server:
+   `GOOGLE_CLIENT_ID=...` then run `php artisan config:cache`.
+
+The Google button appears automatically once the ID is set (leave it empty to hide it). Existing users sign in by matching email; anyone new becomes a client and goes through onboarding. Employees must be created by the admin first.
+
+## Dashboard preview data
+
+To see the dashboard with realistic sample figures on your own computer (never in production):
+`php artisan db:seed --class=DemoDataSeeder`
+
 ## Security rules
 
 - Never commit `.env`, passwords, bank details or API keys. This repository is public.
