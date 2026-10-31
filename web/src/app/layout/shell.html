@@ -1,0 +1,56 @@
+<div class="app" [class.collapsed]="collapsed()" [class.open]="drawerOpen()">
+  <aside class="side" aria-label="Main navigation">
+    <a class="logo" routerLink="/dashboard">
+      <img [src]="collapsed() ? 'logo-icon.png' : 'logo.png'" alt="DigiFox Pro Solutions" />
+    </a>
+
+    <div class="nav-label">Overview</div>
+    <nav class="nav">
+      @for (item of overview; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">
+          <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="nav-label">System</div>
+    <nav class="nav">
+      @for (item of system; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">
+          <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </aside>
+
+  @if (drawerOpen()) {
+    <div class="scrim" (click)="drawerOpen.set(false)"></div>
+  }
+
+  <main>
+    <header class="top" [class.scrolled]="scrolled()">
+      <button class="icon-btn burger" aria-label="Open menu" (click)="drawerOpen.set(true)">
+        <app-icon name="menu" />
+      </button>
+      <button class="icon-btn collapse-btn" aria-label="Collapse sidebar" (click)="collapsed.update((v) => !v)">
+        <app-icon name="menu" />
+      </button>
+      <div class="spacer"></div>
+      <a class="icon-btn" routerLink="/notifications" aria-label="Notifications"><app-icon name="bell" /></a>
+      <span class="avatar" title="Signed-in user">DF</span>
+    </header>
+
+    <section class="content">
+      <router-outlet />
+    </section>
+  </main>
+
+  <nav class="bnav" aria-label="Quick navigation">
+    @for (item of mobileNav; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="active">
+        <app-icon [name]="item.icon" />{{ item.label === 'Notifications' ? 'Alerts' : item.label === 'Dashboard' ? 'Home' : item.label }}
+      </a>
+    }
+    <a href="" (click)="$event.preventDefault(); drawerOpen.set(true)"><app-icon name="menu" />More</a>
+  </nav>
+</div>

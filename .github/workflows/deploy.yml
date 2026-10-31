@@ -1,0 +1,43 @@
+name: Deploy to Hostinger
+
+# Manual only: Actions tab -> "Deploy to Hostinger" -> Run workflow.
+# Needs these repository secrets (Settings -> Secrets and variables -> Actions):
+#   HOSTINGER_HOST, HOSTINGER_PORT (usually 65002), HOSTINGER_USER, HOSTINGER_SSH_KEY
+# Optional repository variable: SITE_ROOT (defaults to the crm subdomain folder).
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SITE_ROOT: ${{ vars.SITE_ROOT || 'domains/digifoxprosolutions.com/public_html/crm' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build Angular
+        working-directory: web
+        run: npm ci && npx ng build
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy API (git pull, composer, migrate)
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}" \
+            "SITE_ROOT=\$HOME/$SITE_ROOT bash ~/digi-crm/deploy/server-deploy.sh"
+
+      - name: Upload Angular build
+        run: |
+          rsync -az --delete --exclude 'api' \
+            -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.HOSTINGER_PORT }}" \
+            web/dist/web/browser/ "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:$SITE_ROOT/"

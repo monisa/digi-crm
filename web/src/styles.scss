@@ -1,0 +1,70 @@
+/* DigiFox Pro CRM: global design tokens and base styles */
+:root {
+  --brand: #ed8f21;
+  --brand-deep: #d77328;
+  --brand-soft: #fdf1e3;
+  --ink: #16181d;
+  --ink-2: #4b5060;
+  --ink-3: #8a90a0;
+  --bg: #f4f5f8;
+  --card: #fcfcfb;
+  --line: #e7e9ef;
+  --side: #121418;
+  --side-2: #1c1f26;
+  --side-ink: #c9cdd6;
+  /* chart series (validated for colour-blind readability on light surfaces) */
+  --s1: #d9761c;
+  --s2: #2f6fde;
+  --s3: #16a394;
+  --good: #16a34a;
+  --warn: #d97706;
+  --crit: #dc2626;
+  --r: 16px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  animation: rise 0.7s var(--ease) both;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+
+.badge {
+  font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 99px;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.b-crit { background: #fdecec; color: #b42318; }
+.b-warn { background: #fef4e6; color: #b54708; }
+.b-good { background: #e8f7ee; color: #11803b; }
+.b-info { background: #eaf1fd; color: #1f4fb3; }
+.live { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.4s infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer;
+  font-weight: 600; font-size: 13.5px; padding: 10px 16px; border-radius: 12px; color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+  box-shadow: 0 6px 18px rgba(237, 143, 33, 0.35);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(237, 143, 33, 0.45); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

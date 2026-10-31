@@ -1,0 +1,21 @@
+.head { margin: 12px 0 22px; }
+.head h1 { font-size: 26px; letter-spacing: -0.02em; }
+.head p { color: var(--ink-2); margin-top: 4px; }
+.grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; align-items: start; }
+h3 { font-size: 16px; margin-bottom: 14px; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.muted { color: var(--ink-3); font-size: 12.5px; margin-top: 12px; }
+ol { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+li {
+  display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 12px;
+  animation: rise 0.6s var(--ease) both; transition: background 0.2s, transform 0.2s var(--ease);
+}
+li:hover { background: var(--bg); transform: translateX(4px); }
+li b { display: block; font-size: 14px; }
+li small { color: var(--ink-3); font-size: 12.5px; }
+.dot {
+  width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none;
+  background: var(--bg); color: var(--ink-2); font-weight: 700; font-size: 13px;
+}
+li.done .dot { background: linear-gradient(135deg, var(--brand), var(--brand-deep)); color: #fff; }
+@media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
