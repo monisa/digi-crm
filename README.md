@@ -1,0 +1,77 @@
+# DigiFox Pro CRM
+
+Internal CRM for **DigiFox Pro Solutions LLP**: leads (Meta Lead Ads), clients and client portal, employees and leave, notifications, expenses and an admin dashboard.
+
+**Live URL (planned):** https://crm.digifoxprosolutions.com
+
+| Folder | What it is |
+|---|---|
+| `web/` | Angular frontend (the CRM screens) |
+| `api/` | Laravel API (PHP 8.3), served at `/api` |
+| `deploy/` | Hostinger deployment script |
+| `docs/` | Build plan and UI prototype |
+
+The full feature plan, database design and phase roadmap are in [`docs/PLAN.md`](docs/PLAN.md).
+
+## Run it locally
+
+Needs PHP 8.3, Composer and Node 22.
+
+```bash
+# 1. API (http://localhost:8000)
+cd api
+composer install
+cp .env.example .env            # then set DB_CONNECTION=sqlite for local use, APP_ENV=local, APP_DEBUG=true
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate
+php artisan serve
+```
+
+```bash
+# 2. Frontend (http://localhost:4200), in a second terminal
+cd web
+npm install
+npx ng serve
+```
+
+`ng serve` forwards `/api/...` to the local Laravel server (`web/proxy.conf.json`), so the app talks to the API the same way it does in production.
+
+Tests: `php artisan test` in `api/`, `npx ng test --watch=false` in `web/`.
+
+## How it runs on Hostinger
+
+```
+crm.digifoxprosolutions.com/        -> Angular build (web/dist/web/browser)
+crm.digifoxprosolutions.com/api/... -> Laravel (symlink to ~/digi-crm/api/public)
+```
+
+- API routes are versioned: `https://crm.digifoxprosolutions.com/api/v1/...`
+- The Laravel code and `.env` live outside the website folder (`~/digi-crm`), so they can't be opened from a browser.
+- `web/public/.htaccess` sends every non-file URL to `index.html` for Angular routing and forces HTTPS.
+
+### First-time server setup (once)
+
+1. hPanel → **Domains → Subdomains**: create `crm`. hPanel → **Security → SSL**: install SSL for it.
+2. hPanel → **Advanced → PHP Configuration**: PHP 8.3.
+3. hPanel → **Databases → MySQL**: create the database and user.
+4. hPanel → **Advanced → SSH Access**: enable, then connect and run:
+   ```bash
+   git clone https://github.com/monisa/digi-crm.git ~/digi-crm
+   cd ~/digi-crm/api && cp .env.example .env && nano .env     # DB and mail details
+   composer install --no-dev && php artisan key:generate
+   ```
+5. hPanel → **Advanced → Cron Jobs**: every minute,
+   `cd ~/digi-crm/api && php artisan schedule:run >> /dev/null 2>&1`
+
+### Deploying an update
+
+- **Automatic (recommended):** add the SSH secrets listed in `.github/workflows/deploy.yml` to the GitHub repo, then run **Actions → Deploy to Hostinger**.
+- **Manual:** run `bash ~/digi-crm/deploy/server-deploy.sh` on the server, then upload the contents of `web/dist/web/browser/` (from `npx ng build`) into the `crm` subdomain folder, keeping the `api` link.
+
+Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return `{"status":"ok"}`.
+
+## Security rules
+
+- Never commit `.env`, passwords, bank details or API keys. This repository is public.
+- Company bank details, GSTIN and Meta tokens are entered in the CRM's Settings screen and stored in the database.

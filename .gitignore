@@ -1,0 +1,8 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+
+# Secrets and local data: never commit
+.env
+*.local.json
