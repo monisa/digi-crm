@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountActive;
+use App\Http\Middleware\EnsurePermission;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,7 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // API only: never redirect guests to a login page, just answer 401.
+        $middleware->redirectGuestsTo(fn () => null);
+
+        $middleware->alias([
+            'permission' => EnsurePermission::class,
+            'active' => EnsureAccountActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // This app is an API only: always answer with JSON.

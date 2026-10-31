@@ -31,6 +31,7 @@ fi
 
 echo "==> Running database migrations"
 php artisan migrate --force
+php artisan db:seed --class=PermissionSeeder --force
 
 echo "==> Caching config and routes"
 php artisan config:cache

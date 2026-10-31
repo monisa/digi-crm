@@ -24,7 +24,8 @@ composer install
 cp .env.example .env            # then set DB_CONNECTION=sqlite for local use, APP_ENV=local, APP_DEBUG=true
 php artisan key:generate
 touch database/database.sqlite
-php artisan migrate
+php artisan migrate --seed
+php artisan crm:create-admin    # your first admin login
 php artisan serve
 ```
 
@@ -60,6 +61,8 @@ crm.digifoxprosolutions.com/api/... -> Laravel (symlink to ~/digi-crm/api/public
    git clone https://github.com/monisa/digi-crm.git ~/digi-crm
    cd ~/digi-crm/api && cp .env.example .env && nano .env     # DB and mail details
    composer install --no-dev && php artisan key:generate
+   php artisan migrate --force && php artisan db:seed --force
+   php artisan crm:create-admin        # asks for your name, email and password
    ```
 5. hPanel → **Advanced → Cron Jobs**: every minute,
    `cd ~/digi-crm/api && php artisan schedule:run >> /dev/null 2>&1`
@@ -70,6 +73,13 @@ crm.digifoxprosolutions.com/api/... -> Laravel (symlink to ~/digi-crm/api/public
 - **Manual:** run `bash ~/digi-crm/deploy/server-deploy.sh` on the server, then upload the contents of `web/dist/web/browser/` (from `npx ng build`) into the `crm` subdomain folder, keeping the `api` link.
 
 Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return `{"status":"ok"}`.
+
+## Accounts and access
+
+- **Admin**: full access; manages everything under **Settings**.
+- **Employees**: accounts are created by the admin; what they see is set in **Settings → Role permissions** (for all employees) and **Settings → Users & access → Access** (for one person).
+- **Clients**: register themselves at `/register`, must complete the onboarding form, then only see Dashboard, Campaigns, Invoices & Payments and Tickets (never internal sections).
+- 5 wrong passwords lock the login for 15 minutes. Password reset links are emailed from `info@digifoxprosolutions.com` and expire after 60 minutes.
 
 ## Security rules
 

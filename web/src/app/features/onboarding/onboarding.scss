@@ -1,0 +1,26 @@
+.page { min-height: 100vh; background: var(--bg); padding-bottom: 48px; }
+.bar {
+  background: #000; display: flex; justify-content: space-between; align-items: center;
+  padding: 16px clamp(16px, 4vw, 48px); height: 180px; align-items: flex-start;
+  background: radial-gradient(circle at 85% 0%, rgba(237, 143, 33, 0.35), transparent 50%), #000;
+}
+.bar img { height: 40px; }
+.out { background: none; border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; padding: 8px 14px; border-radius: 10px; cursor: pointer; transition: background 0.2s; }
+.out:hover { background: rgba(255, 255, 255, 0.12); }
+.wrap { max-width: 820px; margin: -100px auto 0; padding: clamp(24px, 4vw, 52px); border-radius: 24px; }
+.steps { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.steps span { font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 99px; background: var(--bg); color: var(--ink-3); }
+.steps .on { background: var(--brand-soft); color: var(--brand-deep); }
+.steps .cur { background: var(--brand); color: #fff; }
+.upper { text-transform: uppercase; }
+.chips { border: 0; margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; }
+.chips legend { font-size: 13px; color: var(--ink-2); margin-bottom: 12px; }
+.chips .req { color: var(--crit); }
+.chip {
+  border: 1px solid var(--line); background: #fff; padding: 9px 14px; border-radius: 99px; cursor: pointer;
+  font-size: 13.5px; color: var(--ink-2); transition: all 0.2s var(--ease);
+}
+.chip:hover { border-color: var(--brand); color: var(--brand-deep); transform: translateY(-1px); }
+.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 6px 16px rgba(237, 143, 33, 0.3); }
+.chips .err { width: 100%; color: var(--crit); font-size: 12.5px; }
+@media (max-width: 860px) { .wrap { margin: -110px 12px 0; } }

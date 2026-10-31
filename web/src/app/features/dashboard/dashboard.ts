@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { Health, HealthService } from '../../core/health.service';
 
 interface Phase {
@@ -17,12 +18,13 @@ interface Phase {
   styleUrl: './dashboard.scss',
 })
 export class Dashboard {
+  protected readonly auth = inject(AuthService);
   protected readonly health = signal<Health | null>(null);
   protected readonly apiError = signal(false);
 
   protected readonly phases: Phase[] = [
     { name: 'Phase 0 · Setup', scope: 'Angular + Laravel projects, Hostinger deployment', done: true },
-    { name: 'Phase 1 · Foundation', scope: 'Login, register, forgot password, roles & permissions', done: false },
+    { name: 'Phase 1 · Foundation', scope: 'Login, register, forgot password, roles & permissions', done: true },
     { name: 'Phase 2 · Admin Dashboard', scope: 'Clients, employees, revenue, expenses, charts', done: false },
     { name: 'Phase 3 · Employees + Leave', scope: 'Details, salary & payslips, leave requests', done: false },
     { name: 'Phase 4 · Leads + Meta', scope: 'Meta Lead Ads sync, pipeline, follow-ups', done: false },

@@ -4,23 +4,20 @@
       <img [src]="collapsed() ? 'logo-icon.png' : 'logo.png'" alt="DigiFox Pro Solutions" />
     </a>
 
-    <div class="nav-label">Overview</div>
-    <nav class="nav">
-      @for (item of overview; track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">
-          <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
-        </a>
-      }
-    </nav>
+    @for (section of sections(); track section.name) {
+      <div class="nav-label">{{ section.name }}</div>
+      <nav class="nav">
+        @for (item of section.items; track item.path) {
+          <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">
+            <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+    }
 
-    <div class="nav-label">System</div>
-    <nav class="nav">
-      @for (item of system; track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">
-          <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
-        </a>
-      }
-    </nav>
+    <div class="side-foot">
+      <button class="logout" (click)="auth.logout()" title="Log out"><app-icon name="logout" /><span>Log out</span></button>
+    </div>
   </aside>
 
   @if (drawerOpen()) {
@@ -36,8 +33,22 @@
         <app-icon name="menu" />
       </button>
       <div class="spacer"></div>
-      <a class="icon-btn" routerLink="/notifications" aria-label="Notifications"><app-icon name="bell" /></a>
-      <span class="avatar" title="Signed-in user">DF</span>
+      @if (auth.canView('notifications')) {
+        <a class="icon-btn" routerLink="/notifications" aria-label="Notifications"><app-icon name="bell" /></a>
+      }
+      <div class="me">
+        <button class="me-btn" (click)="menuOpen.update((v) => !v)" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">
+          <span class="avatar">{{ auth.initials() }}</span>
+          <span class="me-txt"><b>{{ auth.user()?.name }}</b><small>{{ auth.user()?.role }}</small></span>
+        </button>
+        @if (menuOpen()) {
+          <div class="menu-scrim" (click)="menuOpen.set(false)"></div>
+          <div class="menu" role="menu">
+            <div class="menu-h"><b>{{ auth.user()?.name }}</b><small>{{ auth.user()?.email }}</small></div>
+            <button role="menuitem" (click)="auth.logout()"><app-icon name="logout" /> Log out</button>
+          </div>
+        }
+      </div>
     </header>
 
     <section class="content">
@@ -46,10 +57,8 @@
   </main>
 
   <nav class="bnav" aria-label="Quick navigation">
-    @for (item of mobileNav; track item.path) {
-      <a [routerLink]="item.path" routerLinkActive="active">
-        <app-icon [name]="item.icon" />{{ item.label === 'Notifications' ? 'Alerts' : item.label === 'Dashboard' ? 'Home' : item.label }}
-      </a>
+    @for (item of mobileNav(); track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="active"><app-icon [name]="item.icon" />{{ item.short ?? item.label }}</a>
     }
     <a href="" (click)="$event.preventDefault(); drawerOpen.set(true)"><app-icon name="menu" />More</a>
   </nav>

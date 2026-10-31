@@ -1,7 +1,8 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { NAV_ITEMS } from '../core/navigation';
+import { AuthService } from '../core/auth/auth.service';
+import { NAV_ITEMS, NavItem } from '../core/navigation';
 import { Icon } from './icon';
 
 @Component({
@@ -11,25 +12,42 @@ import { Icon } from './icon';
   styleUrl: './shell.scss',
 })
 export class Shell {
-  protected readonly overview = NAV_ITEMS.filter((i) => i.section === 'Overview');
-  protected readonly system = NAV_ITEMS.filter((i) => i.section === 'System');
-  protected readonly mobileNav = NAV_ITEMS.filter((i) =>
-    ['/dashboard', '/leads', '/clients', '/notifications'].includes(i.path),
-  );
+  protected readonly auth = inject(AuthService);
+
+  /** Menu items this user may see, grouped by section. */
+  protected readonly sections = computed(() => {
+    this.auth.profile(); // re-evaluate when permissions change
+    const visible = NAV_ITEMS.filter((i) => this.auth.canView(i.module));
+    const groups = new Map<string, NavItem[]>();
+    for (const item of visible) groups.set(item.section, [...(groups.get(item.section) ?? []), item]);
+    return [...groups.entries()].map(([name, items]) => ({ name, items }));
+  });
+
+  /** Up to four shortcuts for the mobile bottom bar (+ "More"). */
+  protected readonly mobileNav = computed(() => this.sections().flatMap((s) => s.items).slice(0, 4));
 
   protected readonly collapsed = signal(false);
   protected readonly drawerOpen = signal(false);
+  protected readonly menuOpen = signal(false);
   protected readonly scrolled = signal(false);
 
   constructor() {
-    // Close the mobile drawer whenever the user navigates.
     inject(Router)
       .events.pipe(filter((e) => e instanceof NavigationEnd))
-      .subscribe(() => this.drawerOpen.set(false));
+      .subscribe(() => {
+        this.drawerOpen.set(false);
+        this.menuOpen.set(false);
+      });
   }
 
   @HostListener('window:scroll')
   onScroll() {
     this.scrolled.set(window.scrollY > 4);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.menuOpen.set(false);
+    this.drawerOpen.set(false);
   }
 }

@@ -1,0 +1,37 @@
+.filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.filters .input-sm { flex: 1; min-width: 200px; max-width: 360px; }
+.ulist { display: flex; flex-direction: column; }
+.urow {
+  display: grid; grid-template-columns: 1fr 130px 170px auto; gap: 10px; align-items: center; padding: 12px 6px;
+  border-bottom: 1px solid var(--line); animation: rise 0.45s var(--ease) both; transition: background 0.2s;
+}
+.urow:hover { background: var(--bg); }
+.who { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.who b { display: block; font-size: 14px; }
+.who small { display: block; color: var(--ink-3); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who > div { min-width: 0; }
+.ini {
+  width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; font-weight: 700;
+  background: var(--brand-soft); color: var(--brand-deep);
+}
+.status[data-s='active'] { color: #11803b; }
+.status[data-s='inactive'] { color: #b42318; }
+.status[data-s='pending_onboarding'], .status[data-s='pending_approval'] { color: #b54708; }
+.scrim { position: fixed; inset: 0; background: rgba(10, 12, 16, 0.45); backdrop-filter: blur(2px); z-index: 50; animation: fade 0.25s; }
+.sheet {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(860px, 100%); background: var(--card); z-index: 55;
+  padding: 24px; overflow-y: auto; box-shadow: -20px 0 50px rgba(0, 0, 0, 0.2); animation: slide 0.35s var(--ease);
+}
+.sheet-h { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sheet-h h3 { font-size: 18px; }
+.g { color: #11803b; } .r { color: #b42318; }
+.sheet-f { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; position: sticky; bottom: -24px; background: var(--card); padding: 14px 0; }
+@keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+@keyframes fade { from { opacity: 0; } }
+@media (max-width: 860px) {
+  .urow { grid-template-columns: 1fr 1fr; }
+  .who { grid-column: 1 / -1; }
+  .urow .btn-ghost { grid-column: 1 / -1; justify-content: center; }
+  .sheet { top: auto; max-height: 88vh; border-radius: 22px 22px 0 0; padding: 18px; animation: up 0.35s var(--ease); }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } }
+}

@@ -1,0 +1,74 @@
+<div class="card">
+  <div class="toolbar">
+    <div class="filters">
+      <input class="input-sm" type="search" placeholder="Search name, email or company" [(ngModel)]="search" (ngModelChange)="onSearch()" />
+      <select class="select-sm" [(ngModel)]="roleFilter" (ngModelChange)="load()">
+        <option value="">All roles</option>
+        @for (r of roles; track r) { <option [value]="r">{{ r }}</option> }
+      </select>
+    </div>
+    <span class="hint">Use “Access” to give one person more or less than their role.</span>
+  </div>
+
+  <div class="ulist">
+    @for (u of users(); track u.id; let i = $index) {
+      <div class="urow" [style.animation-delay.s]="i * 0.03">
+        <div class="who">
+          <span class="ini">{{ u.name.slice(0, 1).toUpperCase() }}</span>
+          <div><b>{{ u.name }}</b><small>{{ u.email }}@if (u.company_name) { · {{ u.company_name }} }</small></div>
+        </div>
+        <select class="select-sm" [ngModel]="u.role" (ngModelChange)="change(u, 'role', $event)"
+                [disabled]="!canEdit || u.id === auth.user()?.id" aria-label="Role">
+          @for (r of roles; track r) { <option [value]="r">{{ r }}</option> }
+        </select>
+        <select class="select-sm status" [attr.data-s]="u.status" [ngModel]="u.status" (ngModelChange)="change(u, 'status', $event)"
+                [disabled]="!canEdit || u.id === auth.user()?.id" aria-label="Status">
+          @for (s of statuses; track s) { <option [value]="s">{{ label(s) }}</option> }
+        </select>
+        <button class="btn-ghost" (click)="open(u)" [disabled]="u.role === 'admin'"
+                [attr.title]="u.role === 'admin' ? 'Admins have full access' : 'Set module access'">Access</button>
+      </div>
+    } @empty {
+      <p class="hint" style="padding:16px 4px">{{ loading() ? 'Loading…' : 'No users found.' }}</p>
+    }
+  </div>
+</div>
+
+@if (access(); as a) {
+  <div class="scrim" (click)="close()"></div>
+  <aside class="sheet" role="dialog" aria-label="User access">
+    <div class="sheet-h">
+      <div>
+        <h3>Access for {{ a.user.name }}</h3>
+        <p class="hint">Tap to cycle: <b>role default</b> → <b class="g">allow</b> → <b class="r">deny</b>. Role: {{ a.user.role }}.</p>
+      </div>
+      <button class="btn-ghost" (click)="close()" aria-label="Close">✕</button>
+    </div>
+    <div class="matrix">
+      <div class="mrow headrow"><span>Section</span>@for (ac of actions(); track ac) { <span style="text-align:center">{{ ac }}</span> }</div>
+      @for (m of modules(); track m.key) {
+        @let locked = a.user.role === 'client' && !m.client_allowed;
+        <div class="mrow" [class.locked]="locked">
+          <div class="mname">{{ m.name }}</div>
+          @for (ac of actions(); track ac) {
+            @let key = m.key + '.' + ac;
+            @let st = state(key);
+            <button type="button" class="pchip" [class.on]="st === 'allow'" [class.deny]="st === 'deny'"
+                    [class.inherit-on]="st === 'inherit' && inherited(key)" [disabled]="locked || !canEdit" (click)="cycle(key)"
+                    [attr.aria-label]="m.name + ' ' + ac + ': ' + st">
+              <span class="sym">{{ st === 'allow' ? '✓' : st === 'deny' ? '✕' : inherited(key) ? '•' : '–' }}</span>
+              <span class="lbl">{{ ac }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+    @if (canEdit) {
+      <div class="sheet-f">
+        <button class="btn-ghost" (click)="overrides.set({})">Reset to role default</button>
+        <button class="btn" (click)="saveAccess()" [disabled]="saving()">Save access</button>
+      </div>
+    }
+  </aside>
+}
+@if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }

@@ -1,0 +1,76 @@
+<div class="page">
+  <header class="bar">
+    <img src="logo.png" alt="DigiFox Pro Solutions" />
+    <button class="out" type="button" (click)="auth.logout()">Log out</button>
+  </header>
+
+  <main class="card wrap">
+    <div class="steps"><span class="on">1. Account</span><span class="on cur">2. Business details</span><span>3. Dashboard</span></div>
+    <h1 class="auth-h">Welcome, {{ auth.user()?.name }}!</h1>
+    <p class="auth-sub">Tell us about your business so our team can get started. This takes about a minute.</p>
+    @if (message()) { <div class="alert error" role="alert">{{ message() }}</div> }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="row-2">
+        <div class="field" [class.invalid]="errors().business_name">
+          <label for="bn">Business name <span class="req">*</span></label>
+          <input id="bn" formControlName="business_name" />
+          @if (errors().business_name) { <div class="err">{{ errors().business_name }}</div> }
+        </div>
+        <div class="field" [class.invalid]="errors().industry">
+          <label for="ind">Industry <span class="req">*</span></label>
+          <select id="ind" formControlName="industry">
+            <option value="" disabled>Select…</option>
+            @for (i of industries; track i) { <option [value]="i">{{ i }}</option> }
+          </select>
+          @if (errors().industry) { <div class="err">{{ errors().industry }}</div> }
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field" [class.invalid]="errors().city">
+          <label for="city">City <span class="req">*</span></label>
+          <input id="city" formControlName="city" />
+          @if (errors().city) { <div class="err">{{ errors().city }}</div> }
+        </div>
+        <div class="field">
+          <label for="state">State <span class="req">*</span></label>
+          <select id="state" formControlName="state">
+            @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field" [class.invalid]="errors().website">
+          <label for="web">Website</label>
+          <input id="web" type="url" formControlName="website" placeholder="https://" />
+          @if (errors().website) { <div class="err">{{ errors().website }}</div> }
+        </div>
+        <div class="field" [class.invalid]="errors().gstin">
+          <label for="gst">GSTIN (for GST invoices)</label>
+          <input id="gst" formControlName="gstin" maxlength="15" class="upper" />
+          @if (errors().gstin) { <div class="err">{{ errors().gstin }}</div> }
+        </div>
+      </div>
+
+      <fieldset class="chips" [class.invalid]="errors().services">
+        <legend>Services you're interested in <span class="req">*</span></legend>
+        @for (s of serviceOptions; track s) {
+          <button type="button" class="chip" [class.on]="services().includes(s)" (click)="toggle(s)"
+                  [attr.aria-pressed]="services().includes(s)">{{ s }}</button>
+        }
+        @if (errors().services) { <div class="err">{{ errors().services }}</div> }
+      </fieldset>
+
+      <div class="field">
+        <label for="notes">Anything else we should know?</label>
+        <textarea id="notes" formControlName="notes" rows="3"></textarea>
+      </div>
+
+      <div class="auth-actions">
+        <button class="btn-dark" type="submit" [disabled]="busy()">
+          @if (busy()) { <span class="spinner"></span> } Submit &amp; continue
+        </button>
+      </div>
+    </form>
+  </main>
+</div>

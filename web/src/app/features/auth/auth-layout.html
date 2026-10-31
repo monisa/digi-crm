@@ -1,0 +1,29 @@
+<div class="auth">
+  <svg class="bg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <radialGradient id="glow" cx="78%" cy="18%" r="45%">
+        <stop offset="0" stop-color="#ED8F21" stop-opacity="0.22" />
+        <stop offset="1" stop-color="#ED8F21" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <rect width="1600" height="1000" fill="url(#glow)" />
+    <g class="flow" fill="none" stroke="#fff" stroke-linecap="round">
+      @for (l of lines; track $index) {
+        <path [attr.d]="l.d" [attr.stroke-opacity]="l.o" [attr.stroke-width]="l.w" />
+      }
+    </g>
+  </svg>
+
+  <header class="brand">
+    <img src="logo.png" alt="DigiFox Pro Solutions" />
+  </header>
+
+  <section class="pitch">
+    <h1>Every lead, client and teammate, in one place</h1>
+    <p>Sign in to manage your DigiFox Pro workspace</p>
+  </section>
+
+  <main class="panel">
+    <router-outlet />
+  </main>
+</div>

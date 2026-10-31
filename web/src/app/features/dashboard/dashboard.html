@@ -1,8 +1,9 @@
 <div class="head">
-  <h1>Welcome to DigiFox Pro CRM</h1>
-  <p>The project foundation is in place. Modules will appear here phase by phase.</p>
+  <h1>Welcome, {{ auth.user()?.name }}</h1>
+  <p>Here’s your DigiFox Pro workspace.</p>
 </div>
 
+@if (auth.user()?.role === 'admin') {
 <div class="grid">
   <div class="card status">
     <h3>System status</h3>
@@ -37,3 +38,9 @@
     </ol>
   </div>
 </div>
+} @else {
+  <div class="card soon">
+    <h3>Your workspace is being set up</h3>
+    <p>Your sections are in the menu. Their content will appear here as each part of the CRM goes live.</p>
+  </div>
+}
