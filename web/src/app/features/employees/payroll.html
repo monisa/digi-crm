@@ -1,0 +1,54 @@
+<a class="crumb" routerLink="/employees">← Employees</a>
+<div class="page-head">
+  <div>
+    <h1>Payroll</h1>
+    <p>Payslips are built from each person’s salary, minus loss-of-pay leave and days before joining.</p>
+  </div>
+  <div class="actions">
+    <select class="select-sm" [(ngModel)]="selected" (ngModelChange)="load()" aria-label="Month">
+      @for (m of months; track m.key) { <option [value]="m.key">{{ m.label }}</option> }
+    </select>
+    <button class="btn-ghost" (click)="generate()" [disabled]="busy()">{{ slips().length ? 'Regenerate drafts' : 'Generate payslips' }}</button>
+    <button class="btn" (click)="publish()" [disabled]="busy() || !drafts()">Publish {{ drafts() || '' }}</button>
+  </div>
+</div>
+
+<div class="sum">
+  <div class="card"><span>Payslips</span><b>{{ totals().count }}</b><small>{{ drafts() }} draft · {{ totals().count - drafts() }} published</small></div>
+  <div class="card"><span>Total gross</span><b class="money">{{ money(totals().gross) }}</b></div>
+  <div class="card"><span>Total net pay</span><b class="money net">{{ money(totals().net) }}</b></div>
+</div>
+
+@if (skipped().length) {
+  <div class="alert info">
+    <b>Not prepared:</b>
+    @for (s of skipped(); track s.employee; let last = $last) { {{ s.employee }} ({{ s.reason }}){{ last ? '' : ', ' }} }
+    — set their salary on their profile, then regenerate.
+  </div>
+}
+
+<div class="card list">
+  @for (p of slips(); track p.id) {
+    <div class="row" [class.open]="open() === p.id">
+      <button class="head" (click)="open.set(open() === p.id ? null : p.id)" [attr.aria-expanded]="open() === p.id">
+        <span class="code">{{ p.employee.emp_code }}</span>
+        <b class="name">{{ p.employee.name }}</b>
+        @if (p.lop_days) { <span class="badge b-warn">{{ p.lop_days }} unpaid</span> }
+        <span class="money gross">{{ money(p.gross) }}</span>
+        <b class="money netv">{{ money(p.net) }}</b>
+        <span class="badge" [class.b-warn]="p.status === 'draft'" [class.b-good]="p.status === 'published'">{{ p.status === 'draft' ? 'Draft' : 'Published' }}</span>
+      </button>
+      @if (open() === p.id) {
+        <div class="detail">
+          <div><h4>Earnings</h4>@for (kv of entries(p.earnings); track kv[0]) { <div class="line"><span>{{ kv[0] }}</span><span class="money">{{ money(kv[1]) }}</span></div> }</div>
+          <div><h4>Deductions</h4>@for (kv of entries(p.deductions); track kv[0]) { <div class="line"><span>{{ kv[0] }}</span><span class="money">{{ money(kv[1]) }}</span></div> } @empty { <p class="hint">None</p> }</div>
+          <div class="dl-btn"><button class="btn-ghost" (click)="download(p)">Download PDF</button></div>
+        </div>
+      }
+    </div>
+  } @empty {
+    <div class="empty-box">
+      @if (loading()) { Loading… } @else { <b>No payslips for this month yet</b>Click “Generate payslips” to prepare drafts. }
+    </div>
+  }
+</div>

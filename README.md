@@ -81,6 +81,15 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
 - **Clients**: register themselves at `/register`, must complete the onboarding form, then only see Dashboard, Campaigns, Invoices & Payments and Tickets (never internal sections).
 - 5 wrong passwords lock the login for 15 minutes. Password reset links are emailed from `info@digifoxprosolutions.com` and expire after 60 minutes.
 
+## Employees, payroll and leave
+
+- **Employees**: add people under Employees → Add employee. Tick "Create a CRM login" to email them a link to set their password.
+- **Salary**: on a person's profile → Salary & payslips → Set salary. A revision applies from its start date; history is kept.
+- **Payroll** (each month, after month end): Employees → Payroll & payslips → choose the month → Generate payslips → check the drafts → Publish. Employees then download their PDF payslip. Loss-of-pay leave and days before joining are deducted automatically. Published payslips are never changed.
+- **Leave**: Casual 4 and Sick 6 days a year (change under Leave → Leave policy), plus unpaid Loss of pay. Leave days skip Sundays and public holidays. The admin approves or rejects (with a reason) under Leave → Approvals.
+- **Public holidays**: Leave → Public holidays. "Add national holidays" adds Republic Day, May Day, Independence Day, Gandhi Jayanti and Christmas; add festival holidays (Onam, Vishu, Eid, Diwali…) each year since their dates change.
+- Payslips print `COMPANY_NAME`, `COMPANY_ADDRESS` and `COMPANY_EMAIL` from `api/.env`.
+
 ## Turning on "Sign in with Google"
 
 1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").

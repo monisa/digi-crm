@@ -175,3 +175,29 @@ button { font: inherit; }
 }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 16px); } }
 @media (max-width: 860px) { .toast { bottom: 96px; } }
+
+/* ---------- Shared page pieces ---------- */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; margin: 12px 0 20px; }
+.page-head h1 { font-size: 26px; letter-spacing: -0.02em; }
+.page-head p { color: var(--ink-2); margin-top: 4px; }
+.page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs2 { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; }
+.tabs2 button {
+  border: 0; background: none; padding: 12px 14px; font-weight: 600; font-size: 14px; color: var(--ink-3); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color 0.2s, border-color 0.25s var(--ease);
+}
+.tabs2 button:hover { color: var(--ink); }
+.tabs2 button.on { color: var(--ink); border-color: var(--brand); }
+.tabs2 .count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 99px; background: var(--brand); color: #fff; font-size: 11px; }
+.empty-box { text-align: center; padding: 36px 16px; color: var(--ink-3); }
+.empty-box b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px; }
+.dl { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+.dl div { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.dl dt { font-size: 12px; color: var(--ink-3); }
+.dl dd { font-size: 14.5px; margin-top: 2px; word-break: break-word; }
+.dl .wide { grid-column: 1 / -1; }
+@media (max-width: 560px) { .dl { grid-template-columns: 1fr; } .page-head h1 { font-size: 22px; } }
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; position: sticky; bottom: -24px; background: var(--card); padding: 14px 0; }
+.btn-ghost:disabled, .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.field.compact input, .field.compact select { height: 48px; }
+.money { font-variant-numeric: tabular-nums; }

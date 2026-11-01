@@ -1,0 +1,37 @@
+.h { font-size: 15px; margin: 22px 0 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.hchip { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; font-size: 13px; }
+.hchip b { color: var(--brand-deep); margin-right: 4px; }
+.appr, .hlist, .policy { display: flex; flex-direction: column; }
+.arow, .hrow, .prow { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid var(--line); animation: rise 0.4s var(--ease) both; }
+.arow:last-child, .hrow:last-child, .prow:last-child { border-bottom: 0; }
+.ini { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #eaf1fd; color: #1f4fb3; font-weight: 700; font-size: 13px; flex: none; }
+.grow { flex: 1; min-width: 0; }
+.grow > b { display: block; font-size: 14px; }
+.grow small { display: block; color: var(--ink-3); font-size: 12.5px; }
+.grow small b { color: var(--ink); }
+.reason { font-style: italic; color: var(--ink-2) !important; }
+.acts, .reject { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.reject .input-sm { min-width: 200px; }
+.btn.ok { background: linear-gradient(135deg, #16a34a, #11803b); box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3); }
+.btn-ghost.danger { color: #b42318; border-color: #f5b5b0; }
+.btn-ghost.sm { height: 30px; font-size: 12px; }
+.cap { text-transform: capitalize; }
+.hadd { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.hadd .grow { flex: 1; min-width: 180px; }
+.check.sm { margin: 0; font-size: 13px; }
+.cal { width: 50px; border-radius: 12px; overflow: hidden; text-align: center; border: 1px solid var(--line); flex: none; background: #fff; }
+.cal span { display: block; background: var(--brand); color: #fff; font-size: 10.5px; font-weight: 700; text-transform: uppercase; padding: 2px 0; }
+.cal b { display: block; font-size: 18px; padding: 3px 0; }
+.hrow.past { opacity: 0.55; }
+.num { width: 80px; }
+.hint { color: var(--ink-3); font-size: 13px; }
+.policy .hint { white-space: nowrap; }
+@media (max-width: 760px) {
+  .arow { flex-wrap: wrap; }
+  .arow .grow { flex-basis: calc(100% - 56px); }
+  .acts, .reject { width: 100%; justify-content: flex-end; }
+  .reject .input-sm { flex: 1; min-width: 0; }
+  .prow { flex-wrap: wrap; }
+  .prow .grow { flex-basis: 100%; }
+}

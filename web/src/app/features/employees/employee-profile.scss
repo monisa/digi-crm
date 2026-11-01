@@ -1,0 +1,32 @@
+.crumb { display: inline-block; margin: 8px 0 12px; color: var(--ink-2); font-size: 13.5px; }
+.crumb:hover { color: var(--brand-deep); }
+.hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 16px; position: relative; overflow: hidden; }
+.hero::after { content: ''; position: absolute; right: -60px; top: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(237, 143, 33, 0.35), transparent 70%); }
+.ini { width: 72px; height: 72px; border-radius: 22px; display: grid; place-items: center; font-weight: 800; font-size: 24px; color: #fff; background: linear-gradient(135deg, var(--brand), var(--brand-deep)); box-shadow: 0 10px 24px rgba(237, 143, 33, 0.35); flex: none; }
+.who { flex: 1; min-width: 200px; }
+.who h1 { font-size: 24px; letter-spacing: -0.02em; }
+.who p { color: var(--ink-2); margin-top: 2px; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.hero .btn-ghost { position: relative; z-index: 1; }
+.dl a { color: var(--brand-deep); }
+h3 { font-size: 16px; }
+.sub { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
+.card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.sal-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; }
+.net-hero { background: linear-gradient(135deg, #16181d, #2a2d35); color: #fff; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+.net-hero span { display: block; font-size: 12.5px; color: #c9cdd6; }
+.net-hero b { display: block; font-size: 30px; color: var(--brand); margin: 2px 0; }
+.net-hero small { color: #9aa0ad; font-size: 12.5px; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 6px; }
+.line { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+.slips { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.slip { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; transition: border-color 0.2s, transform 0.2s var(--ease); }
+.slip:hover { border-color: var(--brand); transform: translateX(3px); }
+.slip .grow { flex: 1; min-width: 0; }
+.slip b { display: block; font-size: 14px; }
+.slip small { color: var(--ink-3); font-size: 12.5px; }
+.skel { min-height: 200px; background: linear-gradient(90deg, #f3f4f7 25%, #e9ebf0 50%, #f3f4f7 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (max-width: 960px) { .sal-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .split { grid-template-columns: 1fr; } .ini { width: 56px; height: 56px; font-size: 19px; border-radius: 18px; } .slip { flex-wrap: wrap; } .slip .grow { flex-basis: 100%; } }

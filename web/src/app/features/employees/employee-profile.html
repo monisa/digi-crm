@@ -1,0 +1,115 @@
+@if (error()) {
+  <div class="card empty-box"><b>{{ error() }}</b></div>
+} @else if (employee(); as e) {
+  @if (canEdit()) { <a class="crumb" routerLink="/employees">← All employees</a> }
+
+  <section class="card hero">
+    <span class="ini">{{ initials(e.name) }}</span>
+    <div class="who">
+      <h1>{{ e.name }}</h1>
+      <p>{{ e.designation || 'No designation' }}@if (e.department) { · {{ e.department }} }</p>
+      <div class="tags">
+        <span class="badge b-info">{{ e.emp_code }}</span>
+        @if (e.status === 'inactive') { <span class="badge b-crit">Left the company</span> }
+        @if (e.doj) { <span class="badge b-good">{{ tenure(e.doj) }}</span> }
+      </div>
+    </div>
+    @if (canEdit()) { <button class="btn-ghost" (click)="editing.set(true)">Edit details</button> }
+  </section>
+
+  <div class="tabs2" role="tablist">
+    <button role="tab" [class.on]="tab() === 'details'" (click)="open('details')">Details</button>
+    <button role="tab" [class.on]="tab() === 'salary'" (click)="open('salary')">Salary &amp; payslips</button>
+    <button role="tab" [class.on]="tab() === 'leave'" (click)="open('leave')">Leave</button>
+  </div>
+
+  @switch (tab()) {
+    @case ('details') {
+      <section class="card">
+        <dl class="dl">
+          <div><dt>Full name</dt><dd>{{ e.name }}</dd></div>
+          <div><dt>Employee ID</dt><dd>{{ e.emp_code }}</dd></div>
+          <div><dt>Office email</dt><dd>@if (e.office_email) { <a [href]="'mailto:' + e.office_email">{{ e.office_email }}</a> } @else { — }</dd></div>
+          <div><dt>Mobile number</dt><dd>@if (e.mobile) { <a [href]="'tel:' + e.mobile">{{ e.mobile }}</a> } @else { — }</dd></div>
+          <div><dt>Designation</dt><dd>{{ e.designation || '—' }}</dd></div>
+          <div><dt>Department</dt><dd>{{ e.department || '—' }}</dd></div>
+          <div><dt>Date of birth</dt><dd>{{ date(e.dob) }}</dd></div>
+          <div><dt>Date of joining</dt><dd>{{ date(e.doj) }}</dd></div>
+          <div><dt>Reporting manager</dt><dd>{{ e.reporting_manager?.name || '—' }}</dd></div>
+          <div><dt>CRM login</dt><dd>{{ e.has_login ? 'Yes' : 'No login' }}</dd></div>
+          <div class="wide"><dt>Address</dt><dd>{{ e.address || '—' }}</dd></div>
+        </dl>
+      </section>
+    }
+
+    @case ('salary') {
+      <div class="sal-grid">
+        <section class="card">
+          <div class="card-h">
+            <div><h3>Salary</h3>
+              @if (salary()?.current; as s) { <p class="sub">Since {{ date(s.effective_from) }}</p> }
+            </div>
+            @if (canEdit()) { <button class="btn-ghost" (click)="editingSalary.set(true)">{{ salary()?.current ? 'Revise salary' : 'Set salary' }}</button> }
+          </div>
+          @if (salary(); as si) {
+            @if (si.current; as s) {
+              <div class="net-hero">
+                <span>Take-home per month</span>
+                <b class="money">{{ money(s.net) }}</b>
+                <small>Gross {{ money(s.gross) }} · Yearly {{ money(s.ctc_yearly) }}</small>
+              </div>
+              <div class="split">
+                <div>
+                  <h4>Earnings</h4>
+                  @for (kv of entries(si.components.earnings); track kv[0]) {
+                    @if ($any(s)[kv[0]] > 0) { <div class="line"><span>{{ kv[1] }}</span><b class="money">{{ money($any(s)[kv[0]]) }}</b></div> }
+                  }
+                </div>
+                <div>
+                  <h4>Deductions</h4>
+                  @for (kv of entries(si.components.deductions); track kv[0]) {
+                    @if ($any(s)[kv[0]] > 0) { <div class="line"><span>{{ kv[1] }}</span><b class="money">− {{ money($any(s)[kv[0]]) }}</b></div> }
+                  } @empty {}
+                  @if (s.total_deductions === 0) { <p class="sub">No deductions</p> }
+                </div>
+              </div>
+            } @else {
+              <div class="empty-box"><b>No salary set yet</b>@if (canEdit()) { Use “Set salary” to add one. }</div>
+            }
+          } @else { <p class="sub">Loading…</p> }
+        </section>
+
+        <section class="card">
+          <h3>Payslips</h3>
+          <div class="slips">
+            @for (p of payslips() ?? []; track p.id) {
+              <div class="slip">
+                <div class="grow"><b>{{ p.label }}</b><small>Net {{ money(p.net) }}@if (p.lop_days) { · {{ p.lop_days }} unpaid day(s) }</small></div>
+                @if (p.status === 'draft') { <span class="badge b-warn">Draft</span> }
+                <button class="btn-ghost" (click)="download(p)" [disabled]="downloading() === p.id">
+                  {{ downloading() === p.id ? 'Preparing…' : 'Download PDF' }}
+                </button>
+              </div>
+            } @empty {
+              <div class="empty-box">@if (payslips()) { <b>No payslips yet</b>They appear here once payroll is published each month. } @else { Loading… }</div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    @case ('leave') {
+      @if (leave(); as l) { <app-leave-balances [summary]="l" /> } @else { <p class="sub">Loading…</p> }
+      @if (id() === 'me' || !canEdit()) {
+        <a class="btn" routerLink="/leave" style="margin-top:16px">Request leave</a>
+      }
+    }
+  }
+
+  @if (editing()) { <app-employee-form [employee]="e" (closed)="editing.set(false)" (saved)="saved($event)" /> }
+  @if (editingSalary()) {
+    <app-salary-form [employee]="e" [current]="salary()?.current ?? null" (closed)="editingSalary.set(false)" (saved)="salarySaved()" />
+  }
+} @else {
+  <div class="card skel"></div>
+}

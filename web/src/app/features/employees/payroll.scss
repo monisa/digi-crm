@@ -1,0 +1,36 @@
+.crumb { display: inline-block; margin: 8px 0 0; color: var(--ink-2); font-size: 13.5px; }
+.sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+.sum .card { padding: 16px; }
+.sum span { display: block; font-size: 12.5px; color: var(--ink-3); }
+.sum b { font-size: 24px; display: block; }
+.sum small { color: var(--ink-3); font-size: 12px; }
+.net { color: var(--brand-deep); }
+.alert { margin: 0 0 16px; }
+.list { padding: 8px; }
+.row { border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.head {
+  width: 100%; display: grid; grid-template-columns: 80px 1fr auto 120px 120px 96px; gap: 12px; align-items: center;
+  padding: 12px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 12px; font: inherit; color: inherit;
+  transition: background 0.2s;
+}
+.head:hover, .row.open .head { background: var(--bg); }
+.code { font-size: 12px; font-weight: 700; color: var(--brand-deep); }
+.gross { color: var(--ink-3); text-align: right; font-size: 13px; }
+.netv { text-align: right; }
+.head .badge:last-child { justify-self: end; }
+.detail { display: grid; grid-template-columns: 1fr 1fr auto; gap: 24px; padding: 6px 12px 16px; animation: rise 0.3s var(--ease); }
+h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 4px; }
+.line { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px dashed var(--line); }
+.dl-btn { align-self: end; }
+@media (max-width: 860px) {
+  .sum { grid-template-columns: 1fr 1fr; }
+  .sum .card:first-child { grid-column: 1 / -1; }
+  .head { grid-template-columns: 1fr auto; row-gap: 4px; }
+  .head .code { grid-column: 1; }
+  .head .name { grid-column: 1; }
+  .head .gross { display: none; }
+  .head .netv { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .head .badge { grid-column: 1; justify-self: start !important; }
+  .detail { grid-template-columns: 1fr; gap: 12px; }
+}

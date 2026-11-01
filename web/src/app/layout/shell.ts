@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { NAV_ITEMS, NavItem } from '../core/navigation';
+import { Toast } from '../shared/toast.service';
 import { Icon } from './icon';
 
 @Component({
@@ -13,6 +14,7 @@ import { Icon } from './icon';
 })
 export class Shell {
   protected readonly auth = inject(AuthService);
+  protected readonly toast = inject(Toast);
 
   /** Menu items this user may see, grouped by section. */
   protected readonly sections = computed(() => {

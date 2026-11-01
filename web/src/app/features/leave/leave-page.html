@@ -1,0 +1,134 @@
+<div class="page-head">
+  <div>
+    <h1>Leave</h1>
+    <p>Casual and sick leave, approvals and the public holiday list.</p>
+  </div>
+  <div class="actions">
+    @if (summary() && auth.can('leave.create')) { <button class="btn" (click)="requesting.set(true)">+ Request leave</button> }
+  </div>
+</div>
+
+<div class="tabs2" role="tablist">
+  @if (!noRecord()) { <button role="tab" [class.on]="tab() === 'mine'" (click)="open('mine')">My leave</button> }
+  @if (canApprove) {
+    <button role="tab" [class.on]="tab() === 'approvals'" (click)="open('approvals')">Approvals @if (pendingCount()) { <span class="count">{{ pendingCount() }}</span> }</button>
+  }
+  <button role="tab" [class.on]="tab() === 'holidays'" (click)="open('holidays')">Public holidays</button>
+  @if (canManage) { <button role="tab" [class.on]="tab() === 'policy'" (click)="open('policy')">Leave policy</button> }
+</div>
+
+@switch (tab()) {
+  @case ('mine') {
+    @if (summary(); as s) {
+      <app-leave-balances [summary]="s" [canCancel]="true" (cancel)="cancel($event)" />
+      @if (s.upcoming_holidays?.length) {
+        <h3 class="h">Coming up</h3>
+        <div class="chips">
+          @for (h of s.upcoming_holidays; track h.id) { <span class="hchip"><b>{{ fmt(h.date) }}</b> {{ h.name }}</span> }
+        </div>
+      }
+    } @else if (noRecord()) {
+      <div class="card empty-box"><b>No employee record linked</b>{{ noRecord() }}</div>
+    } @else { <p class="hint">Loading…</p> }
+  }
+
+  @case ('approvals') {
+    <div class="card">
+      <div class="toolbar">
+        <select class="select-sm" [(ngModel)]="approvalStatus" (ngModelChange)="loadApprovals()" aria-label="Show">
+          <option value="pending">Waiting for approval</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+      <div class="appr">
+        @for (r of approvals(); track r.id; let i = $index) {
+          <div class="arow" [style.animation-delay.s]="i * 0.04">
+            <span class="ini">{{ initials(r.employee.name) }}</span>
+            <div class="grow">
+              <b>{{ r.employee.name }}</b>
+              <small>{{ r.type.name }} · {{ range(r) }} · <b>{{ r.days }} day{{ r.days === 1 ? '' : 's' }}</b>@if (r.half_day) { (half) }</small>
+              @if (r.reason) { <small class="reason">“{{ r.reason }}”</small> }
+              @if (r.approver_comment) { <small class="reason">{{ r.approver }}: {{ r.approver_comment }}</small> }
+            </div>
+            @if (r.status === 'pending') {
+              @if (rejecting() === r.id) {
+                <div class="reject">
+                  <input class="input-sm" placeholder="Reason for rejecting" [(ngModel)]="comment[r.id]" />
+                  <button class="btn-ghost danger" (click)="decide(r, 'reject')">Reject</button>
+                  <button class="btn-ghost" (click)="rejecting.set(null)">Back</button>
+                </div>
+              } @else {
+                <div class="acts">
+                  <button class="btn-ghost" (click)="rejecting.set(r.id)">Reject</button>
+                  <button class="btn ok" (click)="decide(r, 'approve')">Approve</button>
+                </div>
+              }
+            } @else {
+              <span class="badge cap" [class.b-good]="r.status === 'approved'" [class.b-crit]="r.status === 'rejected'" [class.b-info]="r.status === 'cancelled'">{{ r.status }}</span>
+            }
+          </div>
+        } @empty {
+          <div class="empty-box"><b>{{ approvalStatus === 'pending' ? 'Nothing waiting for approval' : 'No requests' }}</b>@if (approvalStatus === 'pending') { You’re all caught up. }</div>
+        }
+      </div>
+    </div>
+  }
+
+  @case ('holidays') {
+    <div class="card">
+      <div class="toolbar">
+        <div class="seg2">
+          @for (y of years; track y) { <button [class.on]="holidayYear === y" (click)="holidayYear = y; loadHolidays()">{{ y }}</button> }
+        </div>
+        @if (canManage) { <button class="btn-ghost" (click)="addFixed()">+ Add national holidays for {{ holidayYear }}</button> }
+      </div>
+
+      @if (canManage) {
+        <form class="hadd" (ngSubmit)="addHoliday()">
+          <input class="input-sm" type="date" name="d" [(ngModel)]="newHoliday.date" required aria-label="Date" />
+          <input class="input-sm grow" name="n" placeholder="Holiday name, e.g. Thiruvonam" [(ngModel)]="newHoliday.name" required />
+          <label class="check sm"><input type="checkbox" name="o" [(ngModel)]="newHoliday.optional" /> Optional</label>
+          <button class="btn" type="submit" [disabled]="!newHoliday.date || !newHoliday.name">Add</button>
+        </form>
+        @if (holidayError()) { <div class="alert error">{{ holidayError() }}</div> }
+      }
+
+      <div class="hlist">
+        @for (h of holidays(); track h.id; let i = $index) {
+          <div class="hrow" [class.past]="h.date < (upcoming()[0]?.date ?? '9999')" [style.animation-delay.s]="i * 0.03">
+            <div class="cal"><span>{{ fmt(h.date, { month: 'short' }) }}</span><b>{{ fmt(h.date, { day: 'numeric' }) }}</b></div>
+            <div class="grow"><b>{{ h.name }}</b><small>{{ h.day }}@if (h.optional) { · Optional (counts as leave) }</small></div>
+            @if (canManage) { <button class="btn-ghost sm" (click)="removeHoliday(h)" aria-label="Remove">Remove</button> }
+          </div>
+        } @empty {
+          <div class="empty-box"><b>No holidays listed for {{ holidayYear }}</b>@if (canManage) { Add Onam, Vishu, Eid, Diwali and others above, or start with the national holidays. }</div>
+        }
+      </div>
+    </div>
+  }
+
+  @case ('policy') {
+    <div class="card">
+      <p class="hint">Days per year for each leave type. Leave years run January–December. Loss of pay has no limit and reduces that month’s salary.</p>
+      <div class="policy">
+        @for (t of types(); track t.id) {
+          <div class="prow">
+            <div class="grow"><b>{{ t.name }}</b><small>{{ t.code }} · {{ t.paid ? 'Paid' : 'Unpaid' }}</small></div>
+            @if (t.paid) {
+              <input class="input-sm num" type="number" min="0" max="365" step="0.5" [(ngModel)]="t.yearly_quota" [attr.aria-label]="t.name + ' days per year'" />
+              <span class="hint">days / year</span>
+            } @else { <span class="hint">No limit</span> }
+            <label class="check sm"><input type="checkbox" [(ngModel)]="t.active" /> In use</label>
+            <button class="btn-ghost" (click)="saveType(t)">Save</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+}
+
+@if (requesting() && summary()) {
+  <app-leave-request-form [balances]="summary()!.balances" (closed)="requesting.set(false)" (saved)="requested()" />
+}

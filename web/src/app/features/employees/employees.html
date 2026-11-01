@@ -1,0 +1,49 @@
+<div class="page-head">
+  <div>
+    <h1>Employees</h1>
+    <p>{{ list().length }} {{ status === 'active' ? 'active' : 'former' }} team members</p>
+  </div>
+  <div class="actions">
+    @if (auth.can('employees.edit')) { <a class="btn-ghost" routerLink="/employees/payroll">Payroll &amp; payslips</a> }
+    @if (auth.can('employees.create')) { <button class="btn" (click)="adding.set(true)">+ Add employee</button> }
+  </div>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <div class="filters">
+      <input class="input-sm" type="search" placeholder="Search name, ID, designation or email" [(ngModel)]="search" (ngModelChange)="onSearch()" />
+      <select class="select-sm" [(ngModel)]="status" (ngModelChange)="load()">
+        <option value="active">Active</option>
+        <option value="inactive">Left</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grid">
+    @for (e of list(); track e.id; let i = $index) {
+      <a class="person" [routerLink]="['/employees', e.id]" [style.animation-delay.s]="i * 0.03">
+        <span class="ini">{{ initials(e.name) }}</span>
+        <div class="who">
+          <b>{{ e.name }}</b>
+          <small>{{ e.designation || 'No designation' }}</small>
+        </div>
+        <div class="meta">
+          <span class="code">{{ e.emp_code }}</span>
+          @if (e.department) { <small>{{ e.department }}</small> }
+        </div>
+      </a>
+    } @empty {
+      <div class="empty-box">
+        @if (loading()) { Loading… } @else {
+          <b>No employees found</b>
+          @if (auth.can('employees.create') && !search) { Add your team with “Add employee”. }
+        }
+      </div>
+    }
+  </div>
+</div>
+
+@if (adding()) {
+  <app-employee-form [managers]="list()" (closed)="adding.set(false)" (saved)="added($event)" />
+}
