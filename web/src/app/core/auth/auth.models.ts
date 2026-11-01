@@ -10,6 +10,7 @@ export interface AuthUser {
   role: Role;
   status: Status;
   needs_onboarding: boolean;
+  leads_scope: 'assigned' | 'all';
   last_login_at: string | null;
 }
 

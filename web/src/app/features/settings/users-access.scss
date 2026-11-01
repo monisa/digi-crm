@@ -2,7 +2,7 @@
 .filters .input-sm { flex: 1; min-width: 200px; max-width: 360px; }
 .ulist { display: flex; flex-direction: column; }
 .urow {
-  display: grid; grid-template-columns: 1fr 130px 170px auto; gap: 10px; align-items: center; padding: 12px 6px;
+  display: grid; grid-template-columns: 1fr 120px 160px 170px auto; gap: 10px; align-items: center; padding: 12px 6px;
   border-bottom: 1px solid var(--line); animation: rise 0.45s var(--ease) both; transition: background 0.2s;
 }
 .urow:hover { background: var(--bg); }

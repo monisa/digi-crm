@@ -1,0 +1,141 @@
+<div class="page-head">
+  <div>
+    <h1>Leads</h1>
+    <p>{{ result()?.counts?.all ?? '…' }} {{ seesAll() ? 'leads in total' : 'leads assigned to you' }}</p>
+  </div>
+  <div class="actions">
+    @if (auth.can('settings.edit')) { <button class="btn-ghost" (click)="editingOptions.set(true)">⚙ Options</button> }
+    @if (auth.can('leads.export')) { <button class="btn-ghost" (click)="export()">⬇ Export</button> }
+    @if (auth.can('leads.create')) {
+      <button class="btn-ghost" (click)="importing.set(true)">⬆ Import sheet</button>
+      <button class="btn" (click)="adding.set(true)">+ Add lead</button>
+    }
+  </div>
+</div>
+
+@if (result(); as r) {
+  <div class="views">
+    <button class="vchip" [class.on]="view === ''" (click)="setView('')"><b>{{ r.counts.all }}</b> All</button>
+    <button class="vchip crit" [class.on]="view === 'uncontacted'" (click)="setView('uncontacted')">
+      @if (r.counts.uncontacted) { <span class="live"></span> } <b>{{ r.counts.uncontacted }}</b> Not contacted yet
+    </button>
+    <button class="vchip warn" [class.on]="view === 'followups'" (click)="setView('followups')"><b>{{ r.counts.followups }}</b> Follow-ups due</button>
+    <button class="vchip" [class.on]="view === 'today'" (click)="setView('today')"><b>{{ r.counts.today }}</b> New today</button>
+  </div>
+}
+
+<div class="card">
+  <div class="toolbar">
+    <div class="filters">
+      <input class="input-sm grow" type="search" placeholder="Search name, phone, email, city or ad" [(ngModel)]="search" (ngModelChange)="onSearch()" />
+      @if (layout() === 'list') {
+        <select class="select-sm" [(ngModel)]="status" (ngModelChange)="load(1)" aria-label="Status">
+          <option value="">All stages</option>
+          @for (s of stages(); track s[0]) { <option [value]="s[0]">{{ s[1] }} ({{ result()?.counts?.by_status?.[s[0]] ?? 0 }})</option> }
+        </select>
+      }
+      <select class="select-sm" [(ngModel)]="callStatus" (ngModelChange)="load(1)" aria-label="Call status">
+        <option value="">Any call status</option>
+        @for (c of options()?.call_statuses ?? []; track c) { <option [value]="c">{{ c }}</option> }
+      </select>
+      @if (seesAll()) {
+        <select class="select-sm" [(ngModel)]="assigned" (ngModelChange)="load(1)" aria-label="Assigned to">
+          <option value="">Anyone</option>
+          <option value="me">Assigned to me</option>
+          <option value="none">Unassigned</option>
+          @for (u of options()?.assignees ?? []; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+        </select>
+      }
+    </div>
+    <div class="seg2" role="tablist" aria-label="Layout">
+      <button [class.on]="layout() === 'list'" (click)="setLayout('list')">☰ List</button>
+      <button [class.on]="layout() === 'board'" (click)="setLayout('board')">▦ Board</button>
+    </div>
+  </div>
+
+  @if (selected().size && seesAll()) {
+    <div class="bulk">
+      <b>{{ selected().size }} selected</b>
+      <select class="select-sm" [(ngModel)]="bulkTo" aria-label="Assign to">
+        <option value="">Assign to…</option>
+        <option value="none">Nobody (unassign)</option>
+        @for (u of options()?.assignees ?? []; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+      </select>
+      <button class="btn" [disabled]="!bulkTo" (click)="bulkAssign()">Apply</button>
+      <button class="btn-ghost" (click)="clearSelection()">Clear</button>
+    </div>
+  }
+
+  @if (layout() === 'list') {
+    <div class="table" [class.loading]="loading()">
+      <div class="thead">
+        @if (seesAll()) { <input type="checkbox" aria-label="Select all" [checked]="selected().size && selected().size === result()?.data?.length" (change)="toggleAll()" /> }
+        <span>Date</span><span>Name</span><span>Ad</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
+      </div>
+      @for (l of result()?.data ?? []; track l.id; let i = $index) {
+        <div class="trow" (click)="openId.set(l.id)" [style.animation-delay.s]="i * 0.015" [class.sel]="selected().has(l.id)">
+          @if (seesAll()) { <input type="checkbox" [checked]="selected().has(l.id)" (click)="toggle(l.id, $event)" [attr.aria-label]="'Select ' + l.full_name" /> }
+          <span class="c-date"><b>{{ date(l.date) }}</b><small>{{ age(l.date) }}</small></span>
+          <span class="c-name">
+            <b>{{ l.full_name }}</b>
+            <small>{{ l.phone }}@if (l.city) { · {{ l.city }} }</small>
+          </span>
+          <span class="c-ad"><small>{{ l.ad_name || l.source }}</small></span>
+          <span class="c-call"><span class="pill" [class.muted]="l.call_status === 'Not called'">{{ l.call_status || '—' }}</span></span>
+          <span class="c-stage"><span class="stage" [attr.data-s]="l.status">{{ label(l.status) }}</span></span>
+          <span class="c-fu" [attr.data-due]="due(l.next_followup_at)">{{ date(l.next_followup_at, true) || '—' }}</span>
+          <span class="c-as">{{ l.assigned_to?.name || 'Unassigned' }}</span>
+          <span class="c-quick" (click)="$event.stopPropagation()">
+            @if (l.phone) {
+              <a class="qbtn" [href]="'tel:' + l.phone" aria-label="Call">📞</a>
+              <a class="qbtn wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>
+            }
+          </span>
+        </div>
+      } @empty {
+        <div class="empty-box">
+          @if (loading()) { Loading… } @else {
+            <b>No leads here</b>
+            @if (view || search || status || callStatus || assigned) { Try clearing the filters. } @else { Connect Meta under Settings → Integrations, or import your lead sheet. }
+          }
+        </div>
+      }
+    </div>
+    @if ((result()?.meta?.last_page ?? 1) > 1) {
+      <div class="pager">
+        <button class="btn-ghost" [disabled]="page <= 1" (click)="load(page - 1)">← Newer</button>
+        <span>Page {{ page }} of {{ result()?.meta?.last_page }}</span>
+        <button class="btn-ghost" [disabled]="page >= (result()?.meta?.last_page ?? 1)" (click)="load(page + 1)">Older →</button>
+      </div>
+    }
+  } @else {
+    <div class="board" cdkDropListGroup>
+      @for (s of stages(); track s[0]) {
+        <section class="col" [attr.data-s]="s[0]">
+          <header><span class="stage" [attr.data-s]="s[0]">{{ s[1] }}</span><b>{{ board()[s[0]]?.length ?? 0 }}</b></header>
+          <div class="drop" cdkDropList [cdkDropListData]="board()[s[0]]" (cdkDropListDropped)="drop($event, s[0])" [cdkDropListDisabled]="!auth.can('leads.edit')">
+            @for (l of board()[s[0]]; track l.id) {
+              <article class="kcard" cdkDrag [cdkDragData]="l" (click)="openId.set(l.id)">
+                <b>{{ l.full_name }}</b>
+                <small>{{ l.ad_name || l.requirement || l.source }}</small>
+                <div class="kfoot">
+                  <span class="pill" [class.muted]="l.call_status === 'Not called'">{{ l.call_status }}</span>
+                  @if (l.next_followup_at) { <span class="fu" [attr.data-due]="due(l.next_followup_at)">⏰ {{ date(l.next_followup_at) }}</span> }
+                  @if (l.assigned_to) { <span class="av" [title]="l.assigned_to.name">{{ initials(l.assigned_to.name) }}</span> }
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    </div>
+    @if ((result()?.meta?.total ?? 0) > 300) { <p class="hint">Showing the newest 300 leads. Use search or filters to find older ones.</p> }
+  }
+</div>
+
+@if (openId() && options()) {
+  <app-lead-sheet [leadId]="openId()!" [options]="options()!" (closed)="openId.set(null)" (changed)="changed($event)" />
+}
+@if (adding() && options()) { <app-lead-add [options]="options()!" (closed)="adding.set(false)" (saved)="created($event)" /> }
+@if (importing()) { <app-lead-import (closed)="importing.set(false)" (done)="imported()" /> }
+@if (editingOptions() && options()) { <app-lead-options [options]="options()!" (closed)="editingOptions.set(false)" (saved)="optionsSaved($event)" /> }

@@ -10,6 +10,8 @@ use App\Http\Controllers\Hr\HolidayController;
 use App\Http\Controllers\Hr\LeaveController;
 use App\Http\Controllers\Hr\PayslipController;
 use App\Http\Controllers\Hr\SalaryController;
+use App\Http\Controllers\Leads\LeadController;
+use App\Http\Controllers\Leads\MetaController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +21,10 @@ Route::get('/health', fn () => response()->json([
     'app' => config('app.name'),
     'time' => now()->toIso8601String(),
 ]));
+
+// Meta Lead Ads webhook (verified by signature, not by login).
+Route::get('/webhooks/meta', [MetaController::class, 'verify']);
+Route::post('/webhooks/meta', [MetaController::class, 'receive'])->middleware('throttle:600,1');
 
 // Public auth endpoints (rate-limited per IP on top of the per-account login lockout).
 Route::prefix('auth')->middleware('throttle:20,1')->group(function () {
@@ -67,6 +73,26 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         ->whereIn('decision', ['approve', 'reject'])->middleware('permission:leave.approve');
     Route::get('/leave/types', [LeaveController::class, 'types'])->middleware('permission:leave.view');
     Route::put('/leave/types/{leaveType}', [LeaveController::class, 'updateType'])->middleware('permission:leave.edit');
+
+    // Leads: everyone with leads.view sees the leads assigned to them; admins and
+    // "all leads" users see everything.
+    Route::get('/leads/options', [LeadController::class, 'options'])->middleware('permission:leads.view');
+    Route::put('/leads/options', [LeadController::class, 'saveOptions'])->middleware('permission:settings.edit');
+    Route::get('/leads/export', [LeadController::class, 'export'])->middleware('permission:leads.export');
+    Route::post('/leads/import', [LeadController::class, 'import'])->middleware('permission:leads.create');
+    Route::post('/leads/assign', [LeadController::class, 'bulkAssign'])->middleware('permission:leads.edit');
+    Route::get('/leads', [LeadController::class, 'index'])->middleware('permission:leads.view');
+    Route::post('/leads', [LeadController::class, 'store'])->middleware('permission:leads.create');
+    Route::get('/leads/{lead}', [LeadController::class, 'show'])->middleware('permission:leads.view');
+    Route::patch('/leads/{lead}', [LeadController::class, 'update'])->middleware('permission:leads.edit');
+    Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])->middleware('permission:leads.delete');
+    Route::post('/leads/{lead}/activities', [LeadController::class, 'logActivity'])->middleware('permission:leads.view');
+    Route::post('/leads/{lead}/convert', [LeadController::class, 'convert'])->middleware('permission:leads.edit');
+
+    Route::get('/integrations/meta', [MetaController::class, 'index'])->middleware('permission:settings.view');
+    Route::post('/integrations/meta/pages', [MetaController::class, 'store'])->middleware('permission:settings.edit');
+    Route::delete('/integrations/meta/pages/{metaPage}', [MetaController::class, 'destroy'])->middleware('permission:settings.edit');
+    Route::post('/integrations/meta/sync', [MetaController::class, 'sync'])->middleware('permission:settings.edit');
 
     // Public holidays: everyone can see them; leave.edit (admin) manages them.
     Route::get('/holidays', [HolidayController::class, 'index']);

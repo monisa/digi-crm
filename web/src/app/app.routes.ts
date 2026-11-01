@@ -66,7 +66,13 @@ export const routes: Routes = [
         data: { module: 'settings' },
         loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
       },
-      later('leads', 'Leads', 'leads', 'Phase 4'),
+      {
+        path: 'leads',
+        title: T('Leads'),
+        canActivate: [moduleGuard],
+        data: { module: 'leads' },
+        loadComponent: () => import('./features/leads/leads').then((m) => m.Leads),
+      },
       later('clients', 'Clients', 'clients', 'Phase 5'),
       {
         path: 'employees',

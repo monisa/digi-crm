@@ -92,19 +92,19 @@
     <section class="card" style="animation-delay:.25s">
       <div class="card-h">
         <div><h3>Uncontacted leads</h3><p class="sub">Waiting more than {{ d.uncontacted.sla_minutes }} min</p></div>
-        @if (d.uncontacted.count) { <span class="badge b-crit"><span class="live"></span> {{ d.uncontacted.count }} waiting</span> }
+        @if (d.uncontacted.count) { <a class="badge b-crit" routerLink="/leads" [queryParams]="{ view: 'uncontacted' }"><span class="live"></span> {{ d.uncontacted.count }} waiting →</a> }
         @else { <span class="badge b-good">All caught up</span> }
       </div>
       <div class="list">
         @for (l of d.uncontacted.items; track l.id) {
-          <div class="item">
+          <a class="item" routerLink="/leads" [queryParams]="{ view: 'uncontacted', open: l.id }">
             <span class="ini o">{{ initials(l.name) }}</span>
             <div class="grow"><b>{{ l.name }}</b><small>{{ l.campaign || 'No campaign' }}@if (l.platform) { · {{ l.platform }} }</small></div>
             <div class="end">
               <span class="badge" [class.b-crit]="l.waiting_minutes >= 120" [class.b-warn]="l.waiting_minutes < 120">{{ waited(l.waiting_minutes) }}</span>
               <small>{{ l.assignee || 'Unassigned' }}</small>
             </div>
-          </div>
+          </a>
         } @empty {
           <p class="empty">Every new lead has been contacted on time. 🎉</p>
         }

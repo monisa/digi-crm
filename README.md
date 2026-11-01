@@ -90,6 +90,18 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
 - **Public holidays**: Leave → Public holidays. "Add national holidays" adds Republic Day, May Day, Independence Day, Gandhi Jayanti and Christmas; add festival holidays (Onam, Vishu, Eid, Diwali…) each year since their dates change.
 - Payslips print `COMPANY_NAME`, `COMPANY_ADDRESS` and `COMPANY_EMAIL` from `api/.env`.
 
+## Leads and Meta Lead Ads
+
+- **Leads** follow the DigiFox lead sheet: Date, AD Name, Name, Phone Number, Email ID, Location (City), Call Status, Status, Package, Requirement, Follow-up Status, Notes / Remarks.
+- **Bring in the existing sheet**: Google Sheets → File → Download → CSV, then Leads → Import sheet. Rows whose phone/email is already in the CRM are skipped, so it is safe to import again. Leads → Export gives the same columns back.
+- **Who sees which leads**: give staff the Leads permissions (Settings → Role permissions or a person's Access); by default they see only leads assigned to them. Settings → Users & access → "Leads: all" lets someone see and reassign every lead.
+- **Automatic assignment**: Leads → Options → share new Meta leads in turn between chosen people.
+- **Meta connection** (Settings → Integrations shows the same steps):
+  1. Set `META_APP_SECRET` and `META_VERIFY_TOKEN` (any long random text) in `api/.env`, then `php artisan config:cache`.
+  2. In the Meta app, add Webhooks → Page → `leadgen` with callback `https://crm.digifoxprosolutions.com/api/v1/webhooks/meta` and the same verify token.
+  3. Create a Business Manager system user token with `leads_retrieval`, `pages_show_list`, `pages_read_engagement`, `pages_manage_metadata`, `pages_manage_ads`, and paste the Page ID and token in Settings → Integrations.
+  4. The cron must run every minute (see server setup): it processes incoming leads and re-checks Meta every 15 minutes.
+
 ## Turning on "Sign in with Google"
 
 1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").

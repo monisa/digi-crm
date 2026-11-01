@@ -83,6 +83,7 @@ class User extends Authenticatable
             'role' => $this->role,
             'status' => $this->status,
             'needs_onboarding' => $this->needsOnboarding(),
+            'leads_scope' => $this->isAdmin() ? 'all' : ($this->leads_scope ?? 'assigned'),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
         ];
     }

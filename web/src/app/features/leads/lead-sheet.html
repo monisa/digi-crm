@@ -1,0 +1,108 @@
+<app-sheet [title]="lead()?.full_name ?? 'Lead'" [subtitle]="lead() ? (lead()!.ad_name ? 'Ad: ' + lead()!.ad_name : 'Source: ' + lead()!.source) : ''" width="640px" (closed)="closed.emit()">
+  @if (lead(); as l) {
+    <div class="contact">
+      @if (l.phone) {
+        <a class="cbtn call" [href]="'tel:' + l.phone" (click)="quick('call')">📞 Call</a>
+        <a class="cbtn wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" (click)="quick('whatsapp')">💬 WhatsApp</a>
+      }
+      @if (l.email) { <a class="cbtn" [href]="'mailto:' + l.email">✉️ Email</a> }
+      <span class="meta">{{ l.phone }}@if (l.city) { · {{ l.city }} }@if (l.platform) { · {{ l.platform }} }</span>
+    </div>
+
+    <div class="stages" role="group" aria-label="Stage">
+      @for (s of stages(); track s[0]; let i = $index) {
+        <button type="button" class="stage" [class.on]="l.status === s[0]" [attr.data-s]="s[0]" [disabled]="!canEdit" (click)="setStage(s[0])">{{ s[1] }}</button>
+      }
+    </div>
+    @if (l.status === 'lost' && l.lost_reason) { <p class="lost">Reason: {{ l.lost_reason }}</p> }
+
+    <!-- Log what happened -->
+    <section class="logbox">
+      <div class="types">
+        @for (t of [['call', '📞 Call'], ['whatsapp', '💬 WhatsApp'], ['meeting', '🤝 Meeting'], ['note', '📝 Note']]; track t[0]) {
+          <button type="button" [class.on]="logType === t[0]" (click)="logType = $any(t[0])">{{ t[1] }}</button>
+        }
+      </div>
+      <div class="logrow">
+        @if (logType === 'call') {
+          <select class="select-sm" [(ngModel)]="logOutcome" aria-label="Call result">
+            <option value="">Call result…</option>
+            @for (c of options().call_statuses; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+        }
+        <input class="input-sm grow" [(ngModel)]="logNote" placeholder="What was discussed?" (keyup.enter)="log()" />
+      </div>
+      <div class="logrow">
+        <label class="fu">Next follow-up <input class="input-sm" type="datetime-local" [(ngModel)]="logFollowup" /></label>
+        <button class="btn" (click)="log()" [disabled]="logging() || (!logNote && !logOutcome)">Save</button>
+      </div>
+    </section>
+
+    <!-- Lead sheet fields -->
+    <form class="fields" (ngSubmit)="save()">
+      <div class="row-2">
+        <div class="field compact"><label for="ld-name">Name</label><input id="ld-name" name="n" [(ngModel)]="f['full_name']" [disabled]="!canEdit" /></div>
+        <div class="field compact" [class.invalid]="errors()['phone']"><label for="ld-phone">Phone number</label><input id="ld-phone" name="p" type="tel" [(ngModel)]="f['phone']" [disabled]="!canEdit" />
+          @if (errors()['phone']) { <div class="err">{{ errors()['phone'] }}</div> }</div>
+        <div class="field compact" [class.invalid]="errors()['email']"><label for="ld-email">Email ID</label><input id="ld-email" name="e" type="email" [(ngModel)]="f['email']" [disabled]="!canEdit" />
+          @if (errors()['email']) { <div class="err">{{ errors()['email'] }}</div> }</div>
+        <div class="field compact"><label for="ld-city">Location (city)</label><input id="ld-city" name="c" [(ngModel)]="f['city']" [disabled]="!canEdit" /></div>
+        <div class="field compact"><label for="ld-call">Call status</label>
+          <select id="ld-call" name="cs" [(ngModel)]="f['call_status']" [disabled]="!canEdit">
+            @for (c of options().call_statuses; track c) { <option [value]="c">{{ c }}</option> }
+            @if (f['call_status'] && !options().call_statuses.includes($any(f['call_status']))) { <option [value]="f['call_status']">{{ f['call_status'] }}</option> }
+          </select></div>
+        <div class="field compact"><label for="ld-pkg">Package</label>
+          <select id="ld-pkg" name="pk" [(ngModel)]="f['package']" [disabled]="!canEdit">
+            <option [ngValue]="null">—</option>
+            @for (p of options().packages; track p) { <option [value]="p">{{ p }}</option> }
+            @if (f['package'] && !options().packages.includes($any(f['package']))) { <option [value]="f['package']">{{ f['package'] }}</option> }
+          </select></div>
+        <div class="field compact"><label for="ld-fs">Follow-up status</label>
+          <select id="ld-fs" name="fs" [(ngModel)]="f['followup_status']" [disabled]="!canEdit">
+            <option [ngValue]="null">—</option>
+            @for (p of options().followup_statuses; track p) { <option [value]="p">{{ p }}</option> }
+            @if (f['followup_status'] && !options().followup_statuses.includes($any(f['followup_status']))) { <option [value]="f['followup_status']">{{ f['followup_status'] }}</option> }
+          </select></div>
+        <div class="field compact"><label for="ld-fd">Next follow-up</label><input id="ld-fd" name="fd" type="datetime-local" [(ngModel)]="f['next_followup_at']" [disabled]="!canEdit" /></div>
+      </div>
+      <div class="field"><label for="ld-req">Requirement</label><textarea id="ld-req" name="r" rows="2" [(ngModel)]="f['requirement']" [disabled]="!canEdit"></textarea></div>
+      <div class="field"><label for="ld-notes">Notes / remarks</label><textarea id="ld-notes" name="no" rows="3" [(ngModel)]="f['notes']" [disabled]="!canEdit"></textarea></div>
+      @if (canReassign()) {
+        <div class="field compact"><label for="ld-as">Assigned to</label>
+          <select id="ld-as" name="as" [(ngModel)]="f['assigned_to']">
+            <option [ngValue]="0">Unassigned</option>
+            @for (u of options().assignees; track u.id) { <option [ngValue]="u.id">{{ u.name }}</option> }
+          </select></div>
+      } @else if (l.assigned_to) { <p class="hint">Assigned to {{ l.assigned_to.name }}</p> }
+
+      @if (customEntries().length) {
+        <details class="extra"><summary>Answers from the Meta form</summary>
+          @for (kv of customEntries(); track kv[0]) { <div class="line"><span>{{ kv[0] }}</span><b>{{ kv[1] }}</b></div> }
+        </details>
+      }
+
+      @if (canEdit) {
+        <div class="form-actions">
+          @if (auth.can('leads.delete')) { <button type="button" class="btn-ghost danger" (click)="remove()">Delete</button> }
+          <span class="spacer"></span>
+          @if (!l.converted_client_id) { <button type="button" class="btn-ghost" (click)="convert()">Convert to client</button> }
+          @else { <button type="button" class="btn-ghost" (click)="openClient()">✓ Client created</button> }
+          <button class="btn" type="submit" [disabled]="saving()">Save</button>
+        </div>
+      }
+    </form>
+
+    <h4>History</h4>
+    <ol class="timeline">
+      @for (a of l.activities ?? []; track a.id) {
+        <li>
+          <span class="ic">{{ icon(a.type) }}</span>
+          <div><b>@if (a.outcome) { {{ a.outcome }} · }{{ a.note }}</b><small>{{ a.by || 'System' }} · {{ when(a.at) }}</small></div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <p class="hint">Loading…</p>
+  }
+</app-sheet>

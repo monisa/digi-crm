@@ -34,6 +34,7 @@ class UserController extends Controller
         $data = $request->validate([
             'role' => ['sometimes', Rule::in(config('crm.roles'))],
             'status' => ['sometimes', Rule::in(config('crm.statuses'))],
+            'leads_scope' => ['sometimes', Rule::in(['assigned', 'all'])],
         ]);
 
         // Prevent the admin from locking themselves out.

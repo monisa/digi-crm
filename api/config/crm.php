@@ -44,6 +44,26 @@ return [
         'email' => env('COMPANY_EMAIL', 'info@digifoxprosolutions.com'),
     ],
 
+    // Lead pipeline stages (keys are fixed: the dashboard funnel uses them; labels can change).
+    'lead_statuses' => [
+        'new' => 'New',
+        'contacted' => 'Contacted',
+        'qualified' => 'Interested',
+        'proposal' => 'Proposal sent',
+        'won' => 'Won',
+        'lost' => 'Not interested',
+    ],
+
+    // Default dropdown choices for leads; the admin can change them in the app.
+    'lead_options' => [
+        'call_statuses' => ['Not called', 'Connected', 'Not answering', 'Busy', 'Switched off', 'Call back later', 'Wrong number'],
+        'packages' => ['Starter', 'Growth', 'Premium', 'Custom'],
+        'followup_statuses' => ['Follow-up scheduled', 'Follow-up done', 'Waiting for client', 'No follow-up needed'],
+        'lost_reasons' => ['Budget too low', 'Chose another agency', 'Not reachable', 'Not interested now', 'Wrong number / spam'],
+        'auto_assign' => false,     // share new Meta leads round-robin…
+        'assign_pool' => [],        // …among these user IDs
+    ],
+
     // A new lead counts as "uncontacted" once it has waited this long.
     'lead_sla_minutes' => (int) env('CRM_LEAD_SLA_MINUTES', 30),
 

@@ -50,7 +50,7 @@ export class AdminService {
     return this.http.get<Page<AuthUser>>(`${this.base}/users`, { params });
   }
 
-  updateUser(id: number, data: { role?: Role; status?: Status }): Observable<AuthUser> {
+  updateUser(id: number, data: { role?: Role; status?: Status; leads_scope?: string }): Observable<AuthUser> {
     return this.http.patch<AuthUser>(`${this.base}/users/${id}`, data);
   }
 

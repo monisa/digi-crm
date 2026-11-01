@@ -25,6 +25,11 @@
                 [disabled]="!canEdit || u.id === auth.user()?.id" aria-label="Status">
           @for (s of statuses; track s) { <option [value]="s">{{ label(s) }}</option> }
         </select>
+        <select class="select-sm" [ngModel]="u.leads_scope" (ngModelChange)="change(u, 'leads_scope', $event)"
+                [disabled]="!canEdit || u.role !== 'employee'" aria-label="Which leads they see" title="Which leads they see">
+          <option value="assigned">Leads: only assigned</option>
+          <option value="all">Leads: all</option>
+        </select>
         <button class="btn-ghost" (click)="open(u)" [disabled]="u.role === 'admin'"
                 [attr.title]="u.role === 'admin' ? 'Admins have full access' : 'Set module access'">Access</button>
       </div>

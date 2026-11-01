@@ -36,6 +36,13 @@ return [
     ],
 
 
+    // Meta (Facebook/Instagram) Lead Ads: from developers.facebook.com -> your app.
+    'meta' => [
+        'app_secret' => env('META_APP_SECRET'),
+        'verify_token' => env('META_VERIFY_TOKEN'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v21.0'),
+    ],
+
     // "Sign in with Google": OAuth client ID from Google Cloud Console
     // (Credentials -> OAuth client ID -> Web application).
     'google' => [
