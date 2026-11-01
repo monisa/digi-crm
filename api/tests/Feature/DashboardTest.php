@@ -130,7 +130,7 @@ class DashboardTest extends TestCase
         Ticket::create(['client_id' => $client->id, 'subject' => 'Report', 'priority' => 'low', 'status' => 'waiting']);
         Ticket::create(['client_id' => $client->id, 'subject' => 'Done', 'status' => 'closed']);
 
-        $type = LeaveType::create(['code' => 'CL', 'name' => 'Casual leave']);
+        $type = LeaveType::where('code', 'CL')->first();
         $a = Employee::create(['emp_code' => 'E1', 'name' => 'Arjun']);
         $b = Employee::create(['emp_code' => 'E2', 'name' => 'Meera']);
         Employee::create(['emp_code' => 'E3', 'name' => 'Left', 'status' => 'inactive']);

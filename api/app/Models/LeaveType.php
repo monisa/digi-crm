@@ -10,4 +10,9 @@ class LeaveType extends Model
     use HasFactory;
 
     protected $guarded = ['id'];
+
+    protected function casts(): array
+    {
+        return ['yearly_quota' => 'float', 'paid' => 'boolean', 'active' => 'boolean'];
+    }
 }

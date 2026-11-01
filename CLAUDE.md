@@ -1,6 +1,6 @@
 # DigiFox Pro CRM: notes for Claude
 
-- Monorepo: `web/` = Angular (standalone components, signals, new control flow `@if/@for`), `api/` = Laravel 13 API only (no Blade views, no Vite).
+- Monorepo: `web/` = Angular (standalone components, signals, new control flow `@if/@for`), `api/` = Laravel 13 API only (no Vite; Blade only for PDFs/emails in `resources/views/pdf`).
 - API routes live in `api/routes/api.php` with prefix `v1` (see `api/bootstrap/app.php`). Public URL is `/api/v1/...`; locally `php artisan serve` serves `/v1/...` and the Angular dev proxy rewrites `/api`.
 - Frontend calls the API through `API_BASE` in `web/src/app/core/api.config.ts`, never a hard-coded host.
 - Design tokens (brand orange `#ED8F21`, chart series colours, motion easing) are CSS variables in `web/src/styles.scss`. Reuse them; respect `prefers-reduced-motion`.

@@ -30,6 +30,20 @@ return [
         'settings' => ['Settings', false],
     ],
 
+    // Days of the week that are always off (0 = Sunday … 6 = Saturday). Leave
+    // days skip these and public holidays.
+    'weekly_offs' => [0],
+
+    // Back-dated leave (e.g. sick leave after returning) is allowed this many days back.
+    'leave_backdate_days' => 30,
+
+    // Company details printed on payslips (no bank details: those stay out of the repo).
+    'company' => [
+        'name' => env('COMPANY_NAME', 'DIGIFOX PRO SOLUTIONS LLP'),
+        'address' => env('COMPANY_ADDRESS', 'Kakkanad, Kochi, Kerala'),
+        'email' => env('COMPANY_EMAIL', 'info@digifoxprosolutions.com'),
+    ],
+
     // A new lead counts as "uncontacted" once it has waited this long.
     'lead_sla_minutes' => (int) env('CRM_LEAD_SLA_MINUTES', 30),
 
