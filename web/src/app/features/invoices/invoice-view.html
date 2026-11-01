@@ -1,0 +1,123 @@
+@if (error()) {
+  <div class="card empty-box"><b>{{ error() }}</b></div>
+} @else if (inv(); as i) {
+  <a class="crumb" routerLink="/invoices">← Invoices</a>
+  <div class="page-head">
+    <div>
+      <h1>{{ i.invoice_no || 'Draft invoice' }} <span class="badge big" [attr.data-s]="state()">{{ i.overdue ? 'Overdue' : label[i.status] }}</span></h1>
+      <p>{{ i.client?.company_name }} · {{ money(i.total) }}@if (i.amount_paid > 0 && i.balance > 0) { · <b>{{ money(i.balance) }} left to pay</b> }</p>
+    </div>
+    <div class="actions">
+      <button class="btn-ghost" (click)="download()">⬇ PDF</button>
+      @if (!isClient()) {
+        @if (i.status === 'draft') {
+          @if (auth.can('invoices.delete')) { <button class="btn-ghost danger" (click)="deleteDraft()">Delete</button> }
+          @if (auth.can('invoices.edit')) { <a class="btn-ghost" [routerLink]="['/invoices', i.id, 'edit']">Edit</a> }
+          @if (auth.can('invoices.create')) { <button class="btn" (click)="issue()" [disabled]="busy()">Issue invoice</button> }
+        } @else if (i.status !== 'cancelled') {
+          @if (auth.can('invoices.edit')) {
+            <button class="btn-ghost" (click)="email()" [disabled]="busy()">✉ {{ i.emailed_at ? 'Email again' : 'Email to client' }}</button>
+            @if (i.amount_paid === 0) { <button class="btn-ghost danger" (click)="cancel()">Cancel</button> }
+          }
+          @if (payable() && auth.can('invoices.approve')) { <button class="btn" (click)="openForm('record')">+ Record payment</button> }
+        }
+      }
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Paper -->
+    <article class="card paper">
+      <header>
+        <div><span class="lbl">Bill to</span><b>{{ i.client_detail?.company_name }}</b>
+          @if (i.client_detail?.gstin) { <small>GSTIN {{ i.client_detail?.gstin }}</small> }
+          <small>{{ i.place_of_supply }}</small></div>
+        <div class="dates"><span class="lbl">Invoice date</span><b>{{ date(i.issue_date) }}</b><span class="lbl">Due</span><b [class.od]="i.overdue">{{ date(i.due_date) }}</b></div>
+      </header>
+      <div class="items">
+        @for (it of i.items; track it.id) {
+          <div class="it"><div><b>{{ it.description }}</b><small>SAC {{ it.sac }} · {{ it.qty }} × {{ money(it.rate) }}</small></div><span class="money">{{ money(it.amount ?? 0) }}</span></div>
+        }
+      </div>
+      <div class="tot">
+        <div><span>Taxable value</span><span class="money">{{ money(i.subtotal) }}</span></div>
+        @if (i.gst_type === 'intra') {
+          <div><span>CGST {{ i.gst_rate / 2 }}%</span><span class="money">{{ money(i.cgst) }}</span></div>
+          <div><span>SGST {{ i.gst_rate / 2 }}%</span><span class="money">{{ money(i.sgst) }}</span></div>
+        } @else if (i.gst_type === 'inter') {
+          <div><span>IGST {{ i.gst_rate }}%</span><span class="money">{{ money(i.igst) }}</span></div>
+        } @else { <div><span>Export (zero-rated)</span><span>₹0</span></div> }
+        <div class="grand"><span>Total</span><b class="money">{{ money(i.total) }}</b></div>
+        @for (p of i.payments; track p.id) {
+          <div class="paid"><span>Paid {{ date(p.paid_on) }} · {{ p.mode === 'upi' ? 'UPI' : p.mode.replace('_', ' ') }}@if (p.reference) { · {{ p.reference }} }</span><span class="money">− {{ money(p.amount) }}</span></div>
+        }
+        @if (i.amount_paid > 0) { <div class="grand bal"><span>Balance due</span><b class="money">{{ money(i.balance) }}</b></div> }
+      </div>
+      @if (i.notes) { <p class="note">{{ i.notes }}</p> }
+    </article>
+
+    <!-- Pay / status -->
+    <aside class="side">
+      @if (i.status === 'paid') {
+        <div class="card done"><span class="tick">✓</span><b>Paid in full</b><small>Thank you!</small></div>
+      } @else if (payable()) {
+        <div class="card payc">
+          <h3>Pay {{ money(i.balance) }}</h3>
+          @if (i.pay?.qr) {
+            <img class="qr" [src]="i.pay!.qr" alt="UPI QR code to pay this invoice" />
+            <p class="hint">Scan with <b>GPay, PhonePe, Paytm</b> or any UPI app. The amount and invoice number are filled in for you.</p>
+            @if (isMobile && i.pay?.upi_link) { <a class="btn upi" [href]="i.pay!.upi_link">Open in UPI app</a> }
+            <button class="upi-id" (click)="copyUpi()">UPI ID: <b>{{ i.pay?.upi_id }}</b> <span>{{ copied() ? 'Copied ✓' : 'Copy' }}</span></button>
+          } @else if (!isClient()) {
+            <p class="hint">Add the company UPI ID in <a routerLink="/settings" [queryParams]="{ tab: 'company' }">Settings → Company &amp; billing</a> to show a “scan to pay” QR here and on the PDF.</p>
+          }
+          @if (i.pay?.bank; as b) {
+            <details class="bank"><summary>Pay by bank transfer instead</summary>
+              <div>{{ b['account_name'] }}<br>A/c <b>{{ b['account_number'] }}</b> · IFSC <b>{{ b['ifsc'] }}</b><br>{{ b['bank'] }}@if (b['branch']) {, {{ b['branch'] }} }</div>
+            </details>
+          }
+
+          @if (pendingClaim(); as pc) {
+            <div class="alert info">We’ve received your payment note for {{ money(pc.amount) }} (UTR {{ pc.reference }}). It will show as paid once confirmed.</div>
+          } @else if (isClient() && auth.can('invoices.view')) {
+            @if (!paying()) { <button class="btn wide" (click)="openForm('claim')">I’ve paid</button> }
+          }
+        </div>
+      }
+
+      @if (paying() || recording()) {
+        <form class="card pform" (ngSubmit)="submit(paying() ? 'claim' : 'record')">
+          <h3>{{ paying() ? 'Tell us about your payment' : 'Record a payment received' }}</h3>
+          <div class="field compact" [class.invalid]="payErrors()['amount']"><label for="p-amt">Amount (₹)</label><input id="p-amt" name="a" type="number" min="1" [(ngModel)]="pay.amount" />
+            @if (payErrors()['amount']) { <div class="err">{{ payErrors()['amount'] }}</div> }</div>
+          <div class="field compact" [class.invalid]="payErrors()['paid_on']"><label for="p-on">Paid on</label><input id="p-on" name="o" type="date" [(ngModel)]="pay.paid_on" />
+            @if (payErrors()['paid_on']) { <div class="err">{{ payErrors()['paid_on'] }}</div> }</div>
+          <div class="field compact"><label for="p-mode">Paid by</label>
+            <select id="p-mode" name="m" [(ngModel)]="pay.mode">
+              <option value="upi">UPI (GPay, PhonePe…)</option><option value="bank_transfer">Bank transfer (NEFT/IMPS/RTGS)</option>
+              @if (recording()) { <option value="cash">Cash</option><option value="cheque">Cheque</option><option value="card">Card</option> }
+            </select></div>
+          <div class="field compact" [class.invalid]="payErrors()['reference']"><label for="p-ref">{{ pay.mode === 'upi' ? 'UPI transaction ID (UTR)' : 'Reference / UTR' }}@if (paying()) { <span class="req">*</span> }</label>
+            <input id="p-ref" name="r" [(ngModel)]="pay.reference" [placeholder]="pay.mode === 'upi' ? '12-digit number from the payment app' : ''" />
+            @if (payErrors()['reference']) { <div class="err">{{ payErrors()['reference'] }}</div> }
+            @if (paying() && pay.mode === 'upi') { <small class="ex">GPay: open the payment → “UPI transaction ID”.</small> }</div>
+          <div class="field compact"><label for="p-note">Note (optional)</label><input id="p-note" name="n" [(ngModel)]="pay.note" /></div>
+          <div class="pbtns"><button type="button" class="btn-ghost" (click)="paying.set(false); recording.set(false)">Cancel</button><button class="btn" type="submit" [disabled]="busy()">{{ paying() ? 'Send' : 'Save payment' }}</button></div>
+        </form>
+      }
+
+      @if (i.claims.length) {
+        <div class="card claims">
+          <h3>Payment notes</h3>
+          @for (c of i.claims; track c.id) {
+            <div class="cl"><span class="badge" [attr.data-c]="c.status">{{ c.status === 'pending' ? 'Waiting for check' : c.status === 'confirmed' ? 'Confirmed' : 'Not received' }}</span>
+              <span class="money">{{ money(c.amount) }}</span><small>UTR {{ c.reference }} · {{ date(c.paid_on) }}</small>
+              @if (c.review_note) { <small class="rn">{{ c.review_note }}</small> }</div>
+          }
+          @if (!isClient() && pendingClaim() && auth.can('invoices.approve')) { <a class="link" routerLink="/invoices" [queryParams]="{ tab: 'claims' }">Confirm in Payments to confirm →</a> }
+        </div>
+      }
+      @if (!isClient() && i.emailed_at) { <p class="hint sent">Emailed {{ date(i.emailed_at) }}</p> }
+    </aside>
+  </div>
+} @else { <div class="card skel"></div> }

@@ -1,0 +1,70 @@
+<a class="crumb" routerLink="/invoices">← Invoices</a>
+<div class="page-head"><div><h1>{{ id() ? 'Edit draft invoice' : 'New invoice' }}</h1><p>Amounts before GST. GST is added automatically.</p></div></div>
+
+@if (message()) { <div class="alert error">{{ message() }}</div> }
+
+<div class="layout">
+  <section class="card">
+    <div class="row-3">
+      <div class="field compact wide" [class.invalid]="err('client_id')">
+        <label for="ie-client">Client <span class="req">*</span></label>
+        <select id="ie-client" [(ngModel)]="clientId" (ngModelChange)="changed()">
+          <option [ngValue]="null" disabled>Choose a client…</option>
+          @for (c of clients(); track c.id) { <option [ngValue]="c.id">{{ c.company_name }}@if (c.city) { — {{ c.city }} }</option> }
+        </select>
+        @if (err('client_id')) { <div class="err">{{ err('client_id') }}</div> }
+      </div>
+      <div class="field compact"><label for="ie-date">Invoice date</label><input id="ie-date" type="date" [(ngModel)]="issueDate" /></div>
+      <div class="field compact" [class.invalid]="err('due_date')"><label for="ie-due">Due date</label><input id="ie-due" type="date" [(ngModel)]="dueDate" [min]="issueDate" />
+        @if (!dueDate) { <small class="ex">Default: {{ dueHint() }}</small> }
+        @if (err('due_date')) { <div class="err">{{ err('due_date') }}</div> }</div>
+    </div>
+    @if (client(); as c) {
+      <p class="billto">Billing <b>{{ c.company_name }}</b>@if (c.gstin) { · GSTIN {{ c.gstin }} } @else { · no GSTIN }@if (c.state) { · {{ c.state }} }
+        @if (!c.email) { <span class="warn"> · no email on file, so it can’t be emailed</span> }</p>
+    }
+
+    <h4>Items</h4>
+    <div class="items">
+      <div class="ihead"><span>Description</span><span>SAC</span><span>Qty</span><span>Rate (₹)</span><span>Amount</span><span></span></div>
+      @for (it of items(); track $index; let i = $index) {
+        <div class="irow">
+          <input class="input-sm" [(ngModel)]="it.description" list="svc" placeholder="e.g. Meta ads management – November" [attr.aria-label]="'Item ' + (i + 1) + ' description'" />
+          <input class="input-sm" [(ngModel)]="it.sac" placeholder="998361" inputmode="numeric" aria-label="SAC" />
+          <input class="input-sm num" type="number" min="0.01" step="1" [(ngModel)]="it.qty" (ngModelChange)="changed()" aria-label="Quantity" />
+          <input class="input-sm num" type="number" min="0" step="100" [(ngModel)]="it.rate" (ngModelChange)="changed()" aria-label="Rate" />
+          <b class="money amt">{{ money((+it.qty || 0) * (+it.rate || 0)) }}</b>
+          <button type="button" class="x" (click)="remove(i); changed()" [disabled]="items().length === 1" aria-label="Remove line">✕</button>
+        </div>
+      }
+      <datalist id="svc">@for (s of suggestions; track s) { <option [value]="s"></option> }</datalist>
+    </div>
+    <button type="button" class="btn-ghost" (click)="add()">+ Add line</button>
+
+    <div class="field"><label for="ie-notes">Note on the invoice (optional)</label><textarea id="ie-notes" rows="2" [(ngModel)]="notes" placeholder="e.g. Ad spend is billed by Meta directly."></textarea></div>
+  </section>
+
+  <aside class="card total">
+    <h4>Summary</h4>
+    <div class="line"><span>Taxable value</span><b class="money">{{ money(totals().sub) }}</b></div>
+    @switch (gstType()) {
+      @case ('intra') {
+        <div class="line"><span>CGST {{ totals().rate / 2 }}%</span><b class="money">{{ money(totals().cgst) }}</b></div>
+        <div class="line"><span>SGST {{ totals().rate / 2 }}%</span><b class="money">{{ money(totals().sgst) }}</b></div>
+      }
+      @case ('inter') { <div class="line"><span>IGST {{ totals().rate }}%</span><b class="money">{{ money(totals().igst) }}</b></div> }
+      @case ('export') { <div class="line"><span>Export: zero-rated</span><b>₹0</b></div> }
+    }
+    <div class="grand"><span>Total</span><b class="money">{{ money(totals().total) }}</b></div>
+    @if (gstType() !== 'export') {
+      <label class="rate">GST rate
+        <select class="select-sm" [(ngModel)]="gstRate" (ngModelChange)="changed()">@for (r of [0, 5, 12, 18, 28]; track r) { <option [ngValue]="r">{{ r }}%</option> }</select>
+      </label>
+    }
+    <p class="gstnote">{{ gstType() === 'intra' ? 'Same state as DigiFox: CGST + SGST.' : gstType() === 'inter' ? 'Different state: IGST.' : 'Client outside India: export of services.' }}</p>
+    <div class="btns">
+      <button class="btn" (click)="save(true)" [disabled]="busy() || !clientId">Issue invoice</button>
+      <button class="btn-ghost" (click)="save(false)" [disabled]="busy() || !clientId">Save as draft</button>
+    </div>
+  </aside>
+</div>

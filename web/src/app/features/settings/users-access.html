@@ -30,6 +30,11 @@
           <option value="assigned">Leads: only assigned</option>
           <option value="all">Leads: all</option>
         </select>
+        <select class="select-sm" [ngModel]="u.clients_scope" (ngModelChange)="change(u, 'clients_scope', $event)"
+                [disabled]="!canEdit || u.role !== 'employee'" aria-label="Which clients they see" title="Which clients they see">
+          <option value="assigned">Clients: theirs</option>
+          <option value="all">Clients: all</option>
+        </select>
         <button class="btn-ghost" (click)="open(u)" [disabled]="u.role === 'admin'"
                 [attr.title]="u.role === 'admin' ? 'Admins have full access' : 'Set module access'">Access</button>
       </div>

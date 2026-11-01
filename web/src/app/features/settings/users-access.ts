@@ -64,7 +64,7 @@ export class UsersAccess {
     });
   }
 
-  change(u: AuthUser, field: 'role' | 'status' | 'leads_scope', value: string): void {
+  change(u: AuthUser, field: 'role' | 'status' | 'leads_scope' | 'clients_scope', value: string): void {
     this.admin.updateUser(u.id, { [field]: value }).subscribe({
       next: (updated) => {
         this.users.update((list) => list.map((x) => (x.id === updated.id ? updated : x)));

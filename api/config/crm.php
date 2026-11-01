@@ -44,6 +44,15 @@ return [
         'email' => env('COMPANY_EMAIL', 'info@digifoxprosolutions.com'),
     ],
 
+    // Client onboarding form (from the DigiFox Google Form).
+    'onboarding' => [
+        'platforms' => ['Facebook', 'Instagram', 'LinkedIn', 'Twitter', 'YouTube'],
+        'goals' => ['Brand Awareness', 'Lead Generation', 'Sales/Conversions', 'Website Traffic', 'Social Media Growth',
+            'Email Marketing', 'SEO', 'Paid Advertising'],
+        'industries' => ['Retail', 'Real Estate', 'Healthcare', 'Education', 'Restaurant & Food', 'Jewellery', 'Travel',
+            'Manufacturing', 'IT & Services', 'Beauty & Wellness', 'Automobile', 'Other'],
+    ],
+
     // Lead pipeline stages (keys are fixed: the dashboard funnel uses them; labels can change).
     'lead_statuses' => [
         'new' => 'New',

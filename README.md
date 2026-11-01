@@ -102,6 +102,14 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
   3. Create a Business Manager system user token with `leads_retrieval`, `pages_show_list`, `pages_read_engagement`, `pages_manage_metadata`, `pages_manage_ads`, and paste the Page ID and token in Settings → Integrations.
   4. The cron must run every minute (see server setup): it processes incoming leads and re-checks Meta every 15 minutes.
 
+## Clients, invoices and UPI payments
+
+1. **Settings → Company & billing** (once): registered name and address, GSTIN, PAN, the company **UPI ID**, bank details, invoice prefix (numbers look like `DFP/2026-27/001`), default SAC and terms. These are stored on the server only, never in this repository.
+2. **Clients**: add clients (or convert a won lead). Invite the client's login from their profile; they fill the onboarding form on first login.
+3. **Invoices → New invoice**: pick the client, add lines (amounts before GST). GST is worked out automatically: same state as DigiFox → CGST + SGST, other state → IGST, outside India → zero-rated export. Save as draft or Issue. Issued invoices are locked (cancel and re-issue to change).
+4. **Getting paid**: the invoice page and PDF show a **UPI "scan to pay" QR** with the amount and invoice number filled in (GPay, PhonePe, Paytm…). After paying, the client taps **I've paid** and enters the UPI transaction ID. You check the bank and press **Received ✓** under Invoices → Payments to confirm. Bank transfers, cash and cheques can be recorded by hand with **Record payment**.
+5. **Email to client** sends the PDF from `info@digifoxprosolutions.com`.
+
 ## Turning on "Sign in with Google"
 
 1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").

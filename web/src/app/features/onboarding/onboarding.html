@@ -5,72 +5,189 @@
   </header>
 
   <main class="card wrap">
-    <div class="steps"><span class="on">1. Account</span><span class="on cur">2. Business details</span><span>3. Dashboard</span></div>
-    <h1 class="auth-h">Welcome, {{ auth.user()?.name }}!</h1>
-    <p class="auth-sub">Tell us about your business so our team can get started. This takes about a minute.</p>
+    <h1 class="auth-h">Digital Marketing Client Onboarding</h1>
+    <p class="auth-sub">Tell us about your business, social media, website and goals so our team can get started.</p>
+
+    <div class="prog" role="progressbar" [attr.aria-valuenow]="step() + 1" aria-valuemin="1" [attr.aria-valuemax]="steps.length">
+      <div class="fill" [style.width.%]="progress()"></div>
+    </div>
+    <ol class="steps">
+      @for (s of steps; track s; let i = $index) {
+        <li [class.done]="i < step()" [class.cur]="i === step()"><span>{{ i < step() ? '✓' : i + 1 }}</span>{{ s }}</li>
+      }
+    </ol>
+
     @if (message()) { <div class="alert error" role="alert">{{ message() }}</div> }
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="row-2">
-        <div class="field" [class.invalid]="errors().business_name">
-          <label for="bn">Business name <span class="req">*</span></label>
-          <input id="bn" formControlName="business_name" />
-          @if (errors().business_name) { <div class="err">{{ errors().business_name }}</div> }
-        </div>
-        <div class="field" [class.invalid]="errors().industry">
-          <label for="ind">Industry <span class="req">*</span></label>
-          <select id="ind" formControlName="industry">
-            <option value="" disabled>Select…</option>
-            @for (i of industries; track i) { <option [value]="i">{{ i }}</option> }
-          </select>
-          @if (errors().industry) { <div class="err">{{ errors().industry }}</div> }
-        </div>
-      </div>
-      <div class="row-2">
-        <div class="field" [class.invalid]="errors().city">
-          <label for="city">City <span class="req">*</span></label>
-          <input id="city" formControlName="city" />
-          @if (errors().city) { <div class="err">{{ errors().city }}</div> }
-        </div>
-        <div class="field">
-          <label for="state">State <span class="req">*</span></label>
-          <select id="state" formControlName="state">
-            @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
-          </select>
-        </div>
-      </div>
-      <div class="row-2">
-        <div class="field" [class.invalid]="errors().website">
-          <label for="web">Website</label>
-          <input id="web" type="url" formControlName="website" placeholder="https://" />
-          @if (errors().website) { <div class="err">{{ errors().website }}</div> }
-        </div>
-        <div class="field" [class.invalid]="errors().gstin">
-          <label for="gst">GSTIN (for GST invoices)</label>
-          <input id="gst" formControlName="gstin" maxlength="15" class="upper" />
-          @if (errors().gstin) { <div class="err">{{ errors().gstin }}</div> }
-        </div>
-      </div>
+    @if (opts(); as o) {
+      <form (ngSubmit)="step() === 4 ? submit() : next()" novalidate>
+        @switch (step()) {
+          <!-- 1. About you -->
+          @case (0) {
+            <section class="pane">
+              <div class="row-2">
+                <div class="field" [class.invalid]="err('full_name')"><label for="o-name">Full name <span class="req">*</span></label><input id="o-name" name="full_name" [(ngModel)]="f['full_name']" autocomplete="name" />
+                  @if (err('full_name')) { <div class="err">{{ err('full_name') }}</div> }</div>
+                <div class="field" [class.invalid]="err('business_name')"><label for="o-biz">Company / business name <span class="req">*</span></label><input id="o-biz" name="business_name" [(ngModel)]="f['business_name']" autocomplete="organization" />
+                  @if (err('business_name')) { <div class="err">{{ err('business_name') }}</div> }</div>
+                <div class="field" [class.invalid]="err('email')"><label for="o-email">Email address <span class="req">*</span></label><input id="o-email" name="email" type="email" [(ngModel)]="f['email']" autocomplete="email" />
+                  @if (err('email')) { <div class="err">{{ err('email') }}</div> }</div>
+                <div class="field" [class.invalid]="err('phone')"><label for="o-phone">Phone number <span class="req">*</span></label><input id="o-phone" name="phone" type="tel" [(ngModel)]="f['phone']" placeholder="+91" autocomplete="tel" />
+                  @if (err('phone')) { <div class="err">{{ err('phone') }}</div> }</div>
+                <div class="field"><label for="o-web">Website URL</label><input id="o-web" name="website" [(ngModel)]="f['website']" placeholder="https://" /></div>
+                <div class="field"><label for="o-ind">Industry / business type</label>
+                  <input id="o-ind" name="industry" [(ngModel)]="f['industry']" list="industries" />
+                  <datalist id="industries">@for (i of o.industries; track i) { <option [value]="i"></option> }</datalist></div>
+              </div>
+              <details class="billing" [open]="!!err('gstin')">
+                <summary>Billing details for GST invoices <small>(optional)</small></summary>
+                <div class="row-2">
+                  <div class="field"><label for="o-city">City</label><input id="o-city" name="city" [(ngModel)]="f['city']" /></div>
+                  <div class="field"><label for="o-state">State</label>
+                    <select id="o-state" name="state" [(ngModel)]="f['state']">@for (s of o.states; track s) { <option [value]="s">{{ s }}</option> }</select></div>
+                  <div class="field" [class.invalid]="err('gstin')"><label for="o-gst">GSTIN</label><input id="o-gst" name="gstin" class="upper" maxlength="15" [(ngModel)]="f['gstin']" />
+                    @if (err('gstin')) { <div class="err">{{ err('gstin') }}</div> }</div>
+                  <div class="field"><label for="o-addr">Billing address</label><input id="o-addr" name="address" [(ngModel)]="f['address']" /></div>
+                </div>
+              </details>
+            </section>
+          }
 
-      <fieldset class="chips" [class.invalid]="errors().services">
-        <legend>Services you're interested in <span class="req">*</span></legend>
-        @for (s of serviceOptions; track s) {
-          <button type="button" class="chip" [class.on]="services().includes(s)" (click)="toggle(s)"
-                  [attr.aria-pressed]="services().includes(s)">{{ s }}</button>
+          <!-- 2. Social media -->
+          @case (1) {
+            <section class="pane">
+              <p class="q">Which social media do you have?</p>
+              <div class="chips">
+                @for (p of o.platforms; track p) {
+                  <button type="button" class="chip" [class.on]="has(p)" (click)="toggle('platforms', p)" [attr.aria-pressed]="has(p)">{{ p }}</button>
+                }
+              </div>
+
+              <div class="safe">🔒 <b>Prefer not to share passwords?</b> Add DigiFox as a partner instead: Meta Business Suite → Settings → Partners for Facebook &amp; Instagram, and a manager role on LinkedIn and YouTube. Anything you do share is encrypted and only visible to the DigiFox admin.</div>
+
+              @if (has('Facebook')) {
+                <div class="plat"><h4>Facebook</h4>
+                  <div class="row-2">
+                    <div class="field"><label for="o-fb">Facebook Page URL</label><input id="o-fb" name="facebook_url" [(ngModel)]="f['facebook_url']" placeholder="https://facebook.com/…" /></div>
+                    <div class="yn"><span>Have you given DigiFox admin access to the Page?</span>
+                      <div class="seg3"><button type="button" [class.on]="f['facebook_admin_access'] === 'yes'" (click)="f['facebook_admin_access'] = 'yes'">Yes</button><button type="button" [class.on]="f['facebook_admin_access'] === 'no'" (click)="f['facebook_admin_access'] = 'no'">No</button></div></div>
+                  </div></div>
+              }
+              @if (has('Instagram')) {
+                <div class="plat"><h4>Instagram</h4>
+                  <div class="row-2">
+                    <div class="field"><label for="o-ig">Instagram handle / username</label><input id="o-ig" name="instagram_handle" [(ngModel)]="f['instagram_handle']" placeholder="@" /></div>
+                    <div class="field"><label for="o-ige">Instagram login email</label><input id="o-ige" name="instagram_email" [(ngModel)]="f['instagram_email']" autocomplete="off" /></div>
+                    <div class="field"><label for="o-igp">Instagram password</label><input id="o-igp" name="instagram_password" [type]="show()['ig'] ? 'text' : 'password'" [(ngModel)]="f['instagram_password']" autocomplete="new-password" />
+                      <button type="button" class="eye" (click)="reveal('ig')">{{ show()['ig'] ? 'Hide' : 'Show' }}</button></div>
+                  </div></div>
+              }
+              @if (has('LinkedIn')) {
+                <div class="plat"><h4>LinkedIn</h4>
+                  <div class="row-2">
+                    <div class="field"><label for="o-li">LinkedIn company page URL</label><input id="o-li" name="linkedin_url" [(ngModel)]="f['linkedin_url']" /></div>
+                    <div class="yn"><span>Have you given DigiFox admin access?</span>
+                      <div class="seg3"><button type="button" [class.on]="f['linkedin_admin_access'] === 'yes'" (click)="f['linkedin_admin_access'] = 'yes'">Yes</button><button type="button" [class.on]="f['linkedin_admin_access'] === 'no'" (click)="f['linkedin_admin_access'] = 'no'">No</button></div></div>
+                  </div></div>
+              }
+              @if (has('Twitter')) {
+                <div class="plat"><h4>Twitter / X</h4>
+                  <div class="row-2">
+                    <div class="field"><label for="o-tw">Twitter / X handle</label><input id="o-tw" name="twitter_handle" [(ngModel)]="f['twitter_handle']" placeholder="@" /></div>
+                    <div class="field"><label for="o-twe">Twitter / X login email</label><input id="o-twe" name="twitter_email" [(ngModel)]="f['twitter_email']" autocomplete="off" /></div>
+                    <div class="field"><label for="o-twp">Twitter / X password</label><input id="o-twp" name="twitter_password" [type]="show()['tw'] ? 'text' : 'password'" [(ngModel)]="f['twitter_password']" autocomplete="new-password" />
+                      <button type="button" class="eye" (click)="reveal('tw')">{{ show()['tw'] ? 'Hide' : 'Show' }}</button></div>
+                  </div></div>
+              }
+              @if (has('YouTube')) {
+                <div class="plat"><h4>YouTube</h4>
+                  <div class="row-2">
+                    <div class="field"><label for="o-yt">YouTube channel URL</label><input id="o-yt" name="youtube_url" [(ngModel)]="f['youtube_url']" /></div>
+                    <div class="yn"><span>Have you given DigiFox access to the channel?</span>
+                      <div class="seg3"><button type="button" [class.on]="f['youtube_access'] === 'yes'" (click)="f['youtube_access'] = 'yes'">Yes</button><button type="button" [class.on]="f['youtube_access'] === 'no'" (click)="f['youtube_access'] = 'no'">No</button></div></div>
+                  </div></div>
+              }
+              <div class="field"><label for="o-oth">Other social media platforms</label><input id="o-oth" name="other_platforms" [(ngModel)]="f['other_platforms']" placeholder="e.g. Pinterest, Threads, WhatsApp Business" /></div>
+            </section>
+          }
+
+          <!-- 3. Website & Google -->
+          @case (2) {
+            <section class="pane">
+              <h4>Website credentials</h4>
+              <p class="hint">Better: create a separate login for DigiFox (e.g. a WordPress “Editor” user) instead of sharing your own.</p>
+              <div class="row-2">
+                <div class="field"><label for="o-cms">CMS / platform</label><input id="o-cms" name="website_cms" [(ngModel)]="f['website_cms']" list="cms" placeholder="WordPress, Shopify, Wix…" />
+                  <datalist id="cms"><option value="WordPress"></option><option value="Shopify"></option><option value="Wix"></option><option value="WooCommerce"></option><option value="Custom / coded"></option></datalist></div>
+                <div class="field"><label for="o-adm">Admin login URL</label><input id="o-adm" name="website_admin_url" [(ngModel)]="f['website_admin_url']" placeholder="https://…/wp-admin" /></div>
+                <div class="field"><label for="o-wu">Admin username</label><input id="o-wu" name="website_username" [(ngModel)]="f['website_username']" autocomplete="off" /></div>
+                <div class="field"><label for="o-wp">Admin password</label><input id="o-wp" name="website_password" [type]="show()['wp'] ? 'text' : 'password'" [(ngModel)]="f['website_password']" autocomplete="new-password" />
+                  <button type="button" class="eye" (click)="reveal('wp')">{{ show()['wp'] ? 'Hide' : 'Show' }}</button></div>
+                <div class="field"><label for="o-host">Hosting provider</label><input id="o-host" name="hosting_provider" [(ngModel)]="f['hosting_provider']" placeholder="Hostinger, GoDaddy…" /></div>
+                <div class="field"><label for="o-dom">Domain registered with</label><input id="o-dom" name="domain_provider" [(ngModel)]="f['domain_provider']" /></div>
+              </div>
+              <div class="field"><label for="o-wn">Anything else about the website?</label><textarea id="o-wn" name="website_notes" rows="2" [(ngModel)]="f['website_notes']"></textarea></div>
+
+              <h4 class="mt">Google</h4>
+              @for (g of [['google_analytics', 'Do you have Google Analytics set up?'], ['search_console', 'Do you have Google Search Console?'], ['google_ads', 'Do you have a Google Ads account?']]; track g[0]) {
+                <div class="yn line" [class.invalid]="err(g[0])">
+                  <span>{{ g[1] }} <span class="req">*</span></span>
+                  <div class="seg3"><button type="button" [class.on]="f[g[0]] === 'yes'" (click)="f[g[0]] = 'yes'">Yes</button><button type="button" [class.on]="f[g[0]] === 'no'" (click)="f[g[0]] = 'no'">No</button></div>
+                  @if (err(g[0])) { <div class="err">{{ err(g[0]) }}</div> }
+                </div>
+              }
+              <div class="field"><label for="o-gbp">Google Business Profile URL</label><input id="o-gbp" name="google_business_url" [(ngModel)]="f['google_business_url']" placeholder="https://g.page/…" /></div>
+            </section>
+          }
+
+          <!-- 4. Brand -->
+          @case (3) {
+            <section class="pane">
+              <div class="row-2 brand">
+                <label class="drop logo" [class.has]="logo()">
+                  <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.pdf,.ai,.eps,.psd" (change)="pickLogo($event)" />
+                  @if (logoPreview()) { <img [src]="logoPreview()" alt="Logo preview" /> } @else { <span class="big">⬆</span> }
+                  <b>{{ logo()?.name ?? 'Upload your logo' }}</b><small>PNG, SVG, AI or PDF · up to 10 MB</small>
+                </label>
+                <label class="drop">
+                  <input type="file" multiple accept=".png,.jpg,.jpeg,.webp,.svg,.pdf,.ai,.eps,.psd,.zip" (change)="pickFiles($event)" />
+                  <span class="big">🎨</span><b>Add brand files</b><small>Style guide, fonts, other logos · up to 20 MB each</small>
+                </label>
+              </div>
+              @if (err('logo') || err('brand_files')) { <div class="err">{{ err('logo') || err('brand_files') }}</div> }
+              @for (file of brandFiles(); track $index; let i = $index) {
+                <div class="fileline"><span>📄 {{ file.name }}</span><small>{{ size(file.size) }}</small><button type="button" (click)="removeFile(i)" aria-label="Remove">✕</button></div>
+              }
+              <div class="field"><label for="o-bn">Brand assets: style guide, colours, fonts</label><textarea id="o-bn" name="brand_notes" rows="3" [(ngModel)]="f['brand_notes']" placeholder="e.g. Primary colour #2E7D32, font Poppins, tone friendly and local"></textarea></div>
+            </section>
+          }
+
+          <!-- 5. Goals -->
+          @case (4) {
+            <section class="pane">
+              <p class="q" [class.bad]="err('goals')">Primary marketing goals <span class="req">*</span></p>
+              <div class="chips">
+                @for (g of o.goals; track g) { <button type="button" class="chip" [class.on]="goals().includes(g)" (click)="toggle('goals', g)" [attr.aria-pressed]="goals().includes(g)">{{ g }}</button> }
+              </div>
+              @if (err('goals')) { <div class="err">{{ err('goals') }}</div> }
+              <div class="field"><label for="o-go">Other goal</label><input id="o-go" name="goals_other" [(ngModel)]="f['goals_other']" /></div>
+              <div class="field" [class.invalid]="err('target_audience')"><label for="o-ta">Target audience <span class="req">*</span></label>
+                <textarea id="o-ta" name="target_audience" rows="3" [(ngModel)]="f['target_audience']" placeholder="Who are your customers? Age, location, interests…"></textarea>
+                @if (err('target_audience')) { <div class="err">{{ err('target_audience') }}</div> }</div>
+              <div class="field"><label for="o-ch">Current marketing challenges</label><textarea id="o-ch" name="challenges" rows="2" [(ngModel)]="f['challenges']"></textarea></div>
+              <div class="field"><label for="o-co">Competitor websites / brands</label><textarea id="o-co" name="competitors" rows="2" [(ngModel)]="f['competitors']"></textarea></div>
+              <div class="field"><label for="o-no">Additional notes or instructions</label><textarea id="o-no" name="notes" rows="2" [(ngModel)]="f['notes']"></textarea></div>
+            </section>
+          }
         }
-        @if (errors().services) { <div class="err">{{ errors().services }}</div> }
-      </fieldset>
 
-      <div class="field">
-        <label for="notes">Anything else we should know?</label>
-        <textarea id="notes" formControlName="notes" rows="3"></textarea>
-      </div>
-
-      <div class="auth-actions">
-        <button class="btn-dark" type="submit" [disabled]="busy()">
-          @if (busy()) { <span class="spinner"></span> } Submit &amp; continue
-        </button>
-      </div>
-    </form>
+        <div class="nav">
+          @if (step() > 0) { <button type="button" class="btn-ghost" (click)="back()">← Back</button> } @else { <span></span> }
+          <button class="btn-dark" type="submit" [disabled]="busy()">
+            @if (busy()) { <span class="spinner"></span> Submitting… } @else if (step() === 4) { Submit &amp; continue } @else { Next → }
+          </button>
+        </div>
+      </form>
+    } @else { <p class="hint">Loading…</p> }
   </main>
 </div>

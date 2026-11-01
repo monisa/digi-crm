@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureAccountActive;
 use App\Http\Middleware\EnsurePermission;
+use App\Http\Middleware\StaffOnly;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => EnsurePermission::class,
             'active' => EnsureAccountActive::class,
+            'staff' => StaffOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

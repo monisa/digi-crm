@@ -1,11 +1,12 @@
 import { Component, signal } from '@angular/core';
+import { CompanySettings } from './company';
 import { Integrations } from './integrations';
 import { RolePermissions } from './role-permissions';
 import { UsersAccess } from './users-access';
 
 @Component({
   selector: 'app-settings',
-  imports: [RolePermissions, UsersAccess, Integrations],
+  imports: [RolePermissions, UsersAccess, Integrations, CompanySettings],
   template: `
     <div class="head">
       <h1>Settings</h1>
@@ -14,18 +15,20 @@ import { UsersAccess } from './users-access';
     <div class="tabs" role="tablist">
       <button role="tab" [class.on]="tab() === 'roles'" (click)="tab.set('roles')">Role permissions</button>
       <button role="tab" [class.on]="tab() === 'users'" (click)="tab.set('users')">Users &amp; access</button>
+      <button role="tab" [class.on]="tab() === 'company'" (click)="tab.set('company')">Company &amp; billing</button>
       <button role="tab" [class.on]="tab() === 'integrations'" (click)="tab.set('integrations')">Integrations</button>
     </div>
     @switch (tab()) {
       @case ('roles') { <app-role-permissions /> }
       @case ('users') { <app-users-access /> }
+      @case ('company') { <app-company /> }
       @case ('integrations') { <app-integrations /> }
     }
   `,
   styleUrl: './settings.scss',
 })
 export class Settings {
-  protected readonly tab = signal<'roles' | 'users' | 'integrations'>(
-    (new URLSearchParams(location.search).get('tab') as 'roles' | 'users' | 'integrations') || 'roles',
+  protected readonly tab = signal<'roles' | 'users' | 'company' | 'integrations'>(
+    (new URLSearchParams(location.search).get('tab') as 'roles' | 'users' | 'company' | 'integrations') || 'roles',
   );
 }

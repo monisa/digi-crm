@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->hasOne(Employee::class);
     }
 
+    public function client(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
@@ -84,6 +89,8 @@ class User extends Authenticatable
             'status' => $this->status,
             'needs_onboarding' => $this->needsOnboarding(),
             'leads_scope' => $this->isAdmin() ? 'all' : ($this->leads_scope ?? 'assigned'),
+            'clients_scope' => $this->isAdmin() ? 'all' : ($this->clients_scope ?? 'assigned'),
+            'client_id' => $this->client_id,
             'last_login_at' => $this->last_login_at?->toIso8601String(),
         ];
     }

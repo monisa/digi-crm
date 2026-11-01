@@ -173,6 +173,7 @@ export class LeadSheet {
   }
 
   openClient(): void {
-    this.router.navigateByUrl('/clients');
+    const id = this.lead()?.converted_client_id;
+    this.router.navigate(id ? ['/clients', id] : ['/clients']);
   }
 }

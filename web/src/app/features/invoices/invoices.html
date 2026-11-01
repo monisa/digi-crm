@@ -1,0 +1,67 @@
+<div class="page-head">
+  <div>
+    <h1>{{ isClient() ? 'Invoices & payments' : 'Invoices' }}</h1>
+    <p>{{ isClient() ? 'Your invoices from DigiFox Pro. Pay any of them by scanning the UPI QR.' : 'GST invoices, UPI payments and confirmations.' }}</p>
+  </div>
+  @if (!isClient() && auth.can('invoices.create')) { <div class="actions"><a class="btn" routerLink="/invoices/new">+ New invoice</a></div> }
+</div>
+
+@if (summary(); as s) {
+  <div class="sum">
+    <button class="card stat" [class.on]="status === 'open'" (click)="filter('open')"><span>{{ isClient() ? 'To pay' : 'Outstanding' }}</span><b class="money">{{ money(s.outstanding) }}</b></button>
+    <button class="card stat crit" [class.on]="status === 'overdue'" (click)="filter('overdue')"><span>Overdue</span><b class="money">{{ money(s.overdue) }}</b><small>{{ s.overdue_count }} invoice{{ s.overdue_count === 1 ? '' : 's' }}</small></button>
+    <div class="card stat ok"><span>{{ isClient() ? 'Paid this month' : 'Received this month' }}</span><b class="money">{{ money(s.paid_this_month) }}</b></div>
+    @if (canConfirm) {
+      <button class="card stat warn" [class.on]="tab() === 'claims'" (click)="openClaims()">
+        <span>Payments to confirm</span><b>@if (s.pending_claims) { <span class="live"></span> }{{ s.pending_claims }}</b><small>clients said “I’ve paid”</small>
+      </button>
+    }
+  </div>
+}
+
+@if (tab() === 'claims') {
+  <div class="card">
+    <h3>Check these in your bank account, then confirm</h3>
+    <p class="hint">Search the bank statement for the UPI transaction ID (UTR) and amount. Confirming records the payment on the invoice.</p>
+    @for (c of claims(); track c.id) {
+      <div class="claim">
+        <div class="grow">
+          <b>{{ c.client }} · <span class="money">{{ money(c.amount) }}</span></b>
+          <small>{{ c.mode === 'upi' ? 'UPI' : 'Bank transfer' }} · UTR <code>{{ c.reference }}</code> · paid {{ date(c.paid_on) }} · for <a [routerLink]="['/invoices', c.invoice.id]">{{ c.invoice.invoice_no }}</a></small>
+          @if (c.note) { <small class="note">“{{ c.note }}”</small> }
+        </div>
+        @if (rejecting() === c.id) {
+          <div class="acts"><input class="input-sm" placeholder="Reason, e.g. not received yet" [(ngModel)]="notes[c.id]" />
+            <button class="btn-ghost danger" (click)="decide(c, 'reject')">Reject</button><button class="btn-ghost" (click)="rejecting.set(null)">Back</button></div>
+        } @else {
+          <div class="acts"><button class="btn-ghost" (click)="rejecting.set(c.id)">Not received</button><button class="btn ok" (click)="decide(c, 'confirm')">Received ✓</button></div>
+        }
+      </div>
+    } @empty { <div class="empty-box"><b>Nothing to confirm</b>You’re all caught up.</div> }
+  </div>
+} @else {
+  <div class="card">
+    <div class="toolbar">
+      <div class="filters">
+        <input class="input-sm grow" type="search" [placeholder]="isClient() ? 'Search invoice number' : 'Search invoice number or client'" [(ngModel)]="search" (ngModelChange)="search$.next()" />
+        <select class="select-sm" [(ngModel)]="status" (ngModelChange)="load()" aria-label="Status">
+          <option value="">All</option><option value="open">To be paid</option><option value="overdue">Overdue</option><option value="paid">Paid</option>
+          @if (!isClient()) { <option value="draft">Drafts</option> }<option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="list" [class.loading]="loading()">
+      @for (i of rows(); track i.id; let n = $index) {
+        <a class="row" [routerLink]="['/invoices', i.id]" [style.animation-delay.s]="n * 0.02">
+          <span class="no"><b>{{ i.invoice_no || 'Draft' }}</b><small>{{ date(i.issue_date) }}</small></span>
+          @if (!isClient()) { <span class="cl">{{ i.client?.company_name }}</span> }
+          <span class="dd"><small>Due</small>{{ date(i.due_date) }}</span>
+          <span class="amt"><b class="money">{{ money(i.total) }}</b>@if (i.status === 'partial') { <small>{{ money(i.balance) }} left</small> }</span>
+          <span class="badge" [attr.data-s]="stateOf(i)">{{ i.overdue ? 'Overdue' : label[i.status] }}</span>
+        </a>
+      } @empty {
+        <div class="empty-box">@if (loading()) { Loading… } @else { <b>No invoices here</b> }</div>
+      }
+    </div>
+  </div>
+}

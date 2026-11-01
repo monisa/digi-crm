@@ -1,0 +1,109 @@
+@if (error()) {
+  <div class="card empty-box"><b>{{ error() }}</b></div>
+} @else if (c(); as c) {
+  <a class="crumb" routerLink="/clients">← All clients</a>
+  <section class="card hero">
+    <span class="ini">{{ initials(c.company_name) }}</span>
+    <div class="who">
+      <h1>{{ c.company_name }}</h1>
+      <p>{{ c.contact_name || 'No contact person' }}@if (c.industry) { · {{ c.industry }} }@if (c.city) { · {{ c.city }} }</p>
+      <div class="tags">
+        @if (c.status === 'inactive') { <span class="badge b-crit">Past client</span> } @else { <span class="badge b-good">Active</span> }
+        @if (c.account_manager) { <span class="badge b-info">Managed by {{ c.account_manager.name }}</span> }
+        @if (c.gstin) { <span class="badge b-warn">GSTIN {{ c.gstin }}</span> }
+      </div>
+    </div>
+    <div class="acts">
+      @if (auth.can('clients.edit')) { <button class="btn-ghost" (click)="editing.set(true)">Edit</button> }
+      @if (auth.can('invoices.create')) { <a class="btn" [routerLink]="['/invoices/new']" [queryParams]="{ client: c.id }">+ New invoice</a> }
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="card"><span>Billed</span><b class="money">{{ money(c.stats.billed) }}</b></div>
+    <div class="card"><span>Received</span><b class="money ok">{{ money(c.stats.paid) }}</b></div>
+    <div class="card"><span>Outstanding</span><b class="money" [class.due]="c.stats.outstanding > 0">{{ money(c.stats.outstanding) }}</b>
+      @if (c.stats.overdue) { <small class="due">{{ c.stats.overdue }} overdue</small> }</div>
+  </div>
+
+  <div class="tabs2" role="tablist">
+    <button role="tab" [class.on]="tab() === 'overview'" (click)="open('overview')">Overview</button>
+    <button role="tab" [class.on]="tab() === 'invoices'" (click)="open('invoices')">Invoices &amp; payments</button>
+  </div>
+
+  @switch (tab()) {
+    @case ('overview') {
+      <div class="two">
+        <section class="card">
+          <h3>Contact &amp; billing</h3>
+          <dl class="dl">
+            <div><dt>Phone</dt><dd>@if (c.phone) { <a [href]="'tel:' + c.phone">{{ c.phone }}</a> } @else { — }</dd></div>
+            <div><dt>Email</dt><dd>@if (c.email) { <a [href]="'mailto:' + c.email">{{ c.email }}</a> } @else { — }</dd></div>
+            <div><dt>GSTIN</dt><dd>{{ c.gstin || 'Not registered' }}</dd></div>
+            <div><dt>Website</dt><dd>{{ c.website || '—' }}</dd></div>
+            <div class="wide"><dt>Address</dt><dd>{{ c.address || '—' }}@if (c.city || c.state) {<br>{{ place(c) }} }</dd></div>
+            @if (c.notes) { <div class="wide"><dt>Internal notes</dt><dd class="pre">{{ c.notes }}</dd></div> }
+          </dl>
+        </section>
+        <section class="card">
+          <div class="card-h"><h3>Client portal logins</h3>
+            @if (auth.can('clients.edit')) { <button class="btn-ghost sm" (click)="startInvite()">+ Invite</button> }</div>
+          @for (u of c.logins; track u.id) {
+            <div class="login"><b>{{ u.name }}</b><small>{{ u.email }} · {{ u.status === 'pending_onboarding' ? 'invited, form not filled yet' : u.last_login_at ? 'last login ' + date(u.last_login_at) : 'not logged in yet' }}</small></div>
+          } @empty { <p class="hint">No portal login yet. Invite the client so they can see invoices, pay and raise tickets.</p> }
+          @if (inviting()) {
+            <form class="invite" (ngSubmit)="invite()">
+              <input class="input-sm" name="n" placeholder="Name" [(ngModel)]="inviteName" required />
+              <input class="input-sm" name="e" type="email" placeholder="Email" [(ngModel)]="inviteEmail" required />
+              <button class="btn" type="submit">Send invite</button>
+              @if (inviteError()) { <div class="err">{{ inviteError() }}</div> }
+            </form>
+          }
+          @if (c.files.length) {
+            <h3 class="mt">Brand files</h3>
+            @for (f of c.files; track f.id) {
+              <button class="file" (click)="download(f)"><span>{{ f.kind === 'logo' ? '🖼 Logo' : '🎨' }} {{ f.name }}</span><small>{{ (f.size / 1024).toFixed(0) }} KB · Download</small></button>
+            }
+          }
+          @if (c.has_credentials) {
+            <h3 class="mt">Shared logins</h3>
+            @if (creds()) {
+              @for (e of credEntries(); track e[0]) {
+                <div class="cred"><b>{{ e[0] === 'website' ? 'Website admin' : e[0] | titlecase }}</b>
+                  @for (kv of e[1] | keyvalue; track kv.key) { <div class="line"><span>{{ kv.key.replace('_', ' ') }}</span><code>{{ kv.value }}</code></div> }
+                </div>
+              }
+              <p class="hint">Hidden again in 2 minutes. Recent views: @for (v of creds()!.views; track $index) { {{ v.name }} ({{ when(v.viewed_at) }}){{ $last ? '' : ', ' }} }</p>
+            } @else if (auth.can('clients.approve')) {
+              <button class="btn-ghost" (click)="reveal()">🔒 Reveal logins</button>
+              <p class="hint">Encrypted. Each reveal is recorded.</p>
+            } @else { <p class="hint">🔒 Logins are on file. Ask the admin if you need them.</p> }
+          }
+        </section>
+      </div>
+      @if (answers().length) {
+        <section class="card answers">
+          <h3>Onboarding answers</h3>
+          <div class="agrid">
+            @for (g of answers(); track g.title) {
+              <div><h4>{{ g.title }}</h4>@for (r of g.rows; track r[0]) { <div class="line"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div> }</div>
+            }
+          </div>
+        </section>
+      }
+    }
+    @case ('invoices') {
+      <section class="card">
+        @for (i of invoices() ?? []; track i.id) {
+          <a class="inv" [routerLink]="['/invoices', i.id]">
+            <b>{{ i.invoice_no || 'Draft' }}</b>
+            <small>{{ date(i.issue_date) }}</small>
+            <span class="money">{{ money(i.total) }}</span>
+            <span class="badge" [attr.data-s]="i.overdue ? 'overdue' : i.status">{{ i.overdue ? 'Overdue' : label[i.status] }}</span>
+          </a>
+        } @empty { <div class="empty-box">@if (invoices()) { <b>No invoices yet</b> } @else { Loading… }</div> }
+      </section>
+    }
+  }
+  @if (editing()) { <app-client-form [client]="c" (closed)="editing.set(false)" (saved)="saved()" /> }
+} @else { <div class="card skel"></div> }

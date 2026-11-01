@@ -59,14 +59,7 @@ class AuthTest extends TestCase
     {
         $token = $this->postJson('/v1/auth/register', $this->registerPayload())->json('token');
 
-        $this->withToken($token)->postJson('/v1/onboarding', [
-            'business_name' => 'Green Leaf Organics',
-            'industry' => 'Retail',
-            'city' => 'Kochi',
-            'state' => 'Kerala',
-            'gstin' => '32ABCDE1234F1Z5',
-            'services' => ['Meta Ads', 'SEO'],
-        ])->assertOk()->assertJsonPath('user.status', 'active');
+        $this->withToken($token)->postJson('/v1/onboarding', ['full_name' => 'Asha Menon', 'business_name' => 'Green Leaf Organics', 'email' => 'asha@example.com', 'phone' => '+91 98470 12345', 'google_analytics' => 'yes', 'search_console' => 'no', 'google_ads' => 'no', 'goals' => ['SEO'], 'target_audience' => 'Health-conscious families in Kochi', 'state' => 'Kerala'])->assertOk()->assertJsonPath('user.status', 'active');
 
         $this->withToken($token)->getJson('/v1/auth/me')
             ->assertJsonPath('user.needs_onboarding', false)

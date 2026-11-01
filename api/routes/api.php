@@ -3,6 +3,11 @@
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Billing\ClientAssetsController;
+use App\Http\Controllers\Billing\ClientController;
+use App\Http\Controllers\Billing\CompanyController;
+use App\Http\Controllers\Billing\InvoiceController;
+use App\Http\Controllers\Billing\PaymentClaimController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\Hr\EmployeeController;
@@ -40,6 +45,7 @@ Route::prefix('auth')->middleware('throttle:20,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/onboarding', [OnboardingController::class, 'show']);
     Route::post('/onboarding', [OnboardingController::class, 'store']);
 });
 
@@ -93,6 +99,40 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/integrations/meta/pages', [MetaController::class, 'store'])->middleware('permission:settings.edit');
     Route::delete('/integrations/meta/pages/{metaPage}', [MetaController::class, 'destroy'])->middleware('permission:settings.edit');
     Route::post('/integrations/meta/sync', [MetaController::class, 'sync'])->middleware('permission:settings.edit');
+
+    // Clients (staff): admins and "all clients" staff see all, others the clients they manage.
+    Route::middleware('staff')->group(function () {
+        Route::get('/clients', [ClientController::class, 'index'])->middleware('permission:clients.view');
+        Route::post('/clients', [ClientController::class, 'store'])->middleware('permission:clients.create');
+        Route::get('/clients/{client}', [ClientController::class, 'show'])->middleware('permission:clients.view');
+        Route::put('/clients/{client}', [ClientController::class, 'update'])->middleware('permission:clients.edit');
+        Route::post('/clients/{client}/invite', [ClientController::class, 'invite'])->middleware('permission:clients.edit');
+        Route::get('/clients/{client}/files', [ClientAssetsController::class, 'files'])->middleware('permission:clients.view');
+        Route::get('/client-files/{file}', [ClientAssetsController::class, 'download'])->middleware('permission:clients.view');
+        // Clients → "approve" = may reveal shared passwords (admins always can).
+        Route::post('/clients/{client}/credentials', [ClientAssetsController::class, 'credentials'])->middleware('permission:clients.approve');
+
+        Route::get('/settings/company', [CompanyController::class, 'show'])->middleware('permission:settings.view');
+        Route::put('/settings/company', [CompanyController::class, 'update'])->middleware('permission:settings.edit');
+    });
+
+    // Invoices: client logins see their own issued invoices; staff create and manage them.
+    Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoices.view');
+    Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices.view');
+    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->middleware('permission:invoices.view');
+    Route::post('/invoices/{invoice}/claims', [PaymentClaimController::class, 'store'])->middleware('permission:invoices.view');
+    Route::middleware('staff')->group(function () {
+        Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('permission:invoices.create');
+        Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->middleware('permission:invoices.edit');
+        Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->middleware('permission:invoices.delete');
+        Route::post('/invoices/{invoice}/issue', [InvoiceController::class, 'issue'])->middleware('permission:invoices.create');
+        Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->middleware('permission:invoices.edit');
+        Route::post('/invoices/{invoice}/email', [InvoiceController::class, 'email'])->middleware('permission:invoices.edit');
+        Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'recordPayment'])->middleware('permission:invoices.approve');
+        Route::get('/payment-claims', [PaymentClaimController::class, 'index'])->middleware('permission:invoices.approve');
+        Route::post('/payment-claims/{claim}/{decision}', [PaymentClaimController::class, 'decide'])
+            ->whereIn('decision', ['confirm', 'reject'])->middleware('permission:invoices.approve');
+    });
 
     // Public holidays: everyone can see them; leave.edit (admin) manages them.
     Route::get('/holidays', [HolidayController::class, 'index']);

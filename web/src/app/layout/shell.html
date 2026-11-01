@@ -5,7 +5,7 @@
     </a>
 
     @for (section of sections(); track section.name) {
-      <div class="nav-label">{{ section.name }}</div>
+      <div class="nav-label">{{ section.name === 'Client portal' && auth.user()?.role !== 'client' ? 'Client work' : section.name === 'Client portal' ? 'Your account' : section.name }}</div>
       <nav class="nav">
         @for (item of section.items; track item.path) {
           <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">

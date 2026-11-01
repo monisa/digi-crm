@@ -194,7 +194,9 @@ class LeadController extends Controller
                 'email' => $lead->email,
                 'phone' => $lead->phone,
                 'status' => 'active',
+                'city' => $lead->city,
                 'account_manager_id' => $lead->assigned_to ?? $user->id,
+                'source_lead_id' => $lead->id,
             ]);
             $lead->update(['status' => 'won', 'converted_client_id' => $client->id, 'first_contacted_at' => $lead->first_contacted_at ?? now()]);
             $lead->log($user, 'status', "Won: converted to client {$client->company_name}");

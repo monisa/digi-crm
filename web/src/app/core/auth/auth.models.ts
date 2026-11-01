@@ -11,6 +11,8 @@ export interface AuthUser {
   status: Status;
   needs_onboarding: boolean;
   leads_scope: 'assigned' | 'all';
+  clients_scope: 'assigned' | 'all';
+  client_id: number | null;
   last_login_at: string | null;
 }
 
