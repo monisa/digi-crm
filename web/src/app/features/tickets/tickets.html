@@ -1,0 +1,60 @@
+<div class="page-head">
+  <div>
+    <h1>{{ isClient() ? 'Help & requests' : 'Tickets' }}</h1>
+    <p>{{ isClient() ? 'Ask for changes, report a problem or ask a question. Our team replies here.' : 'Client requests and conversations.' }}</p>
+  </div>
+  @if (auth.can('tickets.create')) { <div class="actions"><button class="btn" (click)="startNew()">+ {{ isClient() ? 'New request' : 'New ticket' }}</button></div> }
+</div>
+
+<div class="filters">
+  <div class="seg2">
+    <button [class.on]="status === 'active'" (click)="status = 'active'; load()">Open ({{ counts().active }})</button>
+    <button [class.on]="status === 'resolved'" (click)="status = 'resolved'; load()">Resolved</button>
+    <button [class.on]="status === 'closed'" (click)="status = 'closed'; load()">Closed</button>
+    <button [class.on]="status === 'all'" (click)="status = 'all'; load()">All</button>
+  </div>
+  @if (!isClient()) {
+    <select class="select-sm" [(ngModel)]="assigned" (ngModelChange)="load()" aria-label="Assigned"><option value="">Anyone</option><option value="me">Assigned to me</option><option value="none">Unassigned</option></select>
+    @if (counts().needs_reply) { <span class="badge b-crit"><span class="live"></span> {{ counts().needs_reply }} waiting for a reply</span> }
+  }
+</div>
+
+<div class="card list">
+  @for (t of list(); track t.id; let i = $index) {
+    <a class="row" [routerLink]="['/tickets', t.id]" [style.animation-delay.s]="i * 0.025" [class.unread]="isClient() ? !t.awaiting_staff && t.status !== 'closed' && t.status !== 'resolved' : t.awaiting_staff">
+      <span class="pri" [attr.data-p]="t.priority" [title]="t.priority + ' priority'"></span>
+      <div class="grow">
+        <b>{{ t.subject }}</b>
+        <small>{{ t.number }}@if (!isClient()) { · {{ t.client?.company_name }} }@if (t.category) { · {{ t.category }} }</small>
+      </div>
+      @if (!isClient()) { <span class="as">{{ t.assigned_to?.name || 'Unassigned' }}</span> }
+      <span class="badge st" [attr.data-s]="t.status">{{ label[t.status] }}</span>
+      <small class="when">{{ ago(t.last_reply_at) }}</small>
+    </a>
+  } @empty {
+    <div class="empty-box">@if (loading()) { Loading… } @else { <b>No tickets here</b>@if (isClient()) { Need something? Use “New request”. } }</div>
+  }
+</div>
+
+@if (creating()) {
+  <app-sheet [title]="isClient() ? 'New request' : 'New ticket'" subtitle="Tell us what you need" width="540px" (closed)="creating.set(false)">
+    <form (ngSubmit)="create()">
+      @if (!isClient()) {
+        <div class="field compact" [class.invalid]="err('client_id')"><label for="nt-c">Client <span class="req">*</span></label>
+          <select id="nt-c" name="c" [(ngModel)]="nt.client_id"><option [ngValue]="null" disabled>Choose…</option>@for (c of clients(); track c.id) { <option [ngValue]="c.id">{{ c.company_name }}</option> }</select>
+          @if (err('client_id')) { <div class="err">{{ err('client_id') }}</div> }</div>
+      }
+      <div class="field compact" [class.invalid]="err('subject')"><label for="nt-s">Subject <span class="req">*</span></label><input id="nt-s" name="s" [(ngModel)]="nt.subject" placeholder="e.g. Change the ad creative" />
+        @if (err('subject')) { <div class="err">{{ err('subject') }}</div> }</div>
+      <div class="row-2">
+        <div class="field compact"><label for="nt-cat">Category</label><select id="nt-cat" name="cat" [(ngModel)]="nt.category"><option value="">—</option>@for (c of categories(); track c) { <option [value]="c">{{ c }}</option> }</select></div>
+        <div class="field compact"><label for="nt-p">How urgent?</label><select id="nt-p" name="p" [(ngModel)]="nt.priority"><option value="low">Low: when you can</option><option value="medium">Normal</option><option value="high">Urgent</option></select></div>
+      </div>
+      <div class="field" [class.invalid]="err('body')"><label for="nt-b">Details <span class="req">*</span></label><textarea id="nt-b" name="b" rows="5" [(ngModel)]="nt.body"></textarea>
+        @if (err('body')) { <div class="err">{{ err('body') }}</div> }</div>
+      <label class="attach"><input type="file" (change)="pick($event)" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.xlsx,.csv,.zip,.mp4" />📎 {{ ntFile()?.name ?? 'Attach a file (optional)' }}</label>
+      @if (err('attachment')) { <div class="err">{{ err('attachment') }}</div> }
+      <div class="form-actions"><button type="button" class="btn-ghost" (click)="creating.set(false)">Cancel</button><button class="btn" type="submit" [disabled]="busy()">Send</button></div>
+    </form>
+  </app-sheet>
+}

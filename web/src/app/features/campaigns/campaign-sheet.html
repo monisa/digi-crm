@@ -1,0 +1,77 @@
+<app-sheet [title]="c()?.name ?? 'New campaign'" [subtitle]="c()?.client?.company_name ?? ''" width="620px" (closed)="closed.emit()">
+  @if (isClient() && c(); as c) {
+    <!-- Client view -->
+    <div class="meta"><span class="plat" [attr.data-p]="c.platform">{{ platforms()[c.platform] }}</span>
+      <span class="badge st" [attr.data-s]="c.status">{{ c.status }}</span>
+      @if (c.start_date) { <span class="hint">{{ date(c.start_date) }}@if (c.end_date) { – {{ date(c.end_date) }} }</span> }</div>
+    @if (c.objective) { <p class="obj">Goal: <b>{{ c.objective }}</b></p> }
+    <div class="kpis">
+      <div><span>Leads</span><b>{{ c.results.leads ?? '—' }}</b></div>
+      <div><span>Spend</span><b>{{ c.results.spend !== null ? money(c.results.spend) : '—' }}</b></div>
+      <div><span>Cost per lead</span><b>{{ c.results.cost_per_lead !== null ? money(c.results.cost_per_lead) : '—' }}</b></div>
+      <div><span>Reach</span><b>{{ c.results.reach !== null ? count(c.results.reach) : '—' }}</b></div>
+      <div><span>Clicks</span><b>{{ c.results.clicks !== null ? count(c.results.clicks) : '—' }}</b></div>
+      <div><span>Click rate</span><b>{{ c.results.ctr !== null ? c.results.ctr + '%' : '—' }}</b></div>
+    </div>
+    @if (c.summary) { <div class="summary"><h4>Update from DigiFox</h4><p>{{ c.summary }}</p></div> }
+    <h4>Reports &amp; files</h4>
+    @for (f of c.files ?? []; track f.id) {
+      <button class="file" (click)="download(f)"><span>📄 {{ f.title }}</span><small>{{ date(f.uploaded_at) }} · Download</small></button>
+    } @empty { <p class="hint">Reports will appear here.</p> }
+  } @else {
+    <!-- Staff form -->
+    <form (ngSubmit)="save()">
+      <div class="row-2">
+        @if (!c()) {
+          <div class="field compact wide" [class.invalid]="err('client_id')"><label for="cp-cl">Client <span class="req">*</span></label>
+            <select id="cp-cl" name="cl" [(ngModel)]="f['client_id']"><option [ngValue]="null" disabled>Choose…</option>@for (cl of clients(); track cl.id) { <option [ngValue]="cl.id">{{ cl.company_name }}</option> }</select>
+            @if (err('client_id')) { <div class="err">{{ err('client_id') }}</div> }</div>
+        }
+        <div class="field compact wide" [class.invalid]="err('name')"><label for="cp-n">Campaign name <span class="req">*</span></label><input id="cp-n" name="n" [(ngModel)]="f['name']" [disabled]="!canEdit()" placeholder="e.g. Diwali lead generation" />
+          @if (err('name')) { <div class="err">{{ err('name') }}</div> }</div>
+        <div class="field compact"><label for="cp-p">Platform</label><select id="cp-p" name="p" [(ngModel)]="f['platform']" [disabled]="!canEdit()">@for (p of platformKeys(); track p[0]) { <option [value]="p[0]">{{ p[1] }}</option> }</select></div>
+        <div class="field compact"><label for="cp-s">Status</label><select id="cp-s" name="s" [(ngModel)]="f['status']" [disabled]="!canEdit()">
+          <option value="planned">Planned</option><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option></select></div>
+        <div class="field compact"><label for="cp-o">Objective</label><input id="cp-o" name="o" [(ngModel)]="f['objective']" [disabled]="!canEdit()" list="objs" />
+          <datalist id="objs"><option value="Lead generation"></option><option value="Brand awareness"></option><option value="Website traffic"></option><option value="Sales"></option><option value="Followers"></option></datalist></div>
+        <div class="field compact"><label for="cp-b">Ad budget (₹)</label><input id="cp-b" name="b" type="number" min="0" [(ngModel)]="f['budget']" [disabled]="!canEdit()" /></div>
+        <div class="field compact"><label for="cp-sd">Start</label><input id="cp-sd" name="sd" type="date" [(ngModel)]="f['start_date']" [disabled]="!canEdit()" /></div>
+        <div class="field compact" [class.invalid]="err('end_date')"><label for="cp-ed">End</label><input id="cp-ed" name="ed" type="date" [(ngModel)]="f['end_date']" [disabled]="!canEdit()" />
+          @if (err('end_date')) { <div class="err">{{ err('end_date') }}</div> }</div>
+      </div>
+
+      <h4>Results the client sees</h4>
+      <div class="row-3">
+        @for (r of [['spend', 'Spend (₹)'], ['leads', 'Leads'], ['conversions', 'Conversions'], ['reach', 'Reach'], ['impressions', 'Impressions'], ['clicks', 'Clicks']]; track r[0]) {
+          <div class="field compact"><label [for]="'cp-' + r[0]">{{ r[1] }}</label><input [id]="'cp-' + r[0]" [name]="r[0]" type="number" min="0" [(ngModel)]="f[r[0]]" [disabled]="!canEdit()" /></div>
+        }
+      </div>
+      <div class="field"><label for="cp-sum">Update for the client</label><textarea id="cp-sum" name="sum" rows="3" [(ngModel)]="f['summary']" [disabled]="!canEdit()" placeholder="What happened, what's next"></textarea></div>
+      @if (c()?.results?.updated_at) { <p class="hint">Results last updated {{ date(c()!.results.updated_at) }}</p> }
+
+      @if (c()) {
+        <h4>Reports &amp; files <small>(the client can download these)</small></h4>
+        @for (file of c()!.files ?? []; track file.id) {
+          <div class="frow"><button type="button" class="file" (click)="download(file)"><span>📄 {{ file.title }}</span><small>{{ date(file.uploaded_at) }}</small></button>
+            @if (canEdit()) { <button type="button" class="x" (click)="removeFile(file.id)" aria-label="Remove">✕</button> }</div>
+        }
+        @if (canEdit()) {
+          <div class="up">
+            <label class="pick"><input type="file" (change)="pick($event)" accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv,.docx,.pptx,.zip,.mp4" />{{ upFile()?.name ?? 'Choose report…' }}</label>
+            <input class="input-sm" name="ut" placeholder="Title, e.g. October report" [(ngModel)]="upTitle" />
+            <button type="button" class="btn-ghost" (click)="upload()" [disabled]="!upFile() || busy()">Upload</button>
+          </div>
+        }
+      }
+
+      @if (canEdit()) {
+        <div class="form-actions">
+          @if (c() && auth.can('campaigns.delete')) { <button type="button" class="btn-ghost danger" (click)="remove()">Delete</button> }
+          <span class="sp"></span>
+          <button type="button" class="btn-ghost" (click)="closed.emit()">Close</button>
+          <button class="btn" type="submit" [disabled]="busy()">{{ c() ? 'Save' : 'Create campaign' }}</button>
+        </div>
+      }
+    </form>
+  }
+</app-sheet>

@@ -1,0 +1,65 @@
+@if (error()) {
+  <div class="card empty-box"><b>{{ error() }}</b></div>
+} @else if (t(); as t) {
+  <a class="crumb" routerLink="/tickets">← {{ isClient() ? 'All requests' : 'Tickets' }}</a>
+  <div class="page-head">
+    <div>
+      <h1>{{ t.subject }}</h1>
+      <p>{{ t.number }}@if (!isClient()) { · {{ t.client?.company_name }} }@if (t.category) { · {{ t.category }} } · opened by {{ t.raised_by }}</p>
+    </div>
+    <div class="actions">
+      <span class="badge big st" [attr.data-s]="t.status">{{ label[t.status] }}</span>
+      @if (isClient() && t.status !== 'closed') { <button class="btn-ghost" (click)="close()">Close request</button> }
+    </div>
+  </div>
+
+  <div class="layout">
+    <section class="card chat">
+      <div class="msgs">
+        @for (m of t.messages ?? []; track m.id) {
+          <div class="msg" [class.mine]="m.mine" [class.internal]="m.internal" [class.system]="m.internal && m.body.startsWith('Status changed')">
+            @if (!(m.internal && m.body.startsWith('Status changed'))) { <span class="av" [class.client]="m.from_client">{{ initials(m.by) }}</span> }
+            <div class="bubble">
+              @if (m.internal && !m.body.startsWith('Status changed')) { <span class="tag">🔒 Internal note</span> }
+              <p>{{ m.body }}</p>
+              @if (m.attachment) { <button class="att" (click)="download(m.attachment!)">📎 {{ m.attachment.name }}</button> }
+              <small>{{ m.by }} · {{ when(m.at) }}</small>
+            </div>
+          </div>
+        }
+        <div #end></div>
+      </div>
+
+      @if (t.status !== 'closed' || isClient()) {
+        <form class="reply" (ngSubmit)="send()" [class.internal]="internal">
+          <textarea name="b" rows="3" [(ngModel)]="body" [placeholder]="internal ? 'Note for the team only. The client will not see this.' : isClient() ? 'Write a reply…' : 'Reply to the client…'" (keydown.control.enter)="send()"></textarea>
+          <div class="rbar">
+            <label class="attach"><input type="file" (change)="pick($event)" />📎 {{ file()?.name ?? 'Attach' }}</label>
+            @if (!isClient()) { <label class="check sm"><input type="checkbox" name="i" [(ngModel)]="internal" /> Internal note</label> }
+            <button class="btn" type="submit" [disabled]="busy() || !body.trim()">{{ internal ? 'Add note' : 'Send' }}</button>
+          </div>
+        </form>
+      }
+    </section>
+
+    @if (!isClient()) {
+      <aside class="card side">
+        <h3>Details</h3>
+        <label class="lbl" for="tk-s">Status</label>
+        <select id="tk-s" class="select-sm" [ngModel]="t.status" (ngModelChange)="update({ status: $event })" [disabled]="!canManage()">
+          @for (s of statuses; track s[0]) { <option [value]="s[0]">{{ s[1] }}</option> }
+        </select>
+        <label class="lbl" for="tk-p">Priority</label>
+        <select id="tk-p" class="select-sm" [ngModel]="t.priority" (ngModelChange)="update({ priority: $event })" [disabled]="!canManage()">
+          <option value="low">Low</option><option value="medium">Normal</option><option value="high">Urgent</option>
+        </select>
+        <label class="lbl" for="tk-a">Assigned to</label>
+        <select id="tk-a" class="select-sm" [ngModel]="t.assigned_to?.id ?? null" (ngModelChange)="update({ assigned_to: $event })" [disabled]="!canManage()">
+          <option [ngValue]="null">Unassigned</option>@for (u of staff(); track u.id) { <option [ngValue]="u.id">{{ u.name }}</option> }
+        </select>
+        <p class="hint">“Waiting for you” tells the client we need something from them.</p>
+        @if (t.client) { <a class="link" [routerLink]="['/clients', t.client.id]">Open client →</a> }
+      </aside>
+    }
+  </div>
+} @else { <div class="card skel"></div> }

@@ -53,6 +53,11 @@ return [
             'Manufacturing', 'IT & Services', 'Beauty & Wellness', 'Automobile', 'Other'],
     ],
 
+    'campaign_platforms' => ['meta' => 'Meta (Facebook & Instagram) ads', 'google' => 'Google ads', 'seo' => 'SEO',
+        'social' => 'Social media management', 'website' => 'Website', 'email' => 'Email marketing', 'other' => 'Other'],
+
+    'ticket_categories' => ['Ads & campaigns', 'Website', 'Social media', 'Design request', 'Billing', 'Reports', 'Other'],
+
     // Lead pipeline stages (keys are fixed: the dashboard funnel uses them; labels can change).
     'lead_statuses' => [
         'new' => 'New',

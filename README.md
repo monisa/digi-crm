@@ -110,6 +110,12 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
 4. **Getting paid**: the invoice page and PDF show a **UPI "scan to pay" QR** with the amount and invoice number filled in (GPay, PhonePe, Paytm…). After paying, the client taps **I've paid** and enters the UPI transaction ID. You check the bank and press **Received ✓** under Invoices → Payments to confirm. Bank transfers, cash and cheques can be recorded by hand with **Record payment**.
 5. **Email to client** sends the PDF from `info@digifoxprosolutions.com`.
 
+## Campaigns, tickets and the client portal
+
+- **Campaigns**: create one per thing you run for a client (Meta ads, Google ads, SEO, social…). Update the results (spend, leads, reach, clicks) and write a short update; upload monthly reports. Clients see their own campaigns read-only, with cost per lead and click rate worked out.
+- **Tickets**: clients raise requests from the portal (with a file if needed). Staff reply, change status/priority, assign, and can tick **Internal note** for comments the client never sees. A client reply reopens a resolved ticket.
+- **Client home**: amount to pay with a Pay now link, active campaigns and leads, open requests with new replies, and their account manager's contact.
+
 ## Turning on "Sign in with Google"
 
 1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").

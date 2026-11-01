@@ -19,6 +19,9 @@ use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\Portal\CampaignController;
+use App\Http\Controllers\Portal\ClientDashboardController;
+use App\Http\Controllers\Portal\TicketController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json([
@@ -133,6 +136,29 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/payment-claims/{claim}/{decision}', [PaymentClaimController::class, 'decide'])
             ->whereIn('decision', ['confirm', 'reject'])->middleware('permission:invoices.approve');
     });
+
+    // Client dashboard (client logins)
+    Route::get('/dashboard/client', ClientDashboardController::class)->middleware('permission:dashboard.view');
+
+    // Campaigns: clients see their own; staff manage those of clients they can see.
+    Route::get('/campaigns', [CampaignController::class, 'index'])->middleware('permission:campaigns.view');
+    Route::get('/campaigns/{campaign}', [CampaignController::class, 'show'])->middleware('permission:campaigns.view');
+    Route::get('/campaign-files/{file}', [CampaignController::class, 'download'])->middleware('permission:campaigns.view');
+    Route::middleware('staff')->group(function () {
+        Route::post('/campaigns', [CampaignController::class, 'store'])->middleware('permission:campaigns.create');
+        Route::put('/campaigns/{campaign}', [CampaignController::class, 'update'])->middleware('permission:campaigns.edit');
+        Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('permission:campaigns.delete');
+        Route::post('/campaigns/{campaign}/files', [CampaignController::class, 'upload'])->middleware('permission:campaigns.edit');
+        Route::delete('/campaign-files/{file}', [CampaignController::class, 'deleteFile'])->middleware('permission:campaigns.edit');
+    });
+
+    // Tickets: clients raise and reply to their own; staff reply, add internal notes, assign.
+    Route::get('/tickets', [TicketController::class, 'index'])->middleware('permission:tickets.view');
+    Route::post('/tickets', [TicketController::class, 'store'])->middleware('permission:tickets.create');
+    Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->middleware('permission:tickets.view');
+    Route::post('/tickets/{ticket}/messages', [TicketController::class, 'reply'])->middleware('permission:tickets.view');
+    Route::patch('/tickets/{ticket}', [TicketController::class, 'update'])->middleware('permission:tickets.view');
+    Route::get('/ticket-files/{message}', [TicketController::class, 'attachment'])->middleware('permission:tickets.view');
 
     // Public holidays: everyone can see them; leave.edit (admin) manages them.
     Route::get('/holidays', [HolidayController::class, 'index']);

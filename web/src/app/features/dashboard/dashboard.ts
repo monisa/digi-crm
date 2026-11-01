@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { ClientHome } from './client-home';
 import { Overview } from './overview/overview';
 
 /**
@@ -9,10 +10,12 @@ import { Overview } from './overview/overview';
  */
 @Component({
   selector: 'app-dashboard',
-  imports: [Overview],
+  imports: [Overview, ClientHome],
   template: `
     @if (auth.canView('overview')) {
       <app-overview />
+    } @else if (auth.user()?.role === 'client') {
+      <app-client-home />
     } @else {
       <div class="head">
         <h1>Welcome, {{ auth.user()?.name }}</h1>
