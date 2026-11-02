@@ -20,6 +20,8 @@ use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PublicOnboardingController;
+use App\Http\Controllers\Billing\ClientOnboardingController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\StaffDashboardController;
 use App\Http\Controllers\Portal\CampaignController;
@@ -36,6 +38,10 @@ Route::get('/health', fn () => response()->json([
 // Meta Lead Ads webhook (verified by signature, not by login).
 Route::get('/webhooks/meta', [MetaController::class, 'verify']);
 Route::post('/webhooks/meta', [MetaController::class, 'receive'])->middleware('throttle:600,1');
+
+// Onboarding form opened from a shared link (no login).
+Route::get('/public/onboarding/{token}', [PublicOnboardingController::class, 'show'])->middleware('throttle:60,1');
+Route::post('/public/onboarding/{token}', [PublicOnboardingController::class, 'store'])->middleware('throttle:6,1');
 
 // Public auth endpoints (rate-limited per IP on top of the per-account login lockout).
 Route::prefix('auth')->middleware('throttle:20,1')->group(function () {
@@ -110,8 +116,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::middleware('staff')->group(function () {
         Route::get('/clients', [ClientController::class, 'index'])->middleware('permission:clients.view');
         Route::post('/clients', [ClientController::class, 'store'])->middleware('permission:clients.create');
+        Route::get('/clients/onboarding-link', [ClientOnboardingController::class, 'generalLink'])->middleware('permission:clients.create');
+        Route::post('/clients/onboarding-link/reset', [ClientOnboardingController::class, 'resetGeneralLink'])->middleware('permission:clients.approve');
         Route::get('/clients/{client}', [ClientController::class, 'show'])->middleware('permission:clients.view');
         Route::put('/clients/{client}', [ClientController::class, 'update'])->middleware('permission:clients.edit');
+        Route::get('/clients/{client}/onboarding', [ClientOnboardingController::class, 'show'])->middleware('permission:clients.edit');
+        Route::post('/clients/{client}/onboarding', [ClientOnboardingController::class, 'store'])->middleware('permission:clients.edit');
+        Route::post('/clients/{client}/onboarding-link', [ClientOnboardingController::class, 'clientLink'])->middleware('permission:clients.edit');
         Route::post('/clients/{client}/invite', [ClientController::class, 'invite'])->middleware('permission:clients.edit');
         Route::get('/clients/{client}/files', [ClientAssetsController::class, 'files'])->middleware('permission:clients.view');
         Route::get('/client-files/{file}', [ClientAssetsController::class, 'download'])->middleware('permission:clients.view');

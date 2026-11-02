@@ -54,3 +54,10 @@ h4 { font-size: 14px; margin-top: 14px; } .mt { margin-top: 28px; }
   .steps li:not(.cur) { font-size: 0; gap: 0; } .steps li:not(.cur) span { font-size: 11px; }
   .nav .btn-dark { min-width: 0; flex: 1; margin-left: 10px; }
 }
+
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.thanks { text-align: center; padding: 28px 0 12px; animation: slidein 0.4s var(--ease); }
+.thanks .tick { width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; color: #fff;
+  background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 12px 30px rgba(22, 163, 74, 0.3); animation: pop 0.5s var(--ease); }
+@keyframes pop { from { transform: scale(0.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .thanks, .thanks .tick { animation: none; } }

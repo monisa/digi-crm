@@ -43,6 +43,13 @@ class UserController extends Controller
             return response()->json(['message' => 'You cannot change your own role or status.'], 422);
         }
 
+        // Someone who signed up on the Register page starts as a client waiting
+        // for the onboarding form; made staff, they can start straight away.
+        if (isset($data['role']) && $data['role'] !== User::ROLE_CLIENT && ! isset($data['status'])
+            && in_array($user->status, [User::STATUS_PENDING_ONBOARDING, User::STATUS_PENDING_APPROVAL], true)) {
+            $data['status'] = User::STATUS_ACTIVE;
+        }
+
         $user->forceFill($data)->save();
 
         if (($data['status'] ?? null) === User::STATUS_INACTIVE) {

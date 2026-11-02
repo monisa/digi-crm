@@ -15,11 +15,11 @@ class Client extends Model
     protected $guarded = ['id'];
 
     /** Never send shared passwords in normal responses. */
-    protected $hidden = ['credentials'];
+    protected $hidden = ['credentials', 'onboarding_token'];
 
     protected function casts(): array
     {
-        return ['onboarding_data' => 'array', 'credentials' => 'encrypted:array'];
+        return ['onboarding_data' => 'array', 'credentials' => 'encrypted:array', 'onboarded_at' => 'datetime'];
     }
 
     public function manager(): BelongsTo
@@ -71,6 +71,8 @@ class Client extends Model
             'state' => $this->state,
             'pincode' => $this->pincode,
             'status' => $this->status,
+            'source' => $this->source,
+            'onboarded_at' => $this->onboarded_at?->toIso8601String(),
             'account_manager' => $this->manager ? ['id' => $this->manager->id, 'name' => $this->manager->name] : null,
             'notes' => $this->notes,
             'created_at' => $this->created_at?->toIso8601String(),

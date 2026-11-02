@@ -35,3 +35,8 @@ h3 { font-size: 16px; margin-bottom: 6px; } .mt { margin-top: 20px; }
 .agrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 28px; }
 .agrid h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin: 14px 0 4px; }
 .answers .line { text-transform: none; } .answers .line span { text-transform: none; } .answers .line b { text-align: right; font-weight: 500; white-space: pre-line; }
+
+.pend { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; border: 1px solid rgba(237, 143, 33, 0.45);
+  background: linear-gradient(90deg, rgba(237, 143, 33, 0.12), transparent); }
+.pend > div:first-child { flex: 1; min-width: 240px; } .pend p { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
+.pacts { display: flex; gap: 8px; flex-wrap: wrap; }
