@@ -28,7 +28,7 @@ class DemoDataSeeder extends Seeder
     private const BIZ = ['Jewellers', 'Organics', 'Realty', 'Clinic', 'Academy', 'Textiles', 'Bakers', 'Motors', 'Interiors', 'Travels', 'Dental Care', 'Builders', 'Spices', 'Fitness'];
     private const PREFIX = ['Sri Balaji', 'Green Leaf', 'Malabar', 'Kochi', 'Royal', 'Sunrise', 'Blue Ocean', 'Golden', 'Kerala', 'Lotus', 'Silver Oak', 'Coastal', 'Emerald', 'Pearl'];
     private const CAMPAIGNS = ['Diwali Offer', 'SEO Package', 'Website Dev', 'Onam Sale', 'Free Audit', 'Brand Launch'];
-    private const EXPENSE_CATS = ['Ads spend' => 0.35, 'Salaries' => 0.45, 'Rent' => 0.08, 'Software' => 0.06, 'Travel' => 0.03, 'Misc' => 0.03];
+    private const EXPENSE_CATS = ['Ads spend' => 0.35, 'Salaries' => 0.45, 'Rent' => 0.08, 'Software & tools' => 0.06, 'Travel' => 0.03, 'Misc' => 0.03];
 
     public function run(): void
     {

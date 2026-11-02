@@ -124,6 +124,14 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
 - Overdue invoices: a reminder email goes to the client each week, at most 4 times.
 - All of this needs the every-minute cron from the server setup.
 
+## Expenses
+
+- **Expenses → Add expense**: total paid (including GST), the GST part (quick 5/12/18% buttons), date, category, vendor, payment mode, optional client, and a receipt photo or PDF (on a phone it opens the camera).
+- Admins (and anyone given Expenses → approve) add expenses that count straight away. Other staff you give Expenses → create can submit claims: they go to **Approvals**, the approver is notified, and the person hears back. Tick "I paid this myself" for reimbursements; **To reimburse** lists them until marked paid back.
+- **Salaries are automatic**: publishing a month's payroll adds (or updates) one "Salaries" expense for that month.
+- Only approved expenses count on the dashboard. **Export** gives a CSV for the accountant; GST paid is shown for input credit.
+- Categories are edited under Expenses → Categories.
+
 ## Turning on "Sign in with Google"
 
 1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").

@@ -9,6 +9,7 @@ use App\Http\Controllers\Billing\CompanyController;
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PaymentClaimController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Finance\ExpenseController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\Hr\EmployeeController;
 use App\Http\Controllers\Hr\HolidayController;
@@ -144,6 +145,21 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/notifications/read', [NotificationController::class, 'markRead']);
     Route::get('/notifications/preferences', [NotificationController::class, 'preferences']);
     Route::put('/notifications/preferences', [NotificationController::class, 'savePreferences']);
+
+    // Expenses (staff only)
+    Route::middleware('staff')->group(function () {
+        Route::get('/expenses', [ExpenseController::class, 'index'])->middleware('permission:expenses.view');
+        Route::get('/expenses/export', [ExpenseController::class, 'export'])->middleware('permission:expenses.export');
+        Route::get('/expense-categories', [ExpenseController::class, 'categories'])->middleware('permission:expenses.view');
+        Route::put('/expense-categories', [ExpenseController::class, 'saveCategories'])->middleware('permission:expenses.approve');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('permission:expenses.create');
+        Route::post('/expenses/{expense}', [ExpenseController::class, 'update'])->middleware('permission:expenses.create'); // POST: may carry a new receipt file
+        Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->middleware('permission:expenses.create');
+        Route::get('/expenses/{expense}/receipt', [ExpenseController::class, 'receipt'])->middleware('permission:expenses.view');
+        Route::post('/expenses/{expense}/reimburse', [ExpenseController::class, 'reimburse'])->middleware('permission:expenses.approve');
+        Route::post('/expenses/{expense}/{decision}', [ExpenseController::class, 'decide'])
+            ->whereIn('decision', ['approve', 'reject'])->middleware('permission:expenses.approve');
+    });
 
     // Client dashboard (client logins)
     Route::get('/dashboard/client', ClientDashboardController::class)->middleware('permission:dashboard.view');

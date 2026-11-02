@@ -1,0 +1,91 @@
+<div class="page-head">
+  <div><h1>Expenses</h1><p>{{ res()?.can_approve ? 'What DigiFox spends. Approved expenses feed the dashboard.' : 'Your expense claims.' }}</p></div>
+  <div class="actions">
+    @if (res()?.can_approve) { <button class="btn-ghost" (click)="openCats()">⚙ Categories</button> }
+    @if (auth.can('expenses.export')) { <button class="btn-ghost" (click)="export()">⬇ Export</button> }
+    @if (auth.can('expenses.create')) { <button class="btn" (click)="editing.set(null)">+ Add expense</button> }
+  </div>
+</div>
+
+<div class="bar">
+  <div class="seg2">@for (p of periods; track p.key) { <button [class.on]="period === p.key" (click)="period = p.key; load()">{{ p.label }}</button> }</div>
+  <select class="select-sm" [(ngModel)]="category" (ngModelChange)="load()" aria-label="Category">
+    <option value="">All categories</option>@for (c of res()?.categories ?? []; track c) { <option [value]="c">{{ c }}</option> }
+  </select>
+</div>
+
+@if (res(); as r) {
+  <div class="sum">
+    <div class="card k main"><span>Spent</span><b [countUp]="r.summary.total" [format]="money"></b>
+      @if (vsPrev() !== null) { <small [class.up]="vsPrev()! > 0" [class.down]="vsPrev()! < 0">{{ vsPrev()! > 0 ? '▲' : '▼' }} {{ vsPrev()! < 0 ? -vsPrev()! : vsPrev() }}% vs previous</small> }
+      @else { <small>Nothing to compare yet</small> }</div>
+    <div class="card k"><span>GST paid (input credit)</span><b [countUp]="r.summary.gst" [format]="money"></b><small>Share with your accountant</small></div>
+    <button class="card k btnk" [class.on]="tab() === 'approvals'" (click)="setTab(tab() === 'approvals' ? 'all' : 'approvals')">
+      <span>Waiting for approval</span><b>@if (r.summary.pending) { <span class="live"></span> }{{ r.summary.pending }}</b><small>{{ r.can_approve ? 'Claims from the team' : 'Your claims' }}</small></button>
+    <button class="card k btnk" [class.on]="tab() === 'reimburse'" (click)="setTab(tab() === 'reimburse' ? 'all' : 'reimburse')">
+      <span>To reimburse</span><b [countUp]="r.summary.to_reimburse" [format]="money"></b><small>Paid by staff personally</small></button>
+  </div>
+
+  <div class="two">
+    <section class="card list">
+      <div class="tabs2">
+        <button [class.on]="tab() === 'all'" (click)="setTab('all')">All</button>
+        <button [class.on]="tab() === 'approvals'" (click)="setTab('approvals')">Approvals @if (r.summary.pending) { <span class="count">{{ r.summary.pending }}</span> }</button>
+        <button [class.on]="tab() === 'reimburse'" (click)="setTab('reimburse')">To reimburse</button>
+      </div>
+      <div [class.loading]="loading()">
+        @for (e of r.data; track e.id; let i = $index) {
+          <div class="row" (click)="open(e)" [style.animation-delay.s]="i * 0.015" tabindex="0" (keydown.enter)="open(e)">
+            <div class="d"><b>{{ date(e.spent_on) }}</b></div>
+            <div class="grow">
+              <b>{{ e.vendor || e.category }}</b>
+              <small><span class="cat">{{ e.category }}</span>@if (e.client) { · {{ e.client.company_name }} } · {{ e.created_by?.name ?? 'System' }}@if (e.notes) { · {{ e.notes }} }</small>
+              @if (e.status === 'rejected' && e.review_note) { <small class="rej">Rejected: {{ e.review_note }}</small> }
+            </div>
+            @if (e.receipt) { <button class="rc" (click)="receipt(e, $event)" title="Download receipt" aria-label="Download receipt">🧾</button> }
+            <div class="amt"><b class="money">{{ money(e.amount) }}</b>@if (e.gst) { <small>GST {{ money(e.gst) }}</small> }</div>
+            @if (tab() === 'approvals' && r.can_approve && e.status === 'pending') {
+              <div class="acts" (click)="$event.stopPropagation()">
+                @if (rejecting() === e.id) {
+                  <input class="input-sm" placeholder="Why?" [(ngModel)]="rejectNote" />
+                  <button class="btn-ghost danger" (click)="decide(e, 'reject')">Reject</button>
+                } @else {
+                  <button class="btn-ghost" (click)="rejecting.set(e.id)">Reject</button>
+                  <button class="btn ok" (click)="decide(e, 'approve')">Approve</button>
+                }
+              </div>
+            } @else if (tab() === 'reimburse' && r.can_approve) {
+              <div class="acts" (click)="$event.stopPropagation()"><button class="btn ok" (click)="reimburse(e)">Paid back ✓</button></div>
+            } @else {
+              <span class="badge st" [attr.data-s]="e.source ? 'auto' : e.status">{{ e.source ? 'Payroll' : e.status === 'approved' ? (e.reimbursable && !e.reimbursed_at ? 'To reimburse' : 'Approved') : e.status === 'pending' ? 'Pending' : 'Rejected' }}</span>
+            }
+          </div>
+        } @empty {
+          <div class="empty-box">@if (loading()) { Loading… } @else { <b>No expenses here</b>@if (tab() === 'all') { Add one with “Add expense”. } @else { You’re all caught up. } }</div>
+        }
+      </div>
+    </section>
+
+    <aside class="card cats">
+      <h3>Where the money went</h3>
+      <p class="hint">{{ periodLabel() }} · approved expenses</p>
+      @for (c of r.summary.by_category; track c.category; let i = $index) {
+        <div class="crow" [title]="c.count + ' expense(s)'">
+          <div class="cl"><span>{{ c.category }}</span><b class="money">{{ money(c.total) }}</b></div>
+          <div class="track"><div class="fill" [style.width.%]="(c.total / maxCat()) * 100" [style.animation-delay.s]="i * 0.06"></div></div>
+          <small>{{ ((c.total / (r.summary.total || 1)) * 100).toFixed(0) }}% of spending</small>
+        </div>
+      } @empty { <p class="hint">No approved expenses in this period.</p> }
+    </aside>
+  </div>
+} @else { <div class="sum">@for (i of [1, 2, 3, 4]; track i) { <div class="card skel"></div> }</div> }
+
+@if (editing() !== undefined) {
+  <app-expense-form [expense]="editing() ?? null" [categories]="res()?.categories ?? []" [canApprove]="res()?.can_approve ?? false" (closed)="editing.set(undefined)" (saved)="saved()" />
+}
+@if (editingCats()) {
+  <app-sheet title="Expense categories" subtitle="One per line. Salaries is always kept (it comes from payroll)." width="420px" (closed)="editingCats.set(false)">
+    <div class="field"><label for="cats">Categories</label><textarea id="cats" rows="12" [(ngModel)]="catText"></textarea></div>
+    <div class="form-actions"><button class="btn-ghost" (click)="editingCats.set(false)">Cancel</button><button class="btn" (click)="saveCats()">Save</button></div>
+  </app-sheet>
+}

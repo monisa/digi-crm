@@ -52,6 +52,8 @@ class PayslipController extends Controller
         ['year' => $year, 'month' => $month] = $this->period($request);
         $count = Payslip::where(compact('year', 'month'))->where('status', 'draft')
             ->update(['status' => 'published', 'published_at' => now()]);
+        // Salaries show up in Expenses (and the dashboard) automatically.
+        app(\App\Services\PayrollExpense::class)->sync($year, $month, $request->user()->id);
 
         return response()->json(['published' => $count]);
     }

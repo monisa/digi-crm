@@ -97,13 +97,13 @@ class DashboardOverview
 
     private function revenue(CarbonImmutable $from, CarbonImmutable $to): float
     {
-        return round((float) Payment::whereBetween('paid_on', [$from->toDateString(), $to->toDateString()])->sum('amount'), 2);
+        return round((float) Payment::whereDate('paid_on', '>=', $from->toDateString())->whereDate('paid_on', '<=', $to->toDateString())->sum('amount'), 2);
     }
 
     private function expenses(CarbonImmutable $from, CarbonImmutable $to): float
     {
         return round((float) Expense::where('status', 'approved')
-            ->whereBetween('spent_on', [$from->toDateString(), $to->toDateString()])->sum('amount'), 2);
+            ->whereDate('spent_on', '>=', $from->toDateString())->whereDate('spent_on', '<=', $to->toDateString())->sum('amount'), 2);
     }
 
     /** Last 12 calendar months, oldest first. */

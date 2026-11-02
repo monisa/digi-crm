@@ -5,15 +5,6 @@ import { Shell } from './layout/shell';
 
 const T = (page: string) => `${page} · DigiFox Pro CRM`;
 
-/** Pages for modules built in later phases. */
-const later = (path: string, title: string, module: string, phase: string) => ({
-  path,
-  title: T(title),
-  canActivate: [moduleGuard],
-  data: { module, title, phase },
-  loadComponent: () => import('./features/placeholder/placeholder').then((m) => m.Placeholder),
-});
-
 export const routes: Routes = [
   // Must come first: '/' would otherwise match the empty-path auth layout below.
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -115,7 +106,13 @@ export const routes: Routes = [
         data: { module: 'leave' },
         loadComponent: () => import('./features/leave/leave-page').then((m) => m.LeavePage),
       },
-      later('expenses', 'Expenses', 'expenses', 'Phase 7'),
+      {
+        path: 'expenses',
+        title: T('Expenses'),
+        canActivate: [moduleGuard],
+        data: { module: 'expenses' },
+        loadComponent: () => import('./features/expenses/expenses').then((m) => m.Expenses),
+      },
       {
         path: 'campaigns',
         title: T('Campaigns'),

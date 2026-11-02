@@ -68,6 +68,8 @@ return [
         'invoice_issued' => ['New invoice', 'billing', 'client'],
         'invoice_overdue' => ['Invoice overdue reminder', 'billing', 'client'],
         'client_onboarded' => ['New client finished onboarding', 'clients', 'staff'],
+        'expense_submitted' => ['Expense claim to approve', 'expenses', 'staff'],
+        'expense_decided' => ['My expense claim was approved or rejected', 'expenses', 'staff'],
     ],
 
     'campaign_platforms' => ['meta' => 'Meta (Facebook & Instagram) ads', 'google' => 'Google ads', 'seo' => 'SEO',
