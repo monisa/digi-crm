@@ -43,7 +43,10 @@ chmod 600 .env 2>/dev/null || true
 [ -f .env ] || { echo "!! $REPO_DIR/api/.env is missing." >&2; exit 1; }
 
 echo "==> Installing PHP packages"
-$COMPOSER install --no-dev --optimize-autoloader --no-interaction --no-progress
+# Hostinger's PHP has proc_open turned off, which Composer needs to run Laravel's
+# post-install scripts. Skip them in Composer and run the one we need directly.
+$COMPOSER install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
+$PHP artisan package:discover --ansi
 
 echo "==> Database"
 $PHP artisan migrate --force

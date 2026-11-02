@@ -1,21 +1,32 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
-// Runs from the Hostinger cron: `php artisan schedule:run` every minute.
-Schedule::command('sanctum:prune-expired --hours=24')->daily();
-Schedule::command('auth:clear-resets')->everyFifteenMinutes();
+/*
+| Runs from the Hostinger cron: `php artisan schedule:run` every minute.
+|
+| Hostinger's PHP has proc_open turned off, so jobs must not be started as
+| separate processes (Schedule::command does that). Everything runs inside
+| the scheduler's own PHP process via Artisan::call instead.
+*/
+$run = fn (string $command, array $options = []) => fn () => Artisan::call($command, $options);
 
-// Background work on shared hosting: the cron runs schedule:run every minute,
-// which processes queued jobs (e.g. Meta webhook leads) and then exits.
-Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=5')->everyMinute()->withoutOverlapping();
+// Background work: send queued emails, fetch Meta webhook leads.
+Schedule::call($run('queue:work', ['--stop-when-empty' => true, '--max-time' => 50, '--tries' => 5]))
+    ->name('queue-worker')->everyMinute()->withoutOverlapping(5);
 
 // Safety net for Meta leads the webhook may have missed.
-Schedule::command('meta:poll')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::call($run('meta:poll'))->name('meta-poll')->everyFifteenMinutes()->withoutOverlapping(20);
 
 // Alerts
-Schedule::command('crm:lead-sla')->everyFiveMinutes()->withoutOverlapping();
-Schedule::command('crm:invoice-reminders')->dailyAt('10:12');
+Schedule::call($run('crm:lead-sla'))->name('lead-sla')->everyFiveMinutes()->withoutOverlapping(10);
+Schedule::call($run('crm:invoice-reminders'))->name('invoice-reminders')->dailyAt('10:12');
+
+// Housekeeping
+Schedule::call($run('sanctum:prune-expired', ['--hours' => 24]))->name('prune-tokens')->daily();
+Schedule::call($run('auth:clear-resets'))->name('clear-resets')->everyFifteenMinutes();
 // Keep the bell tidy: drop read notifications after 90 days.
-Schedule::call(fn () => \Illuminate\Support\Facades\DB::table('notifications')
-    ->whereNotNull('read_at')->where('created_at', '<', now()->subDays(90))->delete())->weekly()->name('prune-notifications');
+Schedule::call(fn () => DB::table('notifications')->whereNotNull('read_at')->where('created_at', '<', now()->subDays(90))->delete())
+    ->name('prune-notifications')->weekly();
