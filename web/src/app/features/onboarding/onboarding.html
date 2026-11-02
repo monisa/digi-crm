@@ -1,12 +1,30 @@
 <div class="page">
   <header class="bar">
     <img src="logo.png" alt="DigiFox Pro Solutions" />
-    <button class="out" type="button" (click)="auth.logout()">Log out</button>
+    @if (mode === 'self') { <button class="out" type="button" (click)="auth.logout()">Log out</button> }
+    @if (mode === 'staff') { <button class="out" type="button" (click)="cancel()">← Back to client</button> }
   </header>
 
   <main class="card wrap">
+    @if (done()) {
+      <div class="thanks">
+        <div class="tick" aria-hidden="true">✓</div>
+        <h1 class="auth-h">Form received</h1>
+        <p class="auth-sub">{{ done() }}</p>
+        <p class="hint">You can close this page now.</p>
+      </div>
+    } @else if (failed()) {
+      <div class="thanks">
+        <h1 class="auth-h">Link not available</h1>
+        <p class="auth-sub">{{ failed() }}</p>
+      </div>
+    } @else {
     <h1 class="auth-h">Digital Marketing Client Onboarding</h1>
-    <p class="auth-sub">Tell us about your business, social media, website and goals so our team can get started.</p>
+    @if (mode === 'staff') {
+      <p class="auth-sub">Filling in for <b>{{ f['business_name'] || 'this client' }}</b>. Only the business name is required; fill in what you know.</p>
+    } @else {
+      <p class="auth-sub">Tell us about your business, social media, website and goals so our team can get started.</p>
+    }
 
     <div class="prog" role="progressbar" [attr.aria-valuenow]="step() + 1" aria-valuemin="1" [attr.aria-valuemax]="steps.length">
       <div class="fill" [style.width.%]="progress()"></div>
@@ -21,6 +39,7 @@
 
     @if (opts(); as o) {
       <form (ngSubmit)="step() === 4 ? submit() : next()" novalidate>
+        <div class="hp" aria-hidden="true"><label for="o-fax">Fax number</label><input id="o-fax" name="fax_number" tabindex="-1" autocomplete="off" [(ngModel)]="faxNumber" /></div>
         @switch (step()) {
           <!-- 1. About you -->
           @case (0) {
@@ -64,6 +83,9 @@
               </div>
 
               <div class="safe">🔒 <b>Prefer not to share passwords?</b> Add DigiFox as a partner instead: Meta Business Suite → Settings → Partners for Facebook &amp; Instagram, and a manager role on LinkedIn and YouTube. Anything you do share is encrypted and only visible to the DigiFox admin.</div>
+              @if (loginsOnFile().length) {
+                <p class="hint">🔑 Logins already saved for: <b>{{ loginsOnFile().join(', ') }}</b>. Leave those boxes empty to keep them; type new ones to replace them.</p>
+              }
 
               @if (has('Facebook')) {
                 <div class="plat"><h4>Facebook</h4>
@@ -184,10 +206,11 @@
         <div class="nav">
           @if (step() > 0) { <button type="button" class="btn-ghost" (click)="back()">← Back</button> } @else { <span></span> }
           <button class="btn-dark" type="submit" [disabled]="busy()">
-            @if (busy()) { <span class="spinner"></span> Submitting… } @else if (step() === 4) { Submit &amp; continue } @else { Next → }
+            @if (busy()) { <span class="spinner"></span> {{ mode === 'staff' ? 'Saving…' : 'Submitting…' }} } @else if (step() === 4) { {{ mode === 'staff' ? 'Save answers' : mode === 'public' ? 'Submit form' : 'Submit and continue' }} } @else { Next → }
           </button>
         </div>
       </form>
     } @else { <p class="hint">Loading…</p> }
+    }
   </main>
 </div>

@@ -69,7 +69,8 @@ class User extends Authenticatable
 
     public function needsOnboarding(): bool
     {
-        return $this->status === self::STATUS_PENDING_ONBOARDING;
+        // The onboarding form is for clients only.
+        return $this->isClient() && $this->status === self::STATUS_PENDING_ONBOARDING;
     }
 
     public function hasPermission(string $key): bool

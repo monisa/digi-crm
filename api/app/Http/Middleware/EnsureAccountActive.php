@@ -17,7 +17,10 @@ class EnsureAccountActive
     {
         $user = $request->user();
 
-        return match ($user?->status) {
+        // Staff never fill in the client onboarding form.
+        $status = $user && ! $user->isClient() && $user->status === User::STATUS_PENDING_ONBOARDING ? User::STATUS_ACTIVE : $user?->status;
+
+        return match ($status) {
             User::STATUS_ACTIVE => $next($request),
             User::STATUS_PENDING_ONBOARDING => response()->json([
                 'message' => 'Please complete the onboarding form to continue.',

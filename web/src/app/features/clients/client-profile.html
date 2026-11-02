@@ -8,16 +8,35 @@
       <h1>{{ c.company_name }}</h1>
       <p>{{ c.contact_name || 'No contact person' }}@if (c.industry) { · {{ c.industry }} }@if (c.city) { · {{ c.city }} }</p>
       <div class="tags">
-        @if (c.status === 'inactive') { <span class="badge b-crit">Past client</span> } @else { <span class="badge b-good">Active</span> }
+        @if (c.status === 'inactive') { <span class="badge b-crit">Past client</span> } @else if (c.status === 'pending') { <span class="badge b-warn">Waiting for approval</span> } @else { <span class="badge b-good">Active</span> }
+        @if (c.onboarded_at) { <span class="badge b-info">Onboarding form ✓</span> }
         @if (c.account_manager) { <span class="badge b-info">Managed by {{ c.account_manager.name }}</span> }
         @if (c.gstin) { <span class="badge b-warn">GSTIN {{ c.gstin }}</span> }
       </div>
     </div>
     <div class="acts">
-      @if (auth.can('clients.edit')) { <button class="btn-ghost" (click)="editing.set(true)">Edit</button> }
+      @if (auth.can('clients.edit')) {
+        <button class="btn-ghost" (click)="editing.set(true)">Edit</button>
+        <a class="btn-ghost" [routerLink]="['/clients', c.id, 'onboarding']">{{ c.onboarded_at ? 'Edit onboarding form' : 'Fill onboarding form' }}</a>
+        @if (!c.onboarded_at) { <button class="btn-ghost" (click)="sendLink()">🔗 Send form link</button> }
+      }
       @if (auth.can('invoices.create')) { <a class="btn" [routerLink]="['/invoices/new']" [queryParams]="{ client: c.id }">+ New invoice</a> }
     </div>
   </section>
+
+  @if (c.status === 'pending') {
+    <section class="card pend">
+      <div><b>New client from the onboarding form link</b>
+        <p>Check the answers below. Approve to make them an active client; you can then invite them to the client portal.</p></div>
+      @if (auth.can('clients.edit')) {
+        <div class="pacts">
+          <button class="btn" (click)="approveAndInvite()">Approve &amp; invite</button>
+          <button class="btn-ghost" (click)="setStatus('active')">Approve only</button>
+          <button class="btn-ghost" (click)="setStatus('inactive')">Not a client</button>
+        </div>
+      }
+    </section>
+  }
 
   <div class="stats">
     <div class="card"><span>Billed</span><b class="money">{{ money(c.stats.billed) }}</b></div>
@@ -107,3 +126,13 @@
   }
   @if (editing()) { <app-client-form [client]="c" (closed)="editing.set(false)" (saved)="saved()" /> }
 } @else { <div class="card skel"></div> }
+
+@if (sharing()) {
+  <app-sheet title="Send onboarding form" [subtitle]="c()?.company_name ?? ''" (closed)="sharing.set(false)">
+    @if (link(); as l) {
+      <p class="hint" style="margin: 10px 0 14px">This link is just for <b>{{ c()?.company_name }}</b>. They can fill in the form without logging in,
+        and the answers are saved to this client. It works once.</p>
+      <app-share-link [url]="l" [phone]="c()?.phone ?? null" message="Hi! Please fill in this DigiFox Pro onboarding form so we can get started:" />
+    } @else { <p class="hint">Loading…</p> }
+  </app-sheet>
+}

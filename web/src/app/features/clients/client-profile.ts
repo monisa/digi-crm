@@ -1,19 +1,21 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { KeyValuePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { BillingService, ClientDetail, InvoiceRow, STATUS_LABEL } from '../../core/billing.service';
 import { readErrors } from '../../core/http-errors';
 import { initials, money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
 import { ClientForm } from './client-form';
+import { Sheet } from '../../shared/sheet';
+import { ShareLink, formUrl } from '../../shared/share-link';
 
 type Tab = 'overview' | 'invoices';
 
 @Component({
   selector: 'app-client-profile',
-  imports: [FormsModule, RouterLink, ClientForm, KeyValuePipe, TitleCasePipe],
+  imports: [FormsModule, RouterLink, ClientForm, KeyValuePipe, TitleCasePipe, Sheet, ShareLink],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',
 })
@@ -36,8 +38,32 @@ export class ClientProfile {
   protected inviteEmail = '';
   protected readonly inviteError = signal('');
 
+  private route = inject(ActivatedRoute);
+  protected readonly sharing = signal(false);
+  protected readonly link = signal('');
+
   ngOnInit(): void {
     this.load();
+    if (this.route.snapshot.queryParamMap.get('saved')) this.toast.show('Onboarding answers saved.');
+  }
+
+  /** A form link just for this client; it fills in their record. */
+  sendLink(): void {
+    this.link.set('');
+    this.sharing.set(true);
+    this.api.clientOnboardingLink(this.c()!.id).subscribe((r) => this.link.set(formUrl(r.token)));
+  }
+
+  setStatus(status: 'active' | 'inactive', then?: () => void): void {
+    this.api.saveClient({ status }, this.c()!.id).subscribe(() => {
+      this.toast.show(status === 'active' ? 'Client approved.' : 'Marked as not a client.');
+      this.load();
+      then?.();
+    });
+  }
+
+  approveAndInvite(): void {
+    this.setStatus('active', () => this.startInvite());
   }
 
   load(): void {

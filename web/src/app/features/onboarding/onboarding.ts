@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { switchMap } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, of, switchMap } from 'rxjs';
 import { API_BASE } from '../../core/api.config';
 import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
@@ -28,7 +28,14 @@ const STEP_OF: Record<string, number> = {
   goals: 4, goals_other: 4, target_audience: 4, challenges: 4, competitors: 4, notes: 4,
 };
 
-/** "Digital Marketing Client Onboarding Form": shown to new clients before anything else. */
+/**
+ * "Digital Marketing Client Onboarding Form", in three places:
+ * - self:   a new client's first login (/onboarding)
+ * - public: a shared link, no login needed (/form/:token)
+ * - staff:  the team filling it in for a client (/clients/:id/onboarding)
+ */
+export type OnboardingMode = 'self' | 'public' | 'staff';
+
 @Component({
   selector: 'app-onboarding',
   imports: [FormsModule],
@@ -39,6 +46,18 @@ export class Onboarding {
   protected readonly auth = inject(AuthService);
   private http = inject(HttpClient);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  protected readonly mode: OnboardingMode = this.route.snapshot.data['mode'] ?? 'self';
+  private readonly token = this.route.snapshot.paramMap.get('token') ?? '';
+  protected readonly clientId = this.route.snapshot.paramMap.get('id') ?? '';
+  /** The answer was sent (public link): show the thank-you screen. */
+  protected readonly done = signal('');
+  protected readonly failed = signal('');
+  /** Staff: which logins are already stored (never shown here). */
+  protected readonly loginsOnFile = signal<string[]>([]);
+  /** Hidden from people; bots fill it in. */
+  protected faxNumber = '';
 
   protected readonly steps = ['About you', 'Social media', 'Website & Google', 'Brand assets', 'Goals'];
   protected readonly step = signal(0);
@@ -65,10 +84,34 @@ export class Onboarding {
   protected readonly progress = computed(() => ((this.step() + 1) / this.steps.length) * 100);
 
   constructor() {
-    this.http.get<{ options: Options; prefill: Record<string, string | null> }>(`${API_BASE}/onboarding`).subscribe((r) => {
-      for (const [k, v] of Object.entries(r.prefill)) if (v) this.f[k] = v;
-      this.opts.set(r.options);
-    });
+    this.http
+      .get<{ options: Options; prefill: Record<string, string | string[] | null>; logins_on_file?: string[] }>(this.url())
+      .subscribe({
+        next: (r) => {
+          for (const [k, v] of Object.entries(r.prefill)) {
+            if (k === 'social_platforms' && Array.isArray(v)) this.platforms.set(v);
+            else if (k === 'goals' && Array.isArray(v)) this.goals.set(v);
+            else if (typeof v === 'string' && v && k in this.f) this.f[k] = v;
+          }
+          this.loginsOnFile.set(r.logins_on_file ?? []);
+          this.opts.set(r.options);
+        },
+        error: (e) => this.failed.set(readErrors(e).message || 'This form could not be opened.'),
+      });
+  }
+
+  private url(): string {
+    if (this.mode === 'public') return `${API_BASE}/public/onboarding/${encodeURIComponent(this.token)}`;
+    if (this.mode === 'staff') return `${API_BASE}/clients/${this.clientId}/onboarding`;
+    return `${API_BASE}/onboarding`;
+  }
+
+  cancel(): void {
+    this.router.navigate(['/clients', this.clientId]);
+  }
+
+  onFile(platform: string): boolean {
+    return this.loginsOnFile().includes(platform);
   }
 
   has(p: string): boolean {
@@ -107,8 +150,9 @@ export class Onboarding {
   /** Required questions on the current step. */
   private check(step: number): boolean {
     const e: Record<string, string> = {};
+    const staff = this.mode === 'staff';
     const need = (k: string, msg = 'This question is required.') => {
-      if (!(this.f[k] ?? '').trim()) e[k] = msg;
+      if (!(this.f[k] ?? '').trim() && (!staff || k === 'business_name')) e[k] = msg;
     };
     if (step === 0) {
       need('full_name'); need('business_name'); need('email'); need('phone');
@@ -117,7 +161,7 @@ export class Onboarding {
     }
     if (step === 2) { need('google_analytics', 'Please choose Yes or No.'); need('search_console', 'Please choose Yes or No.'); need('google_ads', 'Please choose Yes or No.'); }
     if (step === 4) {
-      if (!this.goals().length) e['goals'] = 'Choose at least one goal.';
+      if (!this.goals().length && !staff) e['goals'] = 'Choose at least one goal.';
       need('target_audience');
     }
     this.errors.set(e);
@@ -149,16 +193,24 @@ export class Onboarding {
     }
     this.platforms().forEach((p) => fd.append('social_platforms[]', p));
     this.goals().forEach((g) => fd.append('goals[]', g));
+    if (this.faxNumber) fd.append('fax_number', this.faxNumber);
     if (this.logo()) fd.append('logo', this.logo()!);
     this.brandFiles().forEach((file) => fd.append('brand_files[]', file));
 
     this.busy.set(true);
     this.message.set('');
     this.http
-      .post(`${API_BASE}/onboarding`, fd)
-      .pipe(switchMap(() => this.auth.refresh()))
+      .post<{ message: string }>(this.url(), fd)
+      .pipe(switchMap((r): Observable<unknown> => (this.mode === 'self' ? this.auth.refresh() : of(r))))
       .subscribe({
-        next: () => this.router.navigateByUrl('/dashboard'),
+        next: (r) => {
+          if (this.mode === 'self') this.router.navigateByUrl('/dashboard');
+          else if (this.mode === 'staff') this.router.navigate(['/clients', this.clientId], { queryParams: { saved: 1 } });
+          else {
+            this.done.set((r as { message?: string })?.message || 'Thank you!');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        },
         error: (e) => {
           this.busy.set(false);
           const r = readErrors(e);
