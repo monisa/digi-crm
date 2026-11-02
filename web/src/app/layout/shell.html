@@ -33,9 +33,7 @@
         <app-icon name="menu" />
       </button>
       <div class="spacer"></div>
-      @if (auth.canView('notifications')) {
-        <a class="icon-btn" routerLink="/notifications" aria-label="Notifications"><app-icon name="bell" /></a>
-      }
+      <app-bell />
       <div class="me">
         <button class="me-btn" (click)="menuOpen.update((v) => !v)" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">
           <span class="avatar">{{ auth.initials() }}</span>

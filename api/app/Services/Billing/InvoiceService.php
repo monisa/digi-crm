@@ -71,6 +71,10 @@ class InvoiceService
 
             $invoice->update(['invoice_no' => $prefix.str_pad((string) ($last + 1), 3, '0', STR_PAD_LEFT), 'status' => 'unpaid', 'issued_at' => now()]);
             $invoice->refreshPaidStatus();
+            $n = app(\App\Services\Notify::class);
+            $n->send($n->clientUsers($invoice->client_id), 'invoice_issued', 'New invoice '.$invoice->invoice_no,
+                'Rs. '.number_format($invoice->total, 2).', due '.$invoice->due_date->format('d M Y').'. Pay by scanning the UPI QR on the invoice.',
+                '/invoices/'.$invoice->id);
 
             return $invoice->fresh(['items', 'client']);
         });

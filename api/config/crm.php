@@ -53,6 +53,23 @@ return [
             'Manufacturing', 'IT & Services', 'Beauty & Wellness', 'Automobile', 'Other'],
     ],
 
+    // Notification types: [label, category, audience]. Bell alerts always arrive; email can be switched off per type.
+    'notification_types' => [
+        'lead_new' => ['New lead received', 'leads', 'staff'],
+        'lead_assigned' => ['A lead is assigned to me', 'leads', 'staff'],
+        'lead_uncontacted' => ['Lead not contacted in time', 'leads', 'staff'],
+        'ticket_new' => ['New client request', 'tickets', 'staff'],
+        'ticket_reply' => ['Client replied to a request', 'tickets', 'staff'],
+        'ticket_update' => ['DigiFox replied to my request', 'tickets', 'client'],
+        'leave_requested' => ['Leave request to approve', 'leave', 'staff'],
+        'leave_decided' => ['My leave was approved or rejected', 'leave', 'staff'],
+        'payment_claim' => ['Client says they have paid', 'billing', 'staff'],
+        'payment_decided' => ['My payment was confirmed', 'billing', 'client'],
+        'invoice_issued' => ['New invoice', 'billing', 'client'],
+        'invoice_overdue' => ['Invoice overdue reminder', 'billing', 'client'],
+        'client_onboarded' => ['New client finished onboarding', 'clients', 'staff'],
+    ],
+
     'campaign_platforms' => ['meta' => 'Meta (Facebook & Instagram) ads', 'google' => 'Google ads', 'seo' => 'SEO',
         'social' => 'Social media management', 'website' => 'Website', 'email' => 'Email marketing', 'other' => 'Other'],
 

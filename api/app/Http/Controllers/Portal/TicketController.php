@@ -86,6 +86,7 @@ class TicketController extends Controller
 
             return $ticket;
         });
+        $this->notifyNew($ticket->load('client'), $user, $data['body']);
 
         return response()->json($ticket->fresh(['client:id,company_name', 'raiser:id,name', 'assignee:id,name', 'messages'])->toApiArray($user, true), 201);
     }
@@ -115,6 +116,9 @@ class TicketController extends Controller
             }
             $ticket->save();
         });
+        if (! $internal) {
+            $this->notifyReply($ticket->load('client'), $user, $data['body']);
+        }
 
         return response()->json($ticket->fresh(['client:id,company_name', 'raiser:id,name', 'assignee:id,name', 'messages'])->toApiArray($user, true), 201);
     }
@@ -142,6 +146,13 @@ class TicketController extends Controller
             }
         }
         $ticket->update($data);
+        if (! $user->isClient() && in_array($data['status'] ?? null, ['waiting', 'resolved'], true)) {
+            $n = app(\App\Services\Notify::class);
+            $n->send($n->clientUsers($ticket->client_id), 'ticket_update',
+                $data['status'] === 'resolved' ? 'Request resolved: '.$ticket->subject : 'We need something from you: '.$ticket->subject,
+                $data['status'] === 'resolved' ? 'Reply if anything still needs fixing.' : 'Please reply to your request so we can continue.',
+                '/tickets/'.$ticket->id, $data['status'] === 'waiting', $user);
+        }
 
         return response()->json($ticket->fresh(['client:id,company_name', 'raiser:id,name', 'assignee:id,name', 'messages'])->toApiArray($user, true));
     }
@@ -153,6 +164,36 @@ class TicketController extends Controller
         abort_unless($message->attachment_path, 404);
 
         return Storage::disk('local')->download($message->attachment_path, $message->attachment_name, ['Content-Type' => 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    private function staffFor(Ticket $ticket): \Illuminate\Support\Collection
+    {
+        $n = app(\App\Services\Notify::class);
+
+        return $ticket->assigned_to ? collect([$ticket->assignee()->first()]) : $n->admins();
+    }
+
+    private function notifyNew(Ticket $ticket, $user, string $body): void
+    {
+        $n = app(\App\Services\Notify::class);
+        if ($user->isClient()) {
+            $n->send($this->staffFor($ticket), 'ticket_new', ($ticket->priority === 'high' ? 'Urgent request: ' : 'New request: ').$ticket->subject,
+                $ticket->client->company_name.': '.\Illuminate\Support\Str::limit($body, 160), '/tickets/'.$ticket->id, true, $user);
+        } else {
+            $n->send($n->clientUsers($ticket->client_id), 'ticket_update', 'DigiFox opened a request for you: '.$ticket->subject,
+                \Illuminate\Support\Str::limit($body, 160), '/tickets/'.$ticket->id, true, $user);
+        }
+    }
+
+    private function notifyReply(Ticket $ticket, $user, string $body): void
+    {
+        $n = app(\App\Services\Notify::class);
+        $text = $user->name.': '.\Illuminate\Support\Str::limit($body, 160);
+        if ($user->isClient()) {
+            $n->send($this->staffFor($ticket), 'ticket_reply', $ticket->client->company_name.' replied: '.$ticket->subject, $text, '/tickets/'.$ticket->id, true, $user);
+        } else {
+            $n->send($n->clientUsers($ticket->client_id), 'ticket_update', 'New reply: '.$ticket->subject, $text, '/tickets/'.$ticket->id, true, $user);
+        }
     }
 
     private function addMessage(Ticket $ticket, $user, string $body, bool $internal, ?Request $request): void

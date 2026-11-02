@@ -145,6 +145,10 @@ class OnboardingController extends Controller
             ])->save();
         });
 
+        $notify = app(\App\Services\Notify::class);
+        $notify->send($notify->admins(), 'client_onboarded', $data['business_name'].' finished onboarding',
+            $data['full_name'].' filled in the onboarding form. Goals: '.implode(', ', $data['goals']).'.', '/clients/'.$user->fresh()->client_id);
+
         return response()->json(['message' => 'Thank you! Your account is now active.', 'user' => $user->fresh()->toAuthArray()]);
     }
 

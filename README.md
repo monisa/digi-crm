@@ -116,6 +116,14 @@ Check it worked: https://crm.digifoxprosolutions.com/api/v1/health should return
 - **Tickets**: clients raise requests from the portal (with a file if needed). Staff reply, change status/priority, assign, and can tick **Internal note** for comments the client never sees. A client reply reopens a resolved ticket.
 - **Client home**: amount to pay with a Pay now link, active campaigns and leads, open requests with new replies, and their account manager's contact.
 
+## Notifications
+
+- The bell (top right) shows alerts for everyone: new and assigned leads, leads not contacted within `CRM_LEAD_SLA_MINUTES` (default 30), client requests and replies, leave requests and decisions, "I've paid" notes and confirmations, new invoices, and clients finishing onboarding.
+- The app checks for new alerts every minute while it is open; the browser tab shows the unread count.
+- Important alerts are also emailed (from `info@digifoxprosolutions.com`); each person can switch emails off per type under **Notifications**. Bell alerts are saved instantly; emails are sent by the cron worker within a minute.
+- Overdue invoices: a reminder email goes to the client each week, at most 4 times.
+- All of this needs the every-minute cron from the server setup.
+
 ## Turning on "Sign in with Google"
 
 1. Go to https://console.cloud.google.com → create a project (e.g. "DigiFox CRM").

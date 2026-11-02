@@ -38,6 +38,11 @@ class PaymentClaimController extends Controller
         }
 
         $claim = $invoice->claims()->create([...$data, 'client_id' => $invoice->client_id, 'submitted_by' => $user->id, 'status' => 'pending']);
+        $n = app(\App\Services\Notify::class);
+        $n->send($n->staffWith('invoices.approve'), 'payment_claim',
+            $invoice->client->company_name.' says they paid Rs. '.number_format($claim->amount, 2),
+            'For '.$invoice->invoice_no.' by '.strtoupper($claim->mode === 'upi' ? 'UPI' : 'bank transfer').', reference '.$claim->reference.'. Check the bank, then confirm.',
+            '/invoices?tab=claims', true, $user);
 
         return response()->json($claim->load('invoice', 'client', 'submitter')->toApiArray(), 201);
     }
@@ -77,6 +82,15 @@ class PaymentClaimController extends Controller
                 'review_note' => $data['note'] ?? null, 'payment_id' => $paymentId,
             ]);
         });
+
+        $claim->refresh()->load('invoice');
+        $ok = $claim->status === 'confirmed';
+        $n = app(\App\Services\Notify::class);
+        $n->send($n->clientUsers($claim->client_id), 'payment_decided',
+            $ok ? 'Payment received, thank you!' : 'We could not find your payment yet',
+            $ok ? 'Rs. '.number_format($claim->amount, 2).' for '.$claim->invoice->invoice_no.' is confirmed.'
+                : 'Your payment note for '.$claim->invoice->invoice_no.' (ref '.$claim->reference.'): '.$claim->review_note,
+            '/invoices/'.$claim->invoice_id, true, $request->user());
 
         return response()->json($claim->fresh(['invoice', 'client', 'submitter'])->toApiArray());
     }

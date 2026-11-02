@@ -73,6 +73,12 @@ class LeaveController extends Controller
         ]);
 
         $request_ = $this->leave->request($this->ownEmployee($request->user()), $data);
+        $notify = app(\App\Services\Notify::class);
+        $request_->load('leaveType', 'employee');
+        $notify->send($notify->staffWith('leave.approve'), 'leave_requested',
+            $request_->employee->name.' requested '.$request_->days.' day(s) of '.strtolower($request_->leaveType->name),
+            $request_->from_date->format('d M').($request_->from_date->ne($request_->to_date) ? ' – '.$request_->to_date->format('d M') : '').'. Reason: '.($request_->reason ?: '—'),
+            '/leave', true, $request->user());
 
         return response()->json($request_->load(['leaveType', 'employee'])->toApiArray(), 201);
     }
@@ -120,7 +126,15 @@ class LeaveController extends Controller
             'actioned_at' => now(),
         ]);
 
-        return response()->json($leaveRequest->load(['employee', 'leaveType', 'approver'])->toApiArray());
+        $leaveRequest->load(['employee.user', 'leaveType', 'approver']);
+        $ok = $leaveRequest->status === 'approved';
+        app(\App\Services\Notify::class)->send($leaveRequest->employee?->user, 'leave_decided',
+            'Your leave was '.($ok ? 'approved' : 'not approved'),
+            $leaveRequest->leaveType->name.', '.$leaveRequest->from_date->format('d M').($leaveRequest->from_date->ne($leaveRequest->to_date) ? ' – '.$leaveRequest->to_date->format('d M') : '')
+                .($leaveRequest->approver_comment ? '. Note: '.$leaveRequest->approver_comment : '.'),
+            '/leave', true, $request->user());
+
+        return response()->json($leaveRequest->toApiArray());
     }
 
     public function types(): JsonResponse

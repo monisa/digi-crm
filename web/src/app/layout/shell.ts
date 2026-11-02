@@ -4,11 +4,12 @@ import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { NAV_ITEMS, NavItem } from '../core/navigation';
 import { Toast } from '../shared/toast.service';
+import { Bell } from './bell';
 import { Icon } from './icon';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, Bell],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })

@@ -36,6 +36,7 @@ class User extends Authenticatable
             'onboarding_data' => 'array',
             'onboarded_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'notification_prefs' => 'array',
         ];
     }
 
@@ -48,6 +49,12 @@ class User extends Authenticatable
     public function client(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** Whether this person wants emails for a notification type (on unless switched off). */
+    public function wantsEmail(string $type): bool
+    {
+        return ($this->notification_prefs[$type] ?? true) !== false;
     }
 
     public function isAdmin(): bool

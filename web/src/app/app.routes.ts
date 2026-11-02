@@ -165,7 +165,12 @@ export const routes: Routes = [
         data: { module: 'tickets' },
         loadComponent: () => import('./features/tickets/ticket-thread').then((m) => m.TicketThread),
       },
-      later('notifications', 'Notifications', 'notifications', 'Phase 6'),
+      {
+        // Everyone (including clients) has their own notifications, so no module check.
+        path: 'notifications',
+        title: T('Notifications'),
+        loadComponent: () => import('./features/notifications/notifications').then((m) => m.Notifications),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

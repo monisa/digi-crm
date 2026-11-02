@@ -17,6 +17,7 @@ use App\Http\Controllers\Hr\PayslipController;
 use App\Http\Controllers\Hr\SalaryController;
 use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\Portal\CampaignController;
@@ -136,6 +137,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/payment-claims/{claim}/{decision}', [PaymentClaimController::class, 'decide'])
             ->whereIn('decision', ['confirm', 'reject'])->middleware('permission:invoices.approve');
     });
+
+    // Notifications (everyone sees only their own)
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/read', [NotificationController::class, 'markRead']);
+    Route::get('/notifications/preferences', [NotificationController::class, 'preferences']);
+    Route::put('/notifications/preferences', [NotificationController::class, 'savePreferences']);
 
     // Client dashboard (client logins)
     Route::get('/dashboard/client', ClientDashboardController::class)->middleware('permission:dashboard.view');

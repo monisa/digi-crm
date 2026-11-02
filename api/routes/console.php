@@ -12,3 +12,10 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=5')->every
 
 // Safety net for Meta leads the webhook may have missed.
 Schedule::command('meta:poll')->everyFifteenMinutes()->withoutOverlapping();
+
+// Alerts
+Schedule::command('crm:lead-sla')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('crm:invoice-reminders')->dailyAt('10:12');
+// Keep the bell tidy: drop read notifications after 90 days.
+Schedule::call(fn () => \Illuminate\Support\Facades\DB::table('notifications')
+    ->whereNotNull('read_at')->where('created_at', '<', now()->subDays(90))->delete())->weekly()->name('prune-notifications');

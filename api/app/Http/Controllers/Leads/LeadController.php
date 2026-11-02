@@ -102,6 +102,7 @@ class LeadController extends Controller
         }
         if ($before['assigned_to'] !== $lead->assigned_to) {
             $lead->log($user, 'assignment', $lead->assigned_to ? 'Assigned to '.User::find($lead->assigned_to)?->name : 'Unassigned');
+            $this->notifyAssigned($lead, $user);
         }
 
         return response()->json($lead->fresh(['assignee:id,name', 'activities'])->toApiArray(true));
@@ -170,6 +171,7 @@ class LeadController extends Controller
             if ($lead->assigned_to !== $data['assigned_to']) {
                 $lead->update(['assigned_to' => $data['assigned_to']]);
                 $lead->log($user, 'assignment', $name ? "Assigned to $name" : 'Unassigned');
+                $this->notifyAssigned($lead, $user);
             }
         }
 
@@ -301,6 +303,14 @@ class LeadController extends Controller
         }
 
         return strlen($d) >= 5 ? substr($d, 0, 5).(strlen($d) > 5 ? '%'.substr($d, 5) : '') : $d;
+    }
+
+    private function notifyAssigned(Lead $lead, User $by): void
+    {
+        if ($lead->assigned_to) {
+            app(\App\Services\Notify::class)->send(User::find($lead->assigned_to), 'lead_assigned',
+                'Lead assigned to you: '.$lead->full_name, $by->name.' assigned this lead to you.', '/leads?open='.$lead->id, false, $by);
+        }
     }
 
     private function authorizeLead(User $user, Lead $lead): void

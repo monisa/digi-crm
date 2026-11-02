@@ -182,6 +182,13 @@ class MetaLeads
         $lead->log(null, 'system', 'Lead received from '.ucfirst($lead->platform ?? 'Meta').($lead->ad_name ? ' ad "'.$lead->ad_name.'"' : ''));
         $this->assigner->autoAssign($lead);
 
+        $notify = app(\App\Services\Notify::class);
+        $lead->refresh();
+        $notify->send($lead->assigned_to ? $lead->assignee : $notify->admins(), 'lead_new',
+            'New lead: '.$lead->full_name,
+            trim(($lead->ad_name ? 'From the ad "'.$lead->ad_name.'". ' : '').($lead->city ? 'City: '.$lead->city.'. ' : '').'Call them soon.'),
+            '/leads?open='.$lead->id);
+
         return $lead;
     }
 }
