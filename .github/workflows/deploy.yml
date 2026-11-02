@@ -70,8 +70,28 @@ jobs:
         run: |
           sudo apt-get -qq install -y sshpass >/dev/null
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Accept HOSTINGER_HOST written as "1.2.3.4", "u311568037@1.2.3.4" or the full "ssh -p 65002 u311568037@1.2.3.4".
+          HOST=$(echo "$SSH_HOST" | tr -s ' ' '\n' | grep -v '^-' | grep -vE '^(ssh|[0-9]{2,5})$' | tail -1)
+          HOST=${HOST##*@}
+          PORT=$(echo "$SSH_HOST" | grep -oE -- '-p ?[0-9]+' | grep -oE '[0-9]+' || true)
+          echo "SSH_HOST=$HOST" >> "$GITHUB_ENV"
+          [ -n "$PORT" ] && echo "SSH_PORT=$PORT" >> "$GITHUB_ENV" || true
+          echo "Connecting to: user $SSH_USER, port ${PORT:-$SSH_PORT}, host ${HOST:0:3}***"
           if [ -n "$KEY" ]; then printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy; fi
+          printf 'Host *\n  StrictHostKeyChecking accept-new\n  ConnectTimeout 25\n  ServerAliveInterval 20\n' > ~/.ssh/config
+
+      - name: Test the SSH login
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_PASSWORD }}
+        run: |
+          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -o BatchMode=yes -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
+          if out=$($RUN "$SSH_USER@$SSH_HOST" 'echo LOGIN-OK; php -r "echo PHP_VERSION;"' 2>&1); then
+            echo "$out"
+          else
+            echo "$out" | grep -viE 'password|pass:' | tail -5
+            echo "::error::Could not log in to Hostinger over SSH. Check: (1) HOSTINGER_HOST is only the IP from hPanel → Advanced → SSH Access; (2) SSH access is enabled there; (3) port is 65002 (or set the HOSTINGER_PORT variable); (4) HOSTINGER_PASSWORD is the SSH password shown/changed on that page (not the hPanel login); (5) username is $SSH_USER (or set the HOSTINGER_USER variable)."
+            exit 1
+          fi
 
       - name: Write the settings file (used only on the first run)
         env:
@@ -112,8 +132,8 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ADMIN_NAME: ${{ vars.ADMIN_NAME || 'Admin' }}
         run: |
-          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -p $SSH_PORT"; fi
-          if [ -f ~/.ssh/id_deploy ]; then COPY="scp -i $HOME/.ssh/id_deploy -P $SSH_PORT"; else COPY="sshpass -e scp -o PreferredAuthentications=password -P $SSH_PORT"; fi
+          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
+          if [ -f ~/.ssh/id_deploy ]; then COPY="scp -i $HOME/.ssh/id_deploy -P $SSH_PORT"; else COPY="sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -P $SSH_PORT"; fi
           # Settings file: copied only if the server does not have one yet (never overwrite the app key).
           if ! $RUN "$SSH_USER@$SSH_HOST" 'test -f ~/digi-crm/api/.env'; then
             $COPY deploy.env "$SSH_USER@$SSH_HOST:.digi-crm.env.new"
@@ -128,7 +148,7 @@ jobs:
         env:
           SSHPASS: ${{ secrets.HOSTINGER_PASSWORD }}
         run: |
-          if [ -f ~/.ssh/id_deploy ]; then E="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else E="sshpass -e ssh -o PreferredAuthentications=password -p $SSH_PORT"; fi
+          if [ -f ~/.ssh/id_deploy ]; then E="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else E="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
           rsync -az --delete --exclude 'api' --exclude '.well-known' -e "$E" web/dist/web/browser/ "$SSH_USER@$SSH_HOST:$SITE_ROOT/"
 
       - name: Check it is live
