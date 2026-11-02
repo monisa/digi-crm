@@ -1,5 +1,5 @@
 export type IconName =
-  | 'dashboard' | 'leads' | 'clients' | 'employees' | 'expenses' | 'bell' | 'settings' | 'menu'
+  | 'dashboard' | 'leads' | 'clients' | 'employees' | 'expenses' | 'bell' | 'settings' | 'menu' | 'chevron-left' | 'chevron-right'
   | 'campaigns' | 'invoices' | 'tickets' | 'leave' | 'logout';
 
 export interface NavItem {
