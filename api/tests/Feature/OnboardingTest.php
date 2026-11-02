@@ -226,4 +226,24 @@ class OnboardingTest extends TestCase
         $emp = User::factory()->create(['role' => 'employee', 'status' => 'active', 'clients_scope' => 'assigned']);
         $this->as($emp)->getJson('/v1/clients/'.$c->id.'/onboarding')->assertForbidden();
     }
+
+    public function test_a_signup_made_employee_skips_the_client_form(): void
+    {
+        $u = $this->newClientLogin();
+        $this->as($u)->getJson('/v1/auth/me')->assertJsonPath('user.needs_onboarding', true);
+
+        $this->as($this->admin())->patchJson('/v1/admin/users/'.$u->id, ['role' => 'employee'])->assertOk()
+            ->assertJsonPath('status', 'active')->assertJsonPath('needs_onboarding', false);
+
+        $this->as($u->fresh())->getJson('/v1/auth/me')->assertJsonPath('user.needs_onboarding', false);
+        $this->postJson('/v1/onboarding', $this->form())->assertStatus(409);
+    }
+
+    public function test_staff_left_waiting_for_the_form_are_let_in(): void
+    {
+        $u = User::factory()->create(['role' => 'employee', 'status' => 'pending_onboarding']);
+        $r = $this->as($u)->getJson('/v1/employees/me');
+        $this->assertNotSame(403, $r->status());
+        $this->assertNotSame('ONBOARDING_REQUIRED', $r->json('code'));
+    }
 }
