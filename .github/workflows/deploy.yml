@@ -1,43 +1,138 @@
 name: Deploy to Hostinger
 
-# Manual only: Actions tab -> "Deploy to Hostinger" -> Run workflow.
-# Needs these repository secrets (Settings -> Secrets and variables -> Actions):
-#   HOSTINGER_HOST, HOSTINGER_PORT (usually 65002), HOSTINGER_USER, HOSTINGER_SSH_KEY
-# Optional repository variable: SITE_ROOT (defaults to the crm subdomain folder).
+# Manual: Actions -> "Deploy to Hostinger" -> Run workflow.
+# The first run sets the server up (code, settings, database, admin login);
+# later runs update it. Nothing secret is stored in the repository.
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions -> Secrets):
+#   HOSTINGER_HOST        SSH IP from hPanel -> Advanced -> SSH Access
+#   HOSTINGER_PASSWORD    SSH password            (or HOSTINGER_SSH_KEY: a private key)
+#   DB_PASSWORD           password of the MySQL user
+#   MAIL_PASSWORD         password of info@digifoxprosolutions.com
+#   ADMIN_EMAIL           first CRM admin login
+#   ADMIN_PASSWORD        its password (8+ characters, letters and numbers)
+# Repository variables (same page -> Variables), optional:
+#   HOSTINGER_USER (u311568037)  HOSTINGER_PORT (65002)  DB_DATABASE / DB_USERNAME (u311568037_crm)
+#   SITE_ROOT (domains/digifoxprosolutions.com/public_html/crm)  ADMIN_NAME  GOOGLE_CLIENT_ID
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to deploy
+        default: main
+
+concurrency: deploy-hostinger
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
+      SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_PORT || '65002' }}
+      SSH_USER: ${{ vars.HOSTINGER_USER || 'u311568037' }}
       SITE_ROOT: ${{ vars.SITE_ROOT || 'domains/digifoxprosolutions.com/public_html/crm' }}
+      BRANCH: ${{ inputs.branch }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Check secrets
+        run: |
+          missing=""
+          for s in HOSTINGER_HOST DB_PASSWORD MAIL_PASSWORD ADMIN_EMAIL ADMIN_PASSWORD; do
+            [ -n "${!s}" ] || missing="$missing $s"
+          done
+          [ -n "$HOSTINGER_PASSWORD$HOSTINGER_SSH_KEY" ] || missing="$missing HOSTINGER_PASSWORD(or HOSTINGER_SSH_KEY)"
+          if [ -n "$missing" ]; then echo "::error::Add these repository secrets first:$missing"; exit 1; fi
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PASSWORD: ${{ secrets.HOSTINGER_PASSWORD }}
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Build Angular
+      - name: Build the Angular app
         working-directory: web
         run: npm ci && npx ng build
 
-      - name: Set up SSH key
+      - name: Prepare SSH
+        env:
+          KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+          sudo apt-get -qq install -y sshpass >/dev/null
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          if [ -n "$KEY" ]; then printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy; fi
 
-      - name: Deploy API (git pull, composer, migrate)
+      - name: Write the settings file (used only on the first run)
+        env:
+          DB_DATABASE: ${{ vars.DB_DATABASE || 'u311568037_crm' }}
+          DB_USERNAME: ${{ vars.DB_USERNAME || 'u311568037_crm' }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
         run: |
-          ssh -i ~/.ssh/id_deploy -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}" \
-            "SITE_ROOT=\$HOME/$SITE_ROOT bash ~/digi-crm/deploy/server-deploy.sh"
+          umask 077
+          cp api/.env.example deploy.env
+          set_env() { python3 - "$1" "$2" <<'PY'
+          import sys, re
+          key, val = sys.argv[1], sys.argv[2]
+          text = open('deploy.env').read()
+          line = f'{key}="{val}"' if any(c in val for c in ' #"$') else f'{key}={val}'
+          text, n = re.subn(rf'^{key}=.*$', lambda m: line, text, flags=re.M)
+          if not n: text += f'\n{line}\n'
+          open('deploy.env', 'w').write(text)
+          PY
+          }
+          set_env APP_KEY "base64:$(openssl rand -base64 32)"
+          set_env APP_ENV production
+          set_env APP_DEBUG false
+          set_env LOG_LEVEL warning
+          set_env DB_HOST localhost
+          set_env DB_DATABASE "$DB_DATABASE"
+          set_env DB_USERNAME "$DB_USERNAME"
+          set_env DB_PASSWORD "$DB_PASSWORD"
+          set_env MAIL_PASSWORD "$MAIL_PASSWORD"
+          set_env META_VERIFY_TOKEN "$(openssl rand -hex 24)"
+          set_env GOOGLE_CLIENT_ID "$GOOGLE_CLIENT_ID"
 
-      - name: Upload Angular build
+      - name: Set up / update the server
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_NAME: ${{ vars.ADMIN_NAME || 'Admin' }}
         run: |
-          rsync -az --delete --exclude 'api' \
-            -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.HOSTINGER_PORT }}" \
-            web/dist/web/browser/ "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:$SITE_ROOT/"
+          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -p $SSH_PORT"; fi
+          if [ -f ~/.ssh/id_deploy ]; then COPY="scp -i $HOME/.ssh/id_deploy -P $SSH_PORT"; else COPY="sshpass -e scp -o PreferredAuthentications=password -P $SSH_PORT"; fi
+          # Settings file: copied only if the server does not have one yet (never overwrite the app key).
+          if ! $RUN "$SSH_USER@$SSH_HOST" 'test -f ~/digi-crm/api/.env'; then
+            $COPY deploy.env "$SSH_USER@$SSH_HOST:.digi-crm.env.new"
+          fi
+          rm -f deploy.env
+          $COPY deploy/server-deploy.sh "$SSH_USER@$SSH_HOST:.digi-crm-deploy.sh"
+          # Admin details go through the SSH session's input, not the command line.
+          printf 'export CRM_ADMIN_EMAIL=%q CRM_ADMIN_PASSWORD=%q CRM_ADMIN_NAME=%q BRANCH=%q SITE_ROOT=%q\nbash ~/.digi-crm-deploy.sh\n' \
+            "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$ADMIN_NAME" "$BRANCH" "$SITE_ROOT" | $RUN "$SSH_USER@$SSH_HOST" 'bash -s'
+
+      - name: Upload the app
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_PASSWORD }}
+        run: |
+          if [ -f ~/.ssh/id_deploy ]; then E="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else E="sshpass -e ssh -o PreferredAuthentications=password -p $SSH_PORT"; fi
+          rsync -az --delete --exclude 'api' --exclude '.well-known' -e "$E" web/dist/web/browser/ "$SSH_USER@$SSH_HOST:$SITE_ROOT/"
+
+      - name: Check it is live
+        run: |
+          sleep 3
+          curl -fsS https://crm.digifoxprosolutions.com/api/v1/health && echo
+          curl -fsS -o /dev/null -w "Website: HTTP %{http_code}\n" https://crm.digifoxprosolutions.com/login

@@ -111,6 +111,16 @@ class PermissionTest extends TestCase
         $this->assertSame(0, $employee->tokens()->count());
     }
 
+    public function test_create_admin_command_for_automated_setup(): void
+    {
+        putenv('CRM_ADMIN_PASSWORD=strongpass1');
+        $this->artisan('crm:create-admin', ['--name' => 'Amit', '--email' => 'amit@digifox.test', '--if-none' => true])->assertSuccessful();
+        $this->artisan('crm:create-admin', ['--name' => 'Other', '--email' => 'other@digifox.test', '--if-none' => true])->assertSuccessful();
+        putenv('CRM_ADMIN_PASSWORD');
+
+        $this->assertSame(['amit@digifox.test'], User::where('role', 'admin')->pluck('email')->all());
+    }
+
     public function test_create_admin_command(): void
     {
         $this->artisan('crm:create-admin', ['--name' => 'Amit', '--email' => 'Owner@Digifox.test'])

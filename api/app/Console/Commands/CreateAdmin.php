@@ -9,15 +9,22 @@ use Illuminate\Support\Str;
 
 class CreateAdmin extends Command
 {
-    protected $signature = 'crm:create-admin {--name=} {--email=}';
+    protected $signature = 'crm:create-admin {--name=} {--email=} {--if-none : Do nothing if an admin already exists (for automated setup)}';
 
     protected $description = 'Create (or promote) an administrator account';
 
     public function handle(): int
     {
+        if ($this->option('if-none') && User::where('role', User::ROLE_ADMIN)->exists()) {
+            $this->info('An admin already exists; nothing to do.');
+
+            return self::SUCCESS;
+        }
+
         $name = $this->option('name') ?: $this->ask('Full name');
         $email = Str::lower($this->option('email') ?: $this->ask('Email'));
-        $password = $this->secret('Password (min 8 characters, letters and numbers)');
+        // Automated setup passes the password in an environment variable (never on the command line).
+        $password = getenv('CRM_ADMIN_PASSWORD') ?: $this->secret('Password (min 8 characters, letters and numbers)');
 
         $validator = Validator::make(compact('name', 'email', 'password'), [
             'name' => ['required', 'string', 'max:120'],
