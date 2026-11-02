@@ -23,6 +23,8 @@ import { IconName } from '../core/navigation';
           <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
         }
         @case ('menu') { <path d="M4 6h16M4 12h16M4 18h16" /> }
+        @case ('chevron-left') { <path d="M15 18l-6-6 6-6" /> }
+        @case ('chevron-right') { <path d="M9 18l6-6-6-6" /> }
         @case ('campaigns') { <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 9a3 3 0 0 1 0 6M18 6a7 7 0 0 1 0 12" /> }
         @case ('invoices') { <path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2zM9 7h6M9 11h6M9 15h4" /> }
         @case ('tickets') { <path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3v4zM13 4v16" /> }

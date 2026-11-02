@@ -4,6 +4,7 @@
       <img [src]="collapsed() ? 'logo-icon.png' : 'logo.png'" alt="DigiFox Pro Solutions" />
     </a>
 
+    <div class="side-scroll">
     @for (section of sections(); track section.name) {
       <div class="nav-label">{{ section.name === 'Client portal' && auth.user()?.role !== 'client' ? 'Client work' : section.name === 'Client portal' ? 'Your account' : section.name }}</div>
       <nav class="nav">
@@ -14,6 +15,7 @@
         }
       </nav>
     }
+    </div>
 
     <div class="side-foot">
       <button class="logout" (click)="auth.logout()" title="Log out"><app-icon name="logout" /><span>Log out</span></button>
@@ -29,8 +31,9 @@
       <button class="icon-btn burger" aria-label="Open menu" (click)="drawerOpen.set(true)">
         <app-icon name="menu" />
       </button>
-      <button class="icon-btn collapse-btn" aria-label="Collapse sidebar" (click)="collapsed.update((v) => !v)">
-        <app-icon name="menu" />
+      <button class="icon-btn collapse-btn" [attr.aria-label]="collapsed() ? 'Expand menu' : 'Collapse menu'"
+        [attr.title]="collapsed() ? 'Expand menu' : 'Collapse menu'" (click)="collapsed.update((v) => !v)">
+        <app-icon [name]="collapsed() ? 'chevron-right' : 'chevron-left'" />
       </button>
       <div class="spacer"></div>
       <app-bell />
