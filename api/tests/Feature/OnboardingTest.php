@@ -139,4 +139,91 @@ class OnboardingTest extends TestCase
         $this->as($this->newClientLogin())->post('/v1/onboarding', $this->form(['logo' => UploadedFile::fake()->create('shell.php', 1, 'application/x-php')]), ['Accept' => 'application/json'])
             ->assertUnprocessable()->assertJsonValidationErrors('logo');
     }
+
+    private function admin(): User
+    {
+        return User::where('role', 'admin')->first() ?? User::factory()->create(['role' => 'admin', 'status' => 'active']);
+    }
+
+    public function test_general_link_creates_a_pending_client_without_login(): void
+    {
+        $token = $this->as($this->admin())->getJson('/v1/clients/onboarding-link')->assertOk()->json('token');
+        $this->app['auth']->forgetGuards();
+
+        $this->getJson('/v1/public/onboarding/'.$token)->assertOk()->assertJsonCount(8, 'options.goals');
+        $this->postJson('/v1/public/onboarding/'.$token, $this->form(['goals' => []]))->assertStatus(422)->assertJsonValidationErrors('goals');
+        $this->postJson('/v1/public/onboarding/'.$token, $this->form())->assertOk();
+
+        $c = Client::where('company_name', 'Green Leaf Organics')->firstOrFail();
+        $this->assertSame('pending', $c->status);
+        $this->assertSame('form', $c->source);
+        $this->assertNotNull($c->onboarded_at);
+        $this->assertSame('S3cret-Insta!', $c->credentials['instagram']['password']);
+        $this->assertArrayNotHasKey('instagram_password', $c->onboarding_data);
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $this->admin()->id]);
+
+        // Admins see it waiting, then approve it.
+        $this->as($this->admin())->getJson('/v1/clients?status=pending')->assertOk()->assertJsonPath('pending', 1)->assertJsonPath('data.0.id', $c->id);
+        $this->putJson('/v1/clients/'.$c->id, ['status' => 'active'])->assertOk();
+        $this->assertSame('active', $c->fresh()->status);
+    }
+
+    public function test_bad_or_reset_links_are_refused(): void
+    {
+        $this->getJson('/v1/public/onboarding/'.str_repeat('x', 40))->assertNotFound();
+        $old = $this->as($this->admin())->getJson('/v1/clients/onboarding-link')->json('token');
+        $new = $this->postJson('/v1/clients/onboarding-link/reset')->assertOk()->json('token');
+        $this->assertNotSame($old, $new);
+        $this->app['auth']->forgetGuards();
+        $this->getJson('/v1/public/onboarding/'.$old)->assertNotFound();
+        $this->getJson('/v1/public/onboarding/'.$new)->assertOk();
+    }
+
+    public function test_honeypot_submissions_are_dropped(): void
+    {
+        $token = $this->as($this->admin())->getJson('/v1/clients/onboarding-link')->json('token');
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/v1/public/onboarding/'.$token, $this->form(['fax_number' => '123']))->assertOk();
+        $this->assertDatabaseMissing('clients', ['company_name' => 'Green Leaf Organics']);
+    }
+
+    public function test_a_clients_own_link_fills_that_client_once(): void
+    {
+        $c = Client::create(['company_name' => 'Green Leaf', 'status' => 'active']);
+        $token = $this->as($this->admin())->postJson('/v1/clients/'.$c->id.'/onboarding-link')->assertOk()->json('token');
+        $this->app['auth']->forgetGuards();
+
+        $this->getJson('/v1/public/onboarding/'.$token)->assertOk()->assertJsonPath('prefill.business_name', 'Green Leaf');
+        Storage::fake('local');
+        $this->post('/v1/public/onboarding/'.$token, $this->form(['logo' => UploadedFile::fake()->image('logo.png')]), ['Accept' => 'application/json'])->assertOk();
+
+        $c->refresh();
+        $this->assertSame('active', $c->status);
+        $this->assertSame('Green Leaf Organics', $c->company_name);
+        $this->assertSame(1, $c->files()->count());
+        $this->assertSame(1, Client::count());
+        $this->getJson('/v1/public/onboarding/'.$token)->assertNotFound(); // used up
+    }
+
+    public function test_staff_fill_and_edit_answers_keeping_logins_on_file(): void
+    {
+        $c = Client::create(['company_name' => 'Green Leaf', 'status' => 'active']);
+        $admin = $this->admin();
+        $this->as($admin)->post('/v1/clients/'.$c->id.'/onboarding', $this->form(), ['Accept' => 'application/json'])->assertOk();
+
+        $r = $this->getJson('/v1/clients/'.$c->id.'/onboarding')->assertOk()
+            ->assertJsonPath('prefill.target_audience', 'Health-conscious families in Kochi, 25–45')
+            ->assertJsonPath('logins_on_file', ['instagram', 'website']);
+        $this->assertArrayNotHasKey('instagram_password', $r->json('prefill'));
+
+        // Staff only need the business name; logins not retyped are kept.
+        $this->postJson('/v1/clients/'.$c->id.'/onboarding', ['business_name' => 'Green Leaf Organics', 'notes' => 'Call after 5pm'])->assertOk();
+        $c->refresh();
+        $this->assertSame('Call after 5pm', $c->onboarding_data['notes']);
+        $this->assertSame('Wp-Pass-123', $c->credentials['website']['password']);
+
+        // An employee who does not manage this client cannot.
+        $emp = User::factory()->create(['role' => 'employee', 'status' => 'active', 'clients_scope' => 'assigned']);
+        $this->as($emp)->getJson('/v1/clients/'.$c->id.'/onboarding')->assertForbidden();
+    }
 }

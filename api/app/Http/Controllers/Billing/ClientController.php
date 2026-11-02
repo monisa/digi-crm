@@ -18,7 +18,7 @@ class ClientController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $f = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', Rule::in(['active', 'inactive', 'all'])]]);
+        $f = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', Rule::in(['active', 'inactive', 'pending', 'all'])]]);
         $user = $request->user();
 
         $clients = Client::visibleTo($user)->with('manager:id,name')
@@ -28,7 +28,10 @@ class ClientController extends Controller
             ->withSum(['invoices as outstanding' => fn ($q) => $q->whereIn('status', ['unpaid', 'partial'])], \DB::raw('total - amount_paid'))
             ->orderBy('company_name')->get();
 
-        return response()->json(['data' => $clients->map(fn (Client $c) => [...$c->toApiArray(), 'outstanding' => round((float) $c->outstanding, 2)])]);
+        return response()->json([
+            'data' => $clients->map(fn (Client $c) => [...$c->toApiArray(), 'outstanding' => round((float) $c->outstanding, 2)]),
+            'pending' => Client::visibleTo($user)->where('status', 'pending')->count(), // forms waiting for approval
+        ]);
     }
 
     public function show(Request $request, Client $client): JsonResponse
@@ -114,7 +117,7 @@ class ClientController extends Controller
             'city' => ['nullable', 'string', 'max:120'],
             'state' => ['nullable', Rule::in([...array_values(Gst::STATES), 'Outside India'])],
             'pincode' => ['nullable', 'string', 'max:10'],
-            'status' => ['sometimes', Rule::in(['active', 'inactive'])],
+            'status' => ['sometimes', Rule::in(['active', 'inactive', 'pending'])],
             'account_manager_id' => ['nullable', Rule::exists('users', 'id')->whereIn('role', ['admin', 'employee'])],
             'notes' => ['nullable', 'string', 'max:5000'],
         ], ['gstin.regex' => 'Enter a valid 15-character GSTIN.']);

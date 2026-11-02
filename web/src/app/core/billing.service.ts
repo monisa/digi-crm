@@ -18,7 +18,9 @@ export interface Client {
   city: string | null;
   state: string | null;
   pincode: string | null;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pending';
+  source?: string | null;
+  onboarded_at?: string | null;
   account_manager: { id: number; name: string } | null;
   notes: string | null;
   created_at: string;
@@ -99,10 +101,21 @@ export class BillingService {
     return this.http.put<{ company: Company; states: string[] }>(`${API_BASE}/settings/company`, c);
   }
 
-  clients(params: { search?: string; status?: string } = {}): Observable<{ data: Client[] }> {
+  clients(params: { search?: string; status?: string } = {}): Observable<{ data: Client[]; pending: number }> {
     const p: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) if (v) p[k] = v;
-    return this.http.get<{ data: Client[] }>(`${API_BASE}/clients`, { params: p });
+    return this.http.get<{ data: Client[]; pending: number }>(`${API_BASE}/clients`, { params: p });
+  }
+  /** The general "new client" onboarding form link. */
+  onboardingLink(): Observable<{ token: string }> {
+    return this.http.get<{ token: string }>(`${API_BASE}/clients/onboarding-link`);
+  }
+  resetOnboardingLink(): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(`${API_BASE}/clients/onboarding-link/reset`, {});
+  }
+  /** A client's own form link (works once). */
+  clientOnboardingLink(id: number): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(`${API_BASE}/clients/${id}/onboarding-link`, {});
   }
   client(id: number): Observable<ClientDetail> {
     return this.http.get<ClientDetail>(`${API_BASE}/clients/${id}`);

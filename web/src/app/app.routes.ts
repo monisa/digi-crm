@@ -35,6 +35,19 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'form/:token',
+    title: T('Client onboarding form'),
+    data: { mode: 'public' },
+    loadComponent: () => import('./features/onboarding/onboarding').then((m) => m.Onboarding),
+  },
+  {
+    path: 'clients/:id/onboarding',
+    title: T('Onboarding form'),
+    canActivate: [authGuard, moduleGuard],
+    data: { mode: 'staff', module: 'clients' },
+    loadComponent: () => import('./features/onboarding/onboarding').then((m) => m.Onboarding),
+  },
+  {
     path: 'onboarding',
     title: T('Welcome'),
     canActivate: [onboardingGuard],
