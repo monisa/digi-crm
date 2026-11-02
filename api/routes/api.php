@@ -29,6 +29,7 @@ use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Work\AttendanceController;
 use App\Http\Controllers\Work\TaskController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\StaffDashboardController;
 use App\Http\Controllers\Portal\CampaignController;
 use App\Http\Controllers\Portal\ClientDashboardController;
 use App\Http\Controllers\Portal\TicketController;
@@ -193,6 +194,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/expenses/{expense}/{decision}', [ExpenseController::class, 'decide'])
             ->whereIn('decision', ['approve', 'reject'])->middleware('permission:expenses.approve');
     });
+
+    // A team member's own home page
+    Route::get('/dashboard/me', StaffDashboardController::class)->middleware('staff');
 
     // Client dashboard (client logins)
     Route::get('/dashboard/client', ClientDashboardController::class)->middleware('permission:dashboard.view');
