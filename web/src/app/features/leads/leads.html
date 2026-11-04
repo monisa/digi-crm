@@ -53,28 +53,38 @@
     </div>
   </div>
 
-  @if (selected().size && seesAll()) {
+  @if (selected().size && canSelect()) {
     <div class="bulk">
-      <b>{{ selected().size }} selected</b>
-      <select class="select-sm" [(ngModel)]="bulkTo" aria-label="Assign to">
-        <option value="">Assign to…</option>
-        <option value="none">Nobody (unassign)</option>
-        @for (u of options()?.assignees ?? []; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
-      </select>
-      <button class="btn" [disabled]="!bulkTo" (click)="bulkAssign()">Apply</button>
+      <b>{{ allMatching() ? 'All ' + (result()?.meta?.total ?? 0) + ' leads' : selected().size + ' selected' }}</b>
+      @if (seesAll() && !allMatching()) {
+        <select class="select-sm" [(ngModel)]="bulkTo" aria-label="Assign to">
+          <option value="">Assign to…</option>
+          <option value="none">Nobody (unassign)</option>
+          @for (u of options()?.assignees ?? []; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+        </select>
+        <button class="btn" [disabled]="!bulkTo" (click)="bulkAssign()">Apply</button>
+      }
+      @if (auth.can('leads.delete')) { <button class="btn-ghost danger" (click)="bulkDelete()">🗑 Delete</button> }
       <button class="btn-ghost" (click)="clearSelection()">Clear</button>
+      @if (pageAllTicked() && (result()?.meta?.total ?? 0) > (result()?.data?.length ?? 0)) {
+        <span class="all-note">
+          @if (allMatching()) { All {{ result()?.meta?.total }} leads{{ filtered() ? ' matching your filters' : '' }} are selected. }
+          @else { All {{ result()?.data?.length }} on this page are selected.
+            <button class="linkish" (click)="allMatching.set(true)">Select all {{ result()?.meta?.total }} leads{{ filtered() ? ' matching your filters' : '' }}</button> }
+        </span>
+      }
     </div>
   }
 
   @if (layout() === 'list') {
     <div class="table" [class.loading]="loading()">
       <div class="thead">
-        @if (seesAll()) { <input type="checkbox" aria-label="Select all" [checked]="selected().size && selected().size === result()?.data?.length" (change)="toggleAll()" /> }
+        @if (canSelect()) { <input type="checkbox" aria-label="Select all" [checked]="selected().size && selected().size === result()?.data?.length" (change)="toggleAll()" /> }
         <span>Date</span><span>Name</span><span>Ad</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
       </div>
       @for (l of result()?.data ?? []; track l.id; let i = $index) {
         <div class="trow" (click)="openId.set(l.id)" [style.animation-delay.s]="i * 0.015" [class.sel]="selected().has(l.id)">
-          @if (seesAll()) { <input type="checkbox" [checked]="selected().has(l.id)" (click)="toggle(l.id, $event)" [attr.aria-label]="'Select ' + l.full_name" /> }
+          @if (canSelect()) { <input type="checkbox" [checked]="selected().has(l.id)" (click)="toggle(l.id, $event)" [attr.aria-label]="'Select ' + l.full_name" /> }
           <span class="c-date"><b>{{ date(l.date) }}</b><small>{{ age(l.date) }}</small></span>
           <span class="c-name">
             <b>{{ l.full_name }}</b>

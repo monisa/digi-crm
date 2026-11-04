@@ -261,4 +261,35 @@ class LeadsTest extends TestCase
 
         $this->getJson('/v1/leads/options')->assertJsonPath('statuses.qualified', 'Interested')->assertJsonPath('packages', ['Basic']);
     }
+
+    public function test_bulk_delete_ticked_or_all_matching(): void
+    {
+        $a = Lead::create(['full_name' => 'A', 'status' => 'new']);
+        $b = Lead::create(['full_name' => 'B', 'status' => 'lost']);
+        $c = Lead::create(['full_name' => 'C', 'status' => 'lost']);
+        $d = Lead::create(['full_name' => 'D', 'status' => 'new']);
+        $a->log($this->admin, 'note', 'hello');
+
+        $this->as($this->admin)->postJson('/v1/leads/bulk-delete', ['ids' => [$a->id]])->assertOk()->assertJsonPath('deleted', 1);
+        $this->assertDatabaseMissing('lead_activities', ['lead_id' => $a->id]);
+
+        // "All matching": only the filtered ones go.
+        $this->postJson('/v1/leads/bulk-delete', ['all' => true, 'status' => 'lost'])->assertOk()->assertJsonPath('deleted', 2);
+        $this->assertSame(['D'], Lead::pluck('full_name')->all());
+        $this->postJson('/v1/leads/bulk-delete', [])->assertStatus(422);
+    }
+
+    public function test_bulk_delete_needs_permission_and_only_touches_own_leads(): void
+    {
+        $staff = $this->staff();
+        $mine = Lead::create(['full_name' => 'Mine', 'assigned_to' => $staff->id]);
+        $other = Lead::create(['full_name' => 'Other']);
+
+        $this->as($staff)->postJson('/v1/leads/bulk-delete', ['all' => true])->assertForbidden();
+
+        $this->as($this->admin)->putJson("/v1/admin/users/{$staff->id}/permissions", ['overrides' => ['leads.view' => true, 'leads.delete' => true]]);
+        $this->as($staff->fresh())->postJson('/v1/leads/bulk-delete', ['ids' => [$mine->id, $other->id]])->assertOk()->assertJsonPath('deleted', 1);
+        $this->assertModelExists($other);
+        $this->assertModelMissing($mine);
+    }
 }
