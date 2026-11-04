@@ -42,6 +42,20 @@ rm -f "$HOME/.digi-crm.env.new"
 chmod 600 .env 2>/dev/null || true
 [ -f .env ] || { echo "!! $REPO_DIR/api/.env is missing." >&2; exit 1; }
 
+# Keys passed from GitHub secrets replace the ones in .env (values never echoed).
+set_env() {
+  ENV_KEY="$1" ENV_VAL="$2" $PHP -r '
+    $k = getenv("ENV_KEY"); $v = getenv("ENV_VAL"); $t = file_get_contents(".env");
+    $line = $k."=\"".addcslashes($v, "\"\\$")."\"";
+    $t = preg_replace_callback("/^".preg_quote($k, "/")."=.*$/m", fn () => $line, $t, -1, $n);
+    if (! $n) { $t = rtrim($t)."\n".$line."\n"; }
+    file_put_contents(".env", $t);'
+}
+for key in META_APP_SECRET META_VERIFY_TOKEN; do
+  var="SET_$key"
+  if [ -n "${!var:-}" ]; then echo "==> Updating $key"; set_env "$key" "${!var}"; fi
+done
+
 echo "==> Installing PHP packages"
 # Hostinger's PHP has proc_open turned off, which Composer needs to run Laravel's
 # post-install scripts. Skip them in Composer and run the one we need directly.

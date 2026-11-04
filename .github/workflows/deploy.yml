@@ -11,6 +11,9 @@ name: Deploy to Hostinger
 #   MAIL_PASSWORD         password of info@digifoxprosolutions.com
 #   ADMIN_EMAIL           first CRM admin login
 #   ADMIN_PASSWORD        its password (8+ characters, letters and numbers)
+# Optional secrets, copied into the server settings on every run when set:
+#   META_APP_SECRET       Meta app → App settings → Basic → App secret (Lead Ads)
+#   META_VERIFY_TOKEN     any long phrase you choose; type the same in the Meta webhook setup
 # Repository variables (same page -> Variables), optional:
 #   HOSTINGER_USER (u311568037)  HOSTINGER_PORT (65002)  DB_DATABASE / DB_USERNAME (u311568037_crm)
 #   SITE_ROOT (domains/digifoxprosolutions.com/public_html/crm)  ADMIN_NAME  GOOGLE_CLIENT_ID
@@ -146,6 +149,8 @@ jobs:
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ADMIN_NAME: ${{ vars.ADMIN_NAME || 'Admin' }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_VERIFY_TOKEN: ${{ secrets.META_VERIFY_TOKEN }}
         run: |
           if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
           if [ -f ~/.ssh/id_deploy ]; then COPY="scp -i $HOME/.ssh/id_deploy -P $SSH_PORT"; else COPY="sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -P $SSH_PORT"; fi
@@ -156,8 +161,9 @@ jobs:
           rm -f deploy.env
           $COPY deploy/server-deploy.sh "$SSH_USER@$SSH_HOST:.digi-crm-deploy.sh"
           # Admin details go through the SSH session's input, not the command line.
-          printf 'export CRM_ADMIN_EMAIL=%q CRM_ADMIN_PASSWORD=%q CRM_ADMIN_NAME=%q BRANCH=%q SITE_ROOT=%q\nbash ~/.digi-crm-deploy.sh\n' \
-            "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$ADMIN_NAME" "$BRANCH" "$SITE_ROOT" | $RUN "$SSH_USER@$SSH_HOST" 'bash -s'
+          # Meta Lead Ads keys travel the same way and are written into the server's .env.
+          printf 'export CRM_ADMIN_EMAIL=%q CRM_ADMIN_PASSWORD=%q CRM_ADMIN_NAME=%q BRANCH=%q SITE_ROOT=%q SET_META_APP_SECRET=%q SET_META_VERIFY_TOKEN=%q\nbash ~/.digi-crm-deploy.sh\n' \
+            "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$ADMIN_NAME" "$BRANCH" "$SITE_ROOT" "$META_APP_SECRET" "$META_VERIFY_TOKEN" | $RUN "$SSH_USER@$SSH_HOST" 'bash -s'
 
       - name: Upload the app
         env:

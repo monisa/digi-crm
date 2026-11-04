@@ -53,17 +53,19 @@ import { Toast } from '../../shared/toast.service';
       <details class="help">
         <summary>How to set this up (one time, about 20 minutes)</summary>
         <ol>
-          <li>At <b>developers.facebook.com</b> create an app (type <i>Business</i>) linked to your DigiFox Business Manager, and add the <b>Webhooks</b> product.</li>
-          <li>In the app’s Webhooks, choose <b>Page</b> → subscribe to <b>leadgen</b>, with:
+          <li>At <b>developers.facebook.com</b> → My Apps → Create app (use case <i>Other</i>, type <i>Business</i>), owned by the DigiFox business portfolio. In App settings → Basic, add the privacy policy URL and copy the <b>App secret</b>.</li>
+          <li>In GitHub → repository Settings → Secrets → Actions add <code>META_APP_SECRET</code> (that secret) and <code>META_VERIFY_TOKEN</code> (any long phrase you make up), then run <b>Deploy to Hostinger</b>.
+            @if (!webhookReady()) { <div class="bad">Not done yet: the server has no META_APP_SECRET / META_VERIFY_TOKEN.</div> } @else { <div class="good">Done: the server has both keys.</div> }</li>
+          <li>In the app add the <b>Webhooks</b> product, choose <b>Page</b>, and enter:
             <div class="copy">Callback URL: <code>{{ webhookUrl() }}</code></div>
-            <div class="copy">Verify token: the <code>META_VERIFY_TOKEN</code> value in the server’s settings file.</div>
-            @if (!webhookReady()) { <div class="bad">The server’s META_APP_SECRET / META_VERIFY_TOKEN are not set yet.</div> }
-          </li>
-          <li>In <b>Business Settings → System users</b>, create a system user, give it your Page and the app, and generate a token with <code>leads_retrieval</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_metadata</code> and <code>pages_manage_ads</code>. System-user tokens don’t expire.</li>
-          <li>Paste the Page ID and that token above. The CRM checks them with Meta and subscribes the Page.</li>
+            <div class="copy">Verify token: the same phrase as <code>META_VERIFY_TOKEN</code></div>
+            Then subscribe to the <b>leadgen</b> field. Switch the app to <b>Live</b>.</li>
+          <li>In <b>Business settings → Users → System users</b> add an admin system user, assign it the Page (full control) and the app, then <b>Generate token</b> for the app with <code>leads_retrieval</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_metadata</code> and <code>pages_manage_ads</code>, set to never expire.</li>
+          <li>In <b>Business settings → Integrations → Leads access</b>, select the Page and give the app (CRM) access.</li>
+          <li>Paste the Page ID (Page → About → Page transparency) and the token above. The CRM checks them with Meta and subscribes the Page.</li>
           <li>Test with Meta’s <b>Lead Ads Testing Tool</b>; the test lead should appear in Leads within a minute.</li>
         </ol>
-        <p class="hint">Meta must approve the app (App Review + Business Verification) before real leads from ads arrive. Until then only test leads work. The CRM also re-checks every 15 minutes in case a notification was missed.</p>
+        <p class="hint">Instagram lead ads use the same Facebook Page, so they come in too. The CRM also re-checks every 15 minutes in case a notification was missed. If test leads arrive but real ones don’t, Meta wants Business Verification or Advanced Access for <code>leads_retrieval</code> (App Review).</p>
       </details>
     </div>
   `,
@@ -74,6 +76,7 @@ import { Toast } from '../../shared/toast.service';
     h3 { font-size: 16px; }
     h4 { font-size: 14px; margin-top: 18px; }
     .hint { color: var(--ink-3); font-size: 13px; }
+    .good { color: #11803b; font-weight: 600; margin-top: 4px; }
     .page { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; flex-wrap: wrap; }
     .page .grow { flex: 1; min-width: 200px; }
     .page b { display: block; }
