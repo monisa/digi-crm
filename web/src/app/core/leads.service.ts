@@ -87,6 +87,10 @@ export class LeadsService {
   log(id: number, data: Record<string, unknown>): Observable<Lead> {
     return this.http.post<Lead>(`${this.base}/${id}/activities`, data);
   }
+  /** Delete the given leads, or with all = true every lead matching the filters. */
+  bulkDelete(body: { ids?: number[]; all?: boolean } & Record<string, unknown>): Observable<{ deleted: number }> {
+    return this.http.post<{ deleted: number }>(`${this.base}/bulk-delete`, body);
+  }
   assign(ids: number[], assigned_to: number | null): Observable<{ updated: number }> {
     return this.http.post<{ updated: number }>(`${this.base}/assign`, { ids, assigned_to });
   }

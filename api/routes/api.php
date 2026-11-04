@@ -98,6 +98,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/leads/options', [LeadController::class, 'saveOptions'])->middleware('permission:settings.edit');
     Route::get('/leads/export', [LeadController::class, 'export'])->middleware('permission:leads.export');
     Route::post('/leads/import', [LeadController::class, 'import'])->middleware('permission:leads.create');
+    Route::post('/leads/bulk-delete', [LeadController::class, 'bulkDestroy'])->middleware('permission:leads.delete');
     Route::post('/leads/assign', [LeadController::class, 'bulkAssign'])->middleware('permission:leads.edit');
     Route::get('/leads', [LeadController::class, 'index'])->middleware('permission:leads.view');
     Route::post('/leads', [LeadController::class, 'store'])->middleware('permission:leads.create');

@@ -48,6 +48,10 @@ export class Leads {
   protected bulkTo = '';
 
   protected readonly seesAll = computed(() => this.auth.user()?.leads_scope === 'all');
+  /** Ticking leads is for reassigning (all-leads users) or deleting. */
+  protected readonly canSelect = computed(() => this.seesAll() || this.auth.can('leads.delete'));
+  /** "Select all N leads": the action covers every lead matching the filters, not just this page. */
+  protected readonly allMatching = signal(false);
   protected readonly stages = computed(() => Object.entries(this.options()?.statuses ?? {}) as [LeadStatus, string][]);
   protected readonly board = computed(() => {
     const cols: Record<string, Lead[]> = {};
@@ -81,6 +85,7 @@ export class Leads {
           this.result.set(r);
           this.loading.set(false);
           this.selected.set(new Set());
+          this.allMatching.set(false);
         },
         error: () => this.loading.set(false),
       });
@@ -138,11 +143,46 @@ export class Leads {
 
   clearSelection(): void {
     this.selected.set(new Set());
+    this.allMatching.set(false);
   }
 
   toggleAll(): void {
     const ids = this.result()?.data.map((l) => l.id) ?? [];
+    this.allMatching.set(false);
     this.selected.set(this.selected().size === ids.length ? new Set() : new Set(ids));
+  }
+
+  pageAllTicked(): boolean {
+    const n = this.result()?.data.length ?? 0;
+    return n > 0 && this.selected().size === n;
+  }
+
+  filtered(): boolean {
+    return !!(this.view || this.search || this.status || this.callStatus || this.assigned);
+  }
+
+  private filters() {
+    return { view: this.view, search: this.search, status: this.status, call_status: this.callStatus, assigned: this.assigned };
+  }
+
+  bulkDelete(): void {
+    const all = this.allMatching();
+    const n = all ? (this.result()?.meta?.total ?? 0) : this.selected().size;
+    const what = `${n} lead${n === 1 ? '' : 's'}${all && this.filtered() ? ' matching your filters' : ''}`;
+    if (n > 20 || all) {
+      const typed = prompt(`Delete ${what}? Their call notes and history go too. This cannot be undone.\n\nType DELETE to confirm.`);
+      if (typed?.trim().toUpperCase() !== 'DELETE') return;
+    } else if (!confirm(`Delete ${what}? This cannot be undone.`)) return;
+
+    const body = all ? { all: true, ...Object.fromEntries(Object.entries(this.filters()).filter(([, v]) => v)) } : { ids: [...this.selected()] };
+    this.api.bulkDelete(body).subscribe({
+      next: (r) => {
+        this.toast.show(`${r.deleted} lead${r.deleted === 1 ? '' : 's'} deleted.`);
+        this.openId.set(null);
+        this.load(1);
+      },
+      error: (e) => this.toast.show(readErrors(e).message || 'Could not delete.'),
+    });
   }
 
   bulkAssign(): void {
@@ -158,7 +198,7 @@ export class Leads {
   }
 
   export(): void {
-    this.api.export({ view: this.view, search: this.search, status: this.status, call_status: this.callStatus, assigned: this.assigned }).subscribe({
+    this.api.export(this.filters()).subscribe({
       error: () => this.toast.show('Export failed.'),
     });
   }
