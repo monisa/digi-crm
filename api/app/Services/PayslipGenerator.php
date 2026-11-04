@@ -39,7 +39,12 @@ class PayslipGenerator
 
             $salary = $employee->salaryOn($monthEnd);
             if (! $salary) {
-                $skipped[] = ['employee' => $employee->name, 'reason' => 'No salary details'];
+                // Often the salary was saved to start next month: say so, so it can be moved back.
+                $later = $employee->salaryStructures()->reorder('effective_from')->first();
+                $skipped[] = $later
+                    ? ['employee' => $employee->name, 'reason' => 'Salary starts '.$later->effective_from->format('j M Y'),
+                        'employee_id' => $employee->id, 'salary_id' => $later->id, 'starts' => $later->effective_from->toDateString()]
+                    : ['employee' => $employee->name, 'reason' => 'No salary details', 'employee_id' => $employee->id];
                 continue;
             }
 
@@ -50,7 +55,7 @@ class PayslipGenerator
             $generated++;
         }
 
-        return ['generated' => $generated, 'skipped' => $skipped];
+        return ['generated' => $generated, 'skipped' => $skipped, 'employees' => $employees->count()];
     }
 
     private function calculate(Employee $employee, SalaryStructure $salary, CarbonImmutable $month): array
