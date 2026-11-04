@@ -7,6 +7,7 @@ import { Campaign, PortalService } from '../../core/portal.service';
 import { count, money } from '../../shared/format';
 import { Sheet } from '../../shared/sheet';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 
 /** Add / edit a campaign (staff) or view it with its reports (clients). */
 @Component({
@@ -16,6 +17,7 @@ import { Toast } from '../../shared/toast.service';
   styleUrl: './campaign-sheet.scss',
 })
 export class CampaignSheet {
+  protected readonly dialog = inject(Dialog);
   campaignId = input<number | null>(null);
   clientId = input<number | null>(null);
   platforms = input.required<Record<string, string>>();
@@ -106,13 +108,13 @@ export class CampaignSheet {
     this.api.downloadReport(f).subscribe({ error: () => this.toast.show('Could not download the file.') });
   }
 
-  removeFile(id: number): void {
-    if (!confirm('Remove this file? The client will no longer see it.')) return;
+  async removeFile(id: number): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Remove this file?', message: 'The client will no longer see it.', confirmText: 'Remove', danger: true }))) return;
     this.api.deleteReport(id).subscribe(() => this.api.campaign(this.c()!.id).subscribe((c) => this.set(c)));
   }
 
-  remove(): void {
-    if (!confirm('Delete this campaign and its files?')) return;
+  async remove(): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Delete this campaign?', message: 'Its files and reports are deleted too. This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
     this.api.deleteCampaign(this.c()!.id).subscribe(() => {
       this.toast.show('Campaign deleted.');
       this.changed.emit();

@@ -9,6 +9,7 @@ import { change, money } from '../../shared/format';
 import { Sheet } from '../../shared/sheet';
 import { Toast } from '../../shared/toast.service';
 import { ExpenseForm } from './expense-form';
+import { Dialog } from '../../shared/dialog';
 
 type Tab = 'all' | 'approvals' | 'reimburse';
 
@@ -23,6 +24,7 @@ function iso(d: Date): string {
   styleUrl: './expenses.scss',
 })
 export class Expenses {
+  protected readonly dialog = inject(Dialog);
   private api = inject(ExpensesService);
   private toast = inject(Toast);
   protected readonly auth = inject(AuthService);
@@ -103,8 +105,8 @@ export class Expenses {
     });
   }
 
-  reimburse(e: Expense): void {
-    if (!confirm(`Mark ${money(e.amount)} as paid back to ${e.created_by?.name}?`)) return;
+  async reimburse(e: Expense): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Mark as paid back?', message: `${money(e.amount)} to ${e.created_by?.name}.`, confirmText: 'Paid back' }))) return;
     this.api.reimburse(e.id).subscribe(() => {
       this.toast.show('Marked as reimbursed.');
       this.load();
