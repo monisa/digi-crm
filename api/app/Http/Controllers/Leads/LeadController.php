@@ -116,6 +116,36 @@ class LeadController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    /**
+     * Delete many leads: the ticked ones (ids), or every lead matching the
+     * current filters (all = true). Only leads this person can see.
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'all' => ['sometimes', 'boolean'],
+            'ids' => ['required_without:all', 'array', 'max:500'],
+            'ids.*' => ['integer'],
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'string'],
+            'call_status' => ['nullable', 'string', 'max:60'],
+            'assigned' => ['nullable', 'string'],
+            'view' => ['nullable', Rule::in(['uncontacted', 'followups', 'today'])],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+        $user = $request->user();
+        $q = Lead::visibleTo($user);
+        $q = ($data['all'] ?? false) ? $this->filtered($q, $data, $user) : $q->whereIn('id', $data['ids']);
+
+        $deleted = 0;
+        $q->select('id')->chunkById(500, function ($chunk) use (&$deleted) {
+            $deleted += Lead::whereIn('id', $chunk->pluck('id'))->delete(); // activities go with them (cascade)
+        });
+
+        return response()->json(['deleted' => $deleted]);
+    }
+
     /** Log a call / WhatsApp / meeting / note; contacting a new lead moves it to "Contacted". */
     public function logActivity(Request $request, Lead $lead): JsonResponse
     {

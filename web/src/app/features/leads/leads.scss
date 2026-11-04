@@ -12,6 +12,10 @@
 .vchip.on.crit b, .vchip.on.warn b { color: #fff; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
 .filters .grow { flex: 1; min-width: 220px; }
+.all-note { flex-basis: 100%; font-size: 13px; color: var(--ink-2); }
+.linkish { background: none; border: 0; padding: 0; color: var(--brand-deep); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.btn-ghost.danger { color: #c0262d; border-color: rgba(192, 38, 45, 0.35); }
+.btn-ghost.danger:hover { background: #fdecec; }
 .bulk { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 10px; border-radius: 12px; background: var(--brand-soft); animation: rise 0.25s var(--ease); }
 
 .table { display: flex; flex-direction: column; transition: opacity 0.2s; }
