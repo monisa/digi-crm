@@ -8,7 +8,7 @@ export interface NavItem {
   path: string;
   icon: IconName;
   module: string; // permission module; shown only if the user can view it
-  section: 'Overview' | 'Client portal' | 'System';
+  section: 'Overview' | 'My work' | 'Client portal' | 'System';
 }
 
 /** Full menu. Each user sees only the items whose module they can view (set by the admin). */
@@ -17,10 +17,10 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Leads', path: '/leads', icon: 'leads', module: 'leads', section: 'Overview' },
   { label: 'Clients', path: '/clients', icon: 'clients', module: 'clients', section: 'Overview' },
   { label: 'Employees', short: 'Team', path: '/employees', icon: 'employees', module: 'employees', section: 'Overview' },
-  { label: 'Tasks', path: '/tasks', icon: 'tasks', module: 'tasks', section: 'Overview' },
-  { label: 'Attendance', path: '/attendance', icon: 'clock', module: 'attendance', section: 'Overview' },
-  { label: 'Leave', path: '/leave', icon: 'leave', module: 'leave', section: 'Overview' },
   { label: 'Expenses', path: '/expenses', icon: 'expenses', module: 'expenses', section: 'Overview' },
+  { label: 'Tasks', path: '/tasks', icon: 'tasks', module: 'tasks', section: 'My work' },
+  { label: 'Attendance', path: '/attendance', icon: 'clock', module: 'attendance', section: 'My work' },
+  { label: 'Leave', path: '/leave', icon: 'leave', module: 'leave', section: 'My work' },
   { label: 'Campaigns', path: '/campaigns', icon: 'campaigns', module: 'campaigns', section: 'Client portal' },
   { label: 'Invoices & Payments', short: 'Invoices', path: '/invoices', icon: 'invoices', module: 'invoices', section: 'Client portal' },
   { label: 'Tickets', path: '/tickets', icon: 'tickets', module: 'tickets', section: 'Client portal' },
