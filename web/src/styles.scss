@@ -79,7 +79,7 @@ button { font: inherit; }
 .field textarea { height: auto; min-height: 96px; padding: 14px 16px; resize: vertical; }
 .field label {
   position: absolute; left: 12px; top: -9px; padding: 0 6px; font-size: 13px; color: var(--ink-2);
-  background: #fff; line-height: 18px; pointer-events: none; transition: color 0.2s;
+  background: #fff; line-height: 18px; pointer-events: none; transition: color 0.2s; z-index: 1;
 }
 .field label .req { color: var(--crit); }
 .field input:focus, .field select:focus, .field textarea:focus {
