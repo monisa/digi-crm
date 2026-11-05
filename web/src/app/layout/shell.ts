@@ -5,6 +5,7 @@ import { AuthService } from '../core/auth/auth.service';
 import { NAV_ITEMS, NavItem } from '../core/navigation';
 import { Toast } from '../shared/toast.service';
 import { Bell } from './bell';
+import { ChatService } from '../core/chat.service';
 import { Icon } from './icon';
 import { AccountSheet, AccountTab } from './account-sheet';
 
@@ -17,6 +18,7 @@ import { AccountSheet, AccountTab } from './account-sheet';
 export class Shell {
   protected readonly auth = inject(AuthService);
   protected readonly toast = inject(Toast);
+  protected readonly chat = inject(ChatService);
 
   /** Menu items this user may see, grouped by section. */
   protected readonly sections = computed(() => {
@@ -42,6 +44,11 @@ export class Shell {
   }
 
   constructor() {
+    // Unread chat badge: check every 20 s while the tab is open (no WebSockets on shared hosting).
+    const pollChat = () => !document.hidden && this.auth.canView('chat') && this.chat.refreshUnread();
+    setTimeout(pollChat, 1500);
+    setInterval(pollChat, 20000);
+
     inject(Router)
       .events.pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe(() => {

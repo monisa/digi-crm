@@ -24,6 +24,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
 use App\Http\Controllers\Billing\OnlinePaymentController;
+use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Work\AttendanceController;
 use App\Http\Controllers\Work\TaskController;
 use App\Http\Controllers\PasswordResetController;
@@ -200,6 +201,22 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('permission:campaigns.delete');
         Route::post('/campaigns/{campaign}/files', [CampaignController::class, 'upload'])->middleware('permission:campaigns.edit');
         Route::delete('/campaign-files/{file}', [CampaignController::class, 'deleteFile'])->middleware('permission:campaigns.edit');
+    });
+
+    // Team chat (staff only; the app polls).
+    Route::middleware(['staff', 'permission:chat.view'])->prefix('chat')->group(function () {
+        Route::get('/conversations', [ChatController::class, 'index']);
+        Route::get('/unread', [ChatController::class, 'unread']);
+        Route::get('/people', [ChatController::class, 'people']);
+        Route::post('/direct', [ChatController::class, 'direct']);
+        Route::post('/groups', [ChatController::class, 'createGroup'])->middleware('permission:chat.create');
+        Route::patch('/conversations/{conversation}', [ChatController::class, 'updateGroup']);
+        Route::post('/conversations/{conversation}/leave', [ChatController::class, 'leave']);
+        Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages']);
+        Route::post('/conversations/{conversation}/messages', [ChatController::class, 'send'])->middleware('throttle:60,1');
+        Route::post('/conversations/{conversation}/read', [ChatController::class, 'read']);
+        Route::delete('/messages/{message}', [ChatController::class, 'destroy']);
+        Route::get('/messages/{message}/file', [ChatController::class, 'file']);
     });
 
     // Tasks and attendance (staff only).
