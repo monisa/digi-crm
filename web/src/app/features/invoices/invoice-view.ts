@@ -6,15 +6,19 @@ import { BillingService, Invoice, STATUS_LABEL } from '../../core/billing.servic
 import { readErrors } from '../../core/http-errors';
 import { money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
+import { Sheet } from '../../shared/sheet';
+import { ShareLink } from '../../shared/share-link';
+import { Dialog } from '../../shared/dialog';
 
 /** One invoice: looks like the PDF, with pay (clients) or manage (staff) actions. */
 @Component({
   selector: 'app-invoice-view',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Sheet, ShareLink],
   templateUrl: './invoice-view.html',
   styleUrl: './invoice-view.scss',
 })
 export class InvoiceView {
+  protected readonly dialog = inject(Dialog);
   id = input.required<string>();
   private api = inject(BillingService);
   private router = inject(Router);
@@ -40,8 +44,44 @@ export class InvoiceView {
     return !!i && (i.status === 'unpaid' || i.status === 'partial');
   });
 
+  /** Staff: the Razorpay link to send the client. */
+  protected readonly payLink = signal('');
+  protected readonly sharingLink = signal(false);
+
   ngOnInit(): void {
     this.load();
+  }
+
+  /** Client: go to Razorpay's payment page. */
+  payOnline(): void {
+    this.busy.set(true);
+    this.api.payOnline(this.inv()!.id).subscribe({
+      next: (r) => (window.location.href = r.url),
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Online payment is not available right now. Please use UPI below.');
+      },
+    });
+  }
+
+  /** Staff: get the link to share on WhatsApp / email. */
+  shareLink(): void {
+    this.busy.set(true);
+    this.api.payOnline(this.inv()!.id).subscribe({
+      next: (r) => {
+        this.busy.set(false);
+        this.payLink.set(r.url);
+        this.sharingLink.set(true);
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Could not make a payment link.');
+      },
+    });
+  }
+
+  modeLabel(m: string): string {
+    return ({ upi: 'UPI', online: 'Online (Razorpay)', bank_transfer: 'Bank transfer' } as Record<string, string>)[m] ?? m.replace('_', ' ');
   }
 
   load(): void {
@@ -67,16 +107,16 @@ export class InvoiceView {
     });
   }
 
-  issue(): void {
-    if (confirm('Issue this invoice? It gets its number and can no longer be edited.')) this.act(this.api.issue(this.inv()!.id), 'Invoice issued.');
+  async issue(): Promise<void> {
+    if (await this.dialog.confirm({ title: 'Issue this invoice?', message: 'It gets its number and can no longer be edited.', confirmText: 'Issue invoice' })) this.act(this.api.issue(this.inv()!.id), 'Invoice issued.');
   }
 
-  cancel(): void {
-    if (confirm('Cancel this invoice? It stays on record marked as cancelled.')) this.act(this.api.cancel(this.inv()!.id), 'Invoice cancelled.');
+  async cancel(): Promise<void> {
+    if (await this.dialog.confirm({ title: 'Cancel this invoice?', message: 'It stays on record marked as cancelled.', confirmText: 'Cancel invoice', cancelText: 'Keep it', danger: true })) this.act(this.api.cancel(this.inv()!.id), 'Invoice cancelled.');
   }
 
-  deleteDraft(): void {
-    if (!confirm('Delete this draft?')) return;
+  async deleteDraft(): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Delete this draft?', message: 'This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
     this.api.deleteDraft(this.inv()!.id).subscribe(() => {
       this.toast.show('Draft deleted.');
       this.router.navigateByUrl('/invoices');

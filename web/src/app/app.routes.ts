@@ -35,6 +35,11 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'pay/done',
+    title: T('Payment'),
+    loadComponent: () => import('./features/invoices/pay-done').then((m) => m.PayDone),
+  },
+  {
     path: 'form/:token',
     title: T('Client onboarding form'),
     data: { mode: 'public' },

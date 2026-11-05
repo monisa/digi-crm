@@ -85,9 +85,14 @@ export class SalaryForm {
 
   ngOnInit(): void {
     const c = this.current();
-    const next = new Date();
-    next.setMonth(next.getMonth() + 1, 1);
-    this.v = { effective_from: next.toISOString().slice(0, 10), bank_account_last4: c?.bank_account_last4 ?? '' };
+    // A first salary starts from joining (or last month, so last month's payroll can run);
+    // a revision starts next month.
+    const d = new Date();
+    if (c) d.setMonth(d.getMonth() + 1, 1);
+    else d.setMonth(d.getMonth() - 1, 1);
+    const ymd = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+    const from = !c && this.employee().doj ? this.employee().doj!.slice(0, 10) : ymd(d);
+    this.v = { effective_from: from, bank_account_last4: c?.bank_account_last4 ?? '' };
     for (const f of [...this.earnings, ...this.deductions]) this.v[f.key] = c ? (c as unknown as Record<string, number>)[f.key] || null : null;
   }
 

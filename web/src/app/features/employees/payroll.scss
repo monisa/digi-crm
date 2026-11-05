@@ -34,3 +34,9 @@ h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
   .head .badge { grid-column: 1; justify-self: start !important; }
   .detail { grid-template-columns: 1fr; gap: 12px; }
 }
+
+.skip { margin-bottom: 16px; border: 1px solid rgba(237, 143, 33, 0.45); background: linear-gradient(90deg, rgba(237, 143, 33, 0.1), transparent); animation: rise 0.3s var(--ease); }
+.skip h3 { font-size: 15px; margin-bottom: 6px; }
+.srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-top: 1px dashed var(--line); }
+.srow:first-of-type { border-top: 0; }
+.srow b { display: block; } .srow small { color: #b54708; font-size: 13px; }

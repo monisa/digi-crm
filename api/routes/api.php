@@ -22,6 +22,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
+use App\Http\Controllers\Billing\OnlinePaymentController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\StaffDashboardController;
 use App\Http\Controllers\Portal\CampaignController;
@@ -34,6 +35,10 @@ Route::get('/health', fn () => response()->json([
     'app' => config('app.name'),
     'time' => now()->toIso8601String(),
 ]));
+
+// Razorpay: webhook (signed) and the customer's return from the payment page (signed).
+Route::post('/webhooks/razorpay', [OnlinePaymentController::class, 'webhook'])->middleware('throttle:300,1');
+Route::post('/payments/razorpay/callback', [OnlinePaymentController::class, 'callback'])->middleware('throttle:30,1');
 
 // Meta Lead Ads webhook (verified by signature, not by login).
 Route::get('/webhooks/meta', [MetaController::class, 'verify']);
@@ -73,6 +78,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.edit');
     Route::get('/employees/{employee}/salary', [SalaryController::class, 'show'])->middleware('permission:employees.view');
     Route::post('/employees/{employee}/salary', [SalaryController::class, 'store'])->middleware('permission:employees.edit');
+    Route::patch('/employees/{employee}/salary/{structure}', [SalaryController::class, 'move'])->middleware('permission:employees.edit');
     Route::get('/employees/{employee}/leave', [LeaveController::class, 'forEmployee'])->middleware('permission:employees.view');
     Route::get('/employees/{employee}/payslips', [PayslipController::class, 'forEmployee'])->middleware('permission:employees.view');
 
@@ -138,6 +144,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->middleware('permission:invoices.view');
+    Route::post('/invoices/{invoice}/pay-online', [OnlinePaymentController::class, 'link'])->middleware(['permission:invoices.view', 'throttle:20,1']);
     Route::post('/invoices/{invoice}/claims', [PaymentClaimController::class, 'store'])->middleware('permission:invoices.view');
     Route::middleware('staff')->group(function () {
         Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('permission:invoices.create');

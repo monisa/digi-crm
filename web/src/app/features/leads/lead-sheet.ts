@@ -6,6 +6,7 @@ import { readErrors } from '../../core/http-errors';
 import { Lead, LeadOptions, LeadStatus, LeadsService, waNumber } from '../../core/leads.service';
 import { Sheet } from '../../shared/sheet';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 
 /** Everything about one lead: contact buttons, stage, sheet fields, logging and history. */
 @Component({
@@ -15,6 +16,7 @@ import { Toast } from '../../shared/toast.service';
   styleUrl: './lead-sheet.scss',
 })
 export class LeadSheet {
+  protected readonly dialog = inject(Dialog);
   leadId = input.required<number>();
   options = input.required<LeadOptions>();
   closed = output<void>();
@@ -62,12 +64,12 @@ export class LeadSheet {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
-  setStage(s: LeadStatus): void {
+  async setStage(s: LeadStatus): Promise<void> {
     const l = this.lead();
     if (!l || l.status === s || !this.canEdit) return;
     let lost_reason: string | null = null;
     if (s === 'lost') {
-      lost_reason = prompt(`Why is this lead not interested?\n(${this.options().lost_reasons.join(', ')})`, this.options().lost_reasons[0] ?? '');
+      lost_reason = await this.dialog.prompt({ title: 'Why is this lead not interested?', suggestions: this.options().lost_reasons, label: 'Reason', value: this.options().lost_reasons[0] ?? '', confirmText: 'Mark not interested' });
       if (lost_reason === null) return;
     }
     this.api.update(l.id, { status: s, ...(s === 'lost' ? { lost_reason } : {}) }).subscribe({
@@ -135,9 +137,9 @@ export class LeadSheet {
       });
   }
 
-  convert(): void {
+  async convert(): Promise<void> {
     const l = this.lead()!;
-    const name = prompt('Company / business name for the new client:', l.full_name);
+    const name = await this.dialog.prompt({ title: 'Make this lead a client', label: 'Company / business name', value: l.full_name, confirmText: 'Create client', required: true });
     if (!name) return;
     this.api.convert(l.id, name).subscribe({
       next: (r) => {
@@ -149,9 +151,9 @@ export class LeadSheet {
     });
   }
 
-  remove(): void {
+  async remove(): Promise<void> {
     const l = this.lead()!;
-    if (!confirm(`Delete the lead "${l.full_name}"? This cannot be undone.`)) return;
+    if (!(await this.dialog.confirm({ title: 'Delete this lead?', message: `"${l.full_name}" and its call notes will be deleted. This cannot be undone.`, confirmText: 'Delete lead', danger: true }))) return;
     this.api.remove(l.id).subscribe(() => {
       this.toast.show('Lead deleted.');
       this.changed.emit(null);

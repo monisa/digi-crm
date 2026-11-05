@@ -5,7 +5,7 @@
     <p>Payslips are built from each person’s salary, minus loss-of-pay leave and days before joining.</p>
   </div>
   <div class="actions">
-    <select class="select-sm" [(ngModel)]="selected" (ngModelChange)="load()" aria-label="Month">
+    <select class="select-sm" [(ngModel)]="selected" (ngModelChange)="changeMonth()" aria-label="Month">
       @for (m of months; track m.key) { <option [value]="m.key">{{ m.label }}</option> }
     </select>
     <button class="btn-ghost" (click)="generate()" [disabled]="busy()">{{ slips().length ? 'Regenerate drafts' : 'Generate payslips' }}</button>
@@ -20,10 +20,18 @@
 </div>
 
 @if (skipped().length) {
-  <div class="alert info">
-    <b>Not prepared:</b>
-    @for (s of skipped(); track s.employee; let last = $last) { {{ s.employee }} ({{ s.reason }}){{ last ? '' : ', ' }} }
-    — set their salary on their profile, then regenerate.
+  <div class="card skip">
+    <h3>Not prepared for {{ label() }}</h3>
+    @for (s of skipped(); track s.employee) {
+      <div class="srow">
+        <div><b>{{ s.employee }}</b><small>{{ s.reason }}</small></div>
+        @if (s.salary_id) {
+          <button class="btn" [disabled]="busy()" (click)="startFromThisMonth(s)">Use this salary from {{ label() }}</button>
+        } @else if (s.employee_id) {
+          <a class="btn-ghost" [routerLink]="['/employees', s.employee_id]">Set salary</a>
+        }
+      </div>
+    }
   </div>
 }
 

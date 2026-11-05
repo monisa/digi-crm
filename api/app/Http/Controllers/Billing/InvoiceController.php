@@ -67,6 +67,7 @@ class InvoiceController extends Controller
         return response()->json([
             ...$invoice->toApiArray(true),
             'pay' => [
+                'online' => app(\App\Services\Billing\Razorpay::class)->configured(),
                 'upi_id' => $c['upi_id'] ?: null,
                 'upi_link' => $upi->link($invoice),
                 'qr' => $upi->dataUri($invoice),

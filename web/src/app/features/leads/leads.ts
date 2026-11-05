@@ -12,6 +12,7 @@ import { LeadAdd } from './lead-add';
 import { LeadImport } from './lead-import';
 import { LeadOptionsForm } from './lead-options';
 import { LeadSheet } from './lead-sheet';
+import { Dialog } from '../../shared/dialog';
 
 type View = '' | 'uncontacted' | 'followups' | 'today';
 
@@ -22,6 +23,7 @@ type View = '' | 'uncontacted' | 'followups' | 'today';
   styleUrl: './leads.scss',
 })
 export class Leads {
+  protected readonly dialog = inject(Dialog);
   private api = inject(LeadsService);
   private toast = inject(Toast);
   protected readonly auth = inject(AuthService);
@@ -114,12 +116,12 @@ export class Leads {
     this.result.update((r) => (r ? { ...r, data: r.data.map((x) => (x.id === l.id ? l : x)) } : r));
   }
 
-  drop(e: CdkDragDrop<Lead[]>, to: LeadStatus): void {
+  async drop(e: CdkDragDrop<Lead[]>, to: LeadStatus): Promise<void> {
     const lead = e.item.data as Lead;
     if (lead.status === to) return;
     let lost_reason: string | null = null;
     if (to === 'lost') {
-      lost_reason = prompt('Why is this lead not interested?', this.options()?.lost_reasons[0] ?? '');
+      lost_reason = await this.dialog.prompt({ title: 'Why is this lead not interested?', suggestions: this.options()?.lost_reasons ?? [], label: 'Reason', value: this.options()?.lost_reasons[0] ?? '', confirmText: 'Mark not interested' });
       if (lost_reason === null) return;
     }
     this.changed({ ...lead, status: to }); // move it straight away
@@ -165,14 +167,18 @@ export class Leads {
     return { view: this.view, search: this.search, status: this.status, call_status: this.callStatus, assigned: this.assigned };
   }
 
-  bulkDelete(): void {
+  async bulkDelete(): Promise<void> {
     const all = this.allMatching();
     const n = all ? (this.result()?.meta?.total ?? 0) : this.selected().size;
     const what = `${n} lead${n === 1 ? '' : 's'}${all && this.filtered() ? ' matching your filters' : ''}`;
-    if (n > 20 || all) {
-      const typed = prompt(`Delete ${what}? Their call notes and history go too. This cannot be undone.\n\nType DELETE to confirm.`);
-      if (typed?.trim().toUpperCase() !== 'DELETE') return;
-    } else if (!confirm(`Delete ${what}? This cannot be undone.`)) return;
+    const ok = await this.dialog.confirm({
+      title: `Delete ${what}?`,
+      message: 'Their call notes and history are deleted too. This cannot be undone.',
+      confirmText: `Delete ${n === 1 ? 'lead' : n + ' leads'}`,
+      danger: true,
+      typeToConfirm: n > 20 || all ? 'DELETE' : undefined,
+    });
+    if (!ok) return;
 
     const body = all ? { all: true, ...Object.fromEntries(Object.entries(this.filters()).filter(([, v]) => v)) } : { ids: [...this.selected()] };
     this.api.bulkDelete(body).subscribe({
