@@ -28,4 +28,12 @@
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # Browsers must always use HTTPS for this site (1 year).
+  Header always set Strict-Transport-Security "max-age=31536000"
+  # Only location (attendance check-in) may be used; no camera, microphone, etc.
+  Header always set Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  # Content-Security-Policy: only our own code runs (plus Google sign-in). Blocks injected scripts.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+  Header unset X-Powered-By
 </IfModule>

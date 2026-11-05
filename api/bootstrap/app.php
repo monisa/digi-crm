@@ -26,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // API only: never redirect guests to a login page, just answer 401.
         $middleware->redirectGuestsTo(fn () => null);
 
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         $middleware->alias([
             'permission' => EnsurePermission::class,
             'active' => EnsureAccountActive::class,
