@@ -1,7 +1,7 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { KeyValuePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { BillingService, ClientDetail, InvoiceRow, STATUS_LABEL } from '../../core/billing.service';
 import { readErrors } from '../../core/http-errors';
@@ -47,6 +47,26 @@ export class ClientProfile {
   ngOnInit(): void {
     this.load();
     if (this.route.snapshot.queryParamMap.get('saved')) this.toast.show('Onboarding answers saved.');
+  }
+
+  private router = inject(Router);
+
+  /** Delete a client added by mistake (not possible once invoices are issued). */
+  async removeClient(): Promise<void> {
+    const c = this.c()!;
+    const ok = await this.dialog.confirm({
+      title: `Delete ${c.company_name}?`,
+      message: 'Their portal logins, draft invoices, campaigns, tickets, files and onboarding answers are deleted permanently. Clients with issued invoices cannot be deleted (GST records); set them to Past client instead.',
+      confirmText: 'Delete client', danger: true, typeToConfirm: 'DELETE',
+    });
+    if (!ok) return;
+    this.api.deleteClient(c.id).subscribe({
+      next: () => {
+        this.toast.show(`${c.company_name} deleted.`);
+        this.router.navigateByUrl('/clients');
+      },
+      error: (e) => this.toast.show(readErrors(e).message || 'Could not delete the client.'),
+    });
   }
 
   /** A form link just for this client; it fills in their record. */

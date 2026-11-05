@@ -40,3 +40,6 @@ h3 { font-size: 16px; margin-bottom: 6px; } .mt { margin-top: 20px; }
   background: linear-gradient(90deg, rgba(237, 143, 33, 0.12), transparent); }
 .pend > div:first-child { flex: 1; min-width: 240px; } .pend p { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
 .pacts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn-ghost.danger { color: #c0262d; }
+.btn-ghost.danger:hover { background: #fdecec; border-color: rgba(192, 38, 45, 0.35); }

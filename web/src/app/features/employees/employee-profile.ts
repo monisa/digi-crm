@@ -32,7 +32,7 @@ export class EmployeeProfile {
   async remove(e: Employee): Promise<void> {
     const ok = await this.dialog.confirm({
       title: `Delete ${e.name}?`,
-      message: 'Their login, salary, payslips, leave and attendance are deleted permanently. Leads, clients, invoices and tickets they worked on stay. Download any payslips you need first.',
+      message: 'Their login, salary, payslips, leave and attendance are deleted permanently. Leads, clients, invoices and tickets they worked on stay. Download any payslips you need first. (Only need a new email? Use Edit details → Office email instead.)',
       confirmText: 'Delete permanently', danger: true, typeToConfirm: 'DELETE',
     });
     if (!ok) return;

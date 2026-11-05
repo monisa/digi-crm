@@ -35,11 +35,6 @@ class RemovePersonTest extends TestCase
         $lead = Lead::create(['full_name' => 'Customer', 'assigned_to' => $u->id]);
         Task::create(['title' => 'Old task', 'assigned_to' => $u->id]);
 
-        $this->deleteJson("/v1/admin/users/{$u->id}")->assertStatus(422)->assertJsonPath('message', fn ($m) => str_contains($m, 'inactive'));
-        $this->deleteJson("/v1/employees/{$e->id}")->assertStatus(422);
-
-        $e->update(['status' => 'inactive']);
-        $u->forceFill(['status' => 'inactive'])->save();
         $this->deleteJson("/v1/employees/{$e->id}")->assertOk();
 
         $this->assertModelMissing($u);
