@@ -131,6 +131,9 @@ export class BillingService {
   saveClient(data: Partial<Client> & { account_manager_id?: number | null }, id?: number): Observable<Client> {
     return id ? this.http.put<Client>(`${API_BASE}/clients/${id}`, data) : this.http.post<Client>(`${API_BASE}/clients`, data);
   }
+  deleteClient(id: number): Observable<unknown> {
+    return this.http.delete(`${API_BASE}/clients/${id}`);
+  }
   invite(id: number, name: string, email: string): Observable<unknown> {
     return this.http.post(`${API_BASE}/clients/${id}/invite`, { name, email });
   }

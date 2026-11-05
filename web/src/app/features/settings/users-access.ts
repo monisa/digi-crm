@@ -22,11 +22,30 @@ export class UsersAccess {
   protected readonly canDelete = this.auth.can('settings.delete');
   private dialog = inject(Dialog);
 
-  /** Delete an inactive or never-activated login (test accounts, people who left). */
+  /** Change someone's login email (their password stays the same). */
+  async changeEmail(u: AuthUser): Promise<void> {
+    const email = await this.dialog.prompt({
+      title: `Change ${u.name}'s login email`, label: 'New email', value: u.email, confirmText: 'Change email', required: true,
+      message: 'They log in with the new email and the same password. Their employee record is updated too.',
+    });
+    if (!email || email === u.email) return;
+    this.admin.updateUser(u.id, { email }).subscribe({
+      next: (updated) => {
+        this.users.update((l) => l.map((x) => (x.id === updated.id ? updated : x)));
+        this.flash(`Login email changed to ${updated.email}.`);
+      },
+      error: (e) => {
+        const r = readErrors(e);
+        this.flash(r.fields['email'] || r.message || 'Could not change the email.');
+      },
+    });
+  }
+
+  /** Delete a login (test accounts, people who left). */
   async remove(u: AuthUser): Promise<void> {
     const ok = await this.dialog.confirm({
       title: `Delete ${u.name}?`,
-      message: `${u.email} can no longer log in. Their employee record, salary, payslips, leave and attendance are deleted too. Leads, clients, invoices and tickets they worked on stay (without their name). This cannot be undone.`,
+      message: `${u.email} can no longer log in. (Only need a new email? Use ✎ next to the email instead.) Their employee record, salary, payslips, leave and attendance are deleted too. Leads, clients, invoices and tickets they worked on stay (without their name). This cannot be undone.`,
       confirmText: 'Delete permanently', danger: true, typeToConfirm: 'DELETE',
     });
     if (!ok) return;

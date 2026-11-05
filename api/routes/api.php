@@ -132,6 +132,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/clients/onboarding-link/reset', [ClientOnboardingController::class, 'resetGeneralLink'])->middleware('permission:clients.approve');
         Route::get('/clients/{client}', [ClientController::class, 'show'])->middleware('permission:clients.view');
         Route::put('/clients/{client}', [ClientController::class, 'update'])->middleware('permission:clients.edit');
+        Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->middleware('permission:clients.delete');
         Route::get('/clients/{client}/onboarding', [ClientOnboardingController::class, 'show'])->middleware('permission:clients.edit');
         Route::post('/clients/{client}/onboarding', [ClientOnboardingController::class, 'store'])->middleware('permission:clients.edit');
         Route::post('/clients/{client}/onboarding-link', [ClientOnboardingController::class, 'clientLink'])->middleware('permission:clients.edit');
