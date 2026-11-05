@@ -31,6 +31,10 @@ Schedule::call($run('crm:razorpay-sync'))->name('razorpay-sync')->everyTenMinute
 Schedule::call($run('crm:repeat-tasks'))->name('repeat-tasks')->dailyAt('00:10');
 Schedule::call(fn () => app(\App\Services\AttendanceService::class)->closeOpenDays())->name('close-attendance')->dailyAt('00:20');
 
+// Backups: database every night, uploaded files every Sunday night.
+Schedule::call($run('crm:backup'))->name('backup-db')->dailyAt('02:17');
+Schedule::call($run('crm:backup', ['--files' => true]))->name('backup-files')->weeklyOn(0, '03:23');
+
 // Housekeeping
 Schedule::call($run('sanctum:prune-expired', ['--hours' => 24]))->name('prune-tokens')->daily();
 Schedule::call($run('auth:clear-resets'))->name('clear-resets')->everyFifteenMinutes();
