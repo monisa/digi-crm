@@ -123,4 +123,15 @@ class EmployeeController extends Controller
 
         return sprintf('DFP%03d', $n);
     }
+
+    /** Delete someone who has left the company, with their login and HR history. */
+    public function destroy(Request $request, Employee $employee, \App\Services\RemovePerson $remove): JsonResponse
+    {
+        if ($why = $remove->check($employee->user, $employee, $request->user())) {
+            return response()->json(['message' => $why], 422);
+        }
+        $remove->remove($employee->user, $employee);
+
+        return response()->json(['deleted' => true]);
+    }
 }

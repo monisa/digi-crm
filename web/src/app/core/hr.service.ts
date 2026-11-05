@@ -109,6 +109,9 @@ export class HrService {
   employee(id: number): Observable<Employee> {
     return this.http.get<Employee>(`${API_BASE}/employees/${id}`);
   }
+  deleteEmployee(id: number): Observable<unknown> {
+    return this.http.delete(`${API_BASE}/employees/${id}`);
+  }
   saveEmployee(data: Partial<Employee> & { create_login?: boolean; reporting_manager_id?: number | null }, id?: number): Observable<Employee> {
     return id
       ? this.http.put<Employee>(`${API_BASE}/employees/${id}`, data)

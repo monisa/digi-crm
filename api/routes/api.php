@@ -80,6 +80,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.create');
     Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->middleware('permission:employees.view');
     Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.edit');
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:employees.delete');
     Route::get('/employees/{employee}/salary', [SalaryController::class, 'show'])->middleware('permission:employees.view');
     Route::post('/employees/{employee}/salary', [SalaryController::class, 'store'])->middleware('permission:employees.edit');
     Route::patch('/employees/{employee}/salary/{structure}', [SalaryController::class, 'move'])->middleware('permission:employees.edit');
@@ -240,6 +241,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:settings.view');
         Route::patch('/users/{user}', [UserController::class, 'update'])->middleware('permission:settings.edit');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('permission:settings.delete');
         Route::get('/users/{user}/permissions', [UserController::class, 'permissions'])->middleware('permission:settings.view');
         Route::put('/users/{user}/permissions', [UserController::class, 'updatePermissions'])->middleware('permission:settings.edit');
     });
