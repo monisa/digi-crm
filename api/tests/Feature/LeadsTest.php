@@ -305,4 +305,21 @@ class LeadsTest extends TestCase
         $this->getJson('/v1/leads?ad=Course&from=2026-11-01&to=2026-11-30')->assertJsonCount(1, 'data')->assertJsonPath('data.0.full_name', 'B');
         $this->getJson('/v1/leads?ad=__none')->assertJsonCount(1, 'data')->assertJsonPath('data.0.full_name', 'D');
     }
+
+    public function test_sorting_by_date_service_and_assignee(): void
+    {
+        $zara = User::factory()->create(['name' => 'Zara', 'role' => 'employee']);
+        $anu = User::factory()->create(['name' => 'Anu', 'role' => 'employee']);
+        Lead::create(['full_name' => 'Old', 'ad_name' => 'SEO', 'assigned_to' => $zara->id, 'created_at' => '2026-10-01 10:00']);
+        Lead::create(['full_name' => 'Mid', 'ad_name' => 'Course', 'created_at' => '2026-10-15 10:00']);
+        Lead::create(['full_name' => 'New', 'assigned_to' => $anu->id, 'created_at' => '2026-11-04 10:00']);
+        $names = fn ($q) => collect($this->getJson('/v1/leads'.$q)->assertOk()->json('data'))->pluck('full_name')->all();
+
+        $this->as($this->admin);
+        $this->assertSame(['New', 'Mid', 'Old'], $names(''));
+        $this->assertSame(['Old', 'Mid', 'New'], $names('?sort=date&dir=asc'));
+        $this->assertSame(['Mid', 'Old', 'New'], $names('?sort=service'));          // Course, SEO, then empty
+        $this->assertSame(['Old', 'Mid', 'New'], $names('?sort=service&dir=desc'));
+        $this->assertSame(['New', 'Old', 'Mid'], $names('?sort=assigned'));         // Anu, Zara, then unassigned
+    }
 }

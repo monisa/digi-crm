@@ -49,6 +49,34 @@ export class Leads {
   protected search = '';
   protected page = 1;
   protected readonly pageSizes = [25, 50, 100, 200];
+  /** Column sort; every visit starts with the newest leads first. */
+  protected readonly sort = signal<{ key: 'date' | 'service' | 'assigned'; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
+
+  sortBy(key: 'date' | 'service' | 'assigned'): void {
+    const s = this.sort();
+    this.sort.set(s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'date' ? 'desc' : 'asc' });
+    this.load(1);
+  }
+
+  sortKey(): string {
+    return `${this.sort().key}:${this.sort().dir}`;
+  }
+
+  setSortKey(v: string): void {
+    const [key, dir] = v.split(':') as ['date' | 'service' | 'assigned', 'asc' | 'desc'];
+    this.sort.set({ key, dir });
+    this.load(1);
+  }
+
+  arrow(key: string): string {
+    const s = this.sort();
+    return s.key !== key ? '↕' : s.dir === 'asc' ? '↑' : '↓';
+  }
+
+  ariaSort(key: string): string {
+    const s = this.sort();
+    return s.key !== key ? 'none' : s.dir === 'asc' ? 'ascending' : 'descending';
+  }
   protected readonly pageSize = signal<number>(this.savedSize());
 
   private savedSize(): number {
@@ -279,6 +307,7 @@ export class Leads {
     const f = this.f();
     return {
       view: this.view, search: this.search, ad: f.ad, call_status: f.callStatus, assigned: f.assigned,
+      sort: this.sort().key, dir: this.sort().dir,
       // On the board, stages are the columns.
       status: this.layout() === 'board' ? '' : f.status,
       ...this.range(f),

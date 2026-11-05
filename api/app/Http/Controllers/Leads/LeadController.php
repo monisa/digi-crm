@@ -31,12 +31,23 @@ class LeadController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:500'],
+            'sort' => ['nullable', Rule::in(['date', 'service', 'assigned'])],
+            'dir' => ['nullable', Rule::in(['asc', 'desc'])],
         ]);
         $user = $request->user();
         $base = Lead::visibleTo($user);
+        $sort = $filters['sort'] ?? 'date';
+        $dir = $filters['dir'] ?? ($sort === 'date' ? 'desc' : 'asc'); // newest first by default
 
         $leads = $this->filtered(clone $base, $filters, $user)
             ->with('assignee:id,name')
+            ->tap(fn ($q) => match ($sort) {
+                // Empty service / unassigned always go last; ties show the newest first.
+                'service' => $q->orderByRaw("CASE WHEN ad_name IS NULL OR ad_name = '' THEN 1 ELSE 0 END")->orderBy('ad_name', $dir),
+                'assigned' => $q->orderByRaw('CASE WHEN assigned_to IS NULL THEN 1 ELSE 0 END')
+                    ->orderBy(User::select('name')->whereColumn('users.id', 'leads.assigned_to'), $dir),
+                default => $q->orderBy('created_at', $dir)->orderBy('id', $dir),
+            })
             ->orderByDesc('created_at')->orderByDesc('id')
             ->paginate($filters['per_page'] ?? 50);
 

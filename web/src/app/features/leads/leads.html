@@ -37,6 +37,12 @@
           <div class="fscrim" (click)="filterOpen.set(false)"></div>
           <form class="fpanel" (ngSubmit)="applyFilter()">
             <div class="fh"><b>Filter leads</b><button type="button" class="linkish" (click)="clearFilter()">Clear all</button></div>
+            <label class="fl" for="flt-sort">Sort by</label>
+            <select id="flt-sort" name="sort" class="select-sm" [ngModel]="sortKey()" (ngModelChange)="setSortKey($event)">
+              <option value="date:desc">Newest first</option><option value="date:asc">Oldest first</option>
+              <option value="service:asc">Service A–Z</option><option value="service:desc">Service Z–A</option>
+              <option value="assigned:asc">Assigned A–Z</option><option value="assigned:desc">Assigned Z–A</option>
+            </select>
             <label class="fl" for="flt-date">Date</label>
             <select id="flt-date" name="date" class="select-sm" [(ngModel)]="draft.date">@for (p of presets; track p[0]) { <option [value]="p[0]">{{ p[1] }}</option> }</select>
             @if (draft.date === 'custom') {
@@ -113,7 +119,7 @@
     <div class="table" [class.loading]="loading()">
       <div class="thead">
         @if (canSelect()) { <input type="checkbox" aria-label="Select all" [checked]="selected().size && selected().size === result()?.data?.length" (change)="toggleAll()" /> }
-        <span>Date</span><span>Name</span><span class="h-ad">Service</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
+        <button class="sorth" [class.on]="sort().key === 'date'" (click)="sortBy('date')" [attr.aria-sort]="ariaSort('date')">Date<i>{{ arrow('date') }}</i></button><span>Name</span><button class="sorth h-ad" [class.on]="sort().key === 'service'" (click)="sortBy('service')" [attr.aria-sort]="ariaSort('service')">Service<i>{{ arrow('service') }}</i></button><span>Call status</span><span>Stage</span><span>Follow-up</span><button class="sorth" [class.on]="sort().key === 'assigned'" (click)="sortBy('assigned')" [attr.aria-sort]="ariaSort('assigned')">Assigned<i>{{ arrow('assigned') }}</i></button>
       </div>
       @for (l of result()?.data ?? []; track l.id; let i = $index) {
         <div class="trow" (click)="openId.set(l.id)" [style.animation-delay.s]="i * 0.015" [class.sel]="selected().has(l.id)">
