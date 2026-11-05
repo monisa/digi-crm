@@ -19,6 +19,7 @@ use App\Http\Controllers\Hr\SalaryController;
 use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
@@ -63,6 +64,8 @@ Route::prefix('auth')->middleware('throttle:20,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::put('/auth/profile', [AccountController::class, 'update']);
+    Route::post('/auth/password', [AccountController::class, 'password'])->middleware('throttle:6,1');
     Route::get('/onboarding', [OnboardingController::class, 'show']);
     Route::post('/onboarding', [OnboardingController::class, 'store']);
 });
