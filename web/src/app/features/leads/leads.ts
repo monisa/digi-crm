@@ -15,6 +15,16 @@ import { LeadSheet } from './lead-sheet';
 import { Dialog } from '../../shared/dialog';
 
 type View = '' | 'uncontacted' | 'followups' | 'today';
+type DatePreset = '' | 'today' | 'yesterday' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom';
+
+/** Everything the Filter panel sets. */
+interface LeadFilter { date: DatePreset; from: string; to: string; ad: string; callStatus: string; status: string; assigned: string }
+const NO_FILTER: LeadFilter = { date: '', from: '', to: '', ad: '', callStatus: '', status: '', assigned: '' };
+
+export const DATE_PRESETS: [DatePreset, string][] = [
+  ['', 'Any time'], ['today', 'Today'], ['yesterday', 'Yesterday'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'],
+  ['this_month', 'This month'], ['last_month', 'Last month'], ['custom', 'Pick dates…'],
+];
 
 @Component({
   selector: 'app-leads',
@@ -37,10 +47,88 @@ export class Leads {
 
   protected view: View = '';
   protected search = '';
-  protected status = '';
-  protected callStatus = '';
-  protected assigned = '';
   protected page = 1;
+
+  /** Applied filters, and the copy being edited in the panel. */
+  protected readonly f = signal<LeadFilter>({ ...NO_FILTER });
+  protected draft: LeadFilter = { ...NO_FILTER };
+  protected readonly filterOpen = signal(false);
+  protected readonly presets = DATE_PRESETS;
+  protected readonly ads = computed(() => Object.entries(this.result()?.ads ?? {}));
+  protected readonly activeCount = computed(() => this.chips().length);
+
+  // Kept for the template and bulk actions.
+  protected get status(): string { return this.f().status; }
+  protected get callStatus(): string { return this.f().callStatus; }
+  protected get assigned(): string { return this.f().assigned; }
+
+  /** Active filters as removable chips. */
+  protected readonly chips = computed(() => {
+    const f = this.f();
+    const out: { key: keyof LeadFilter; label: string }[] = [];
+    if (f.date) out.push({ key: 'date', label: f.date === 'custom' ? `${this.short(f.from) || '…'} – ${this.short(f.to) || '…'}` : DATE_PRESETS.find((p) => p[0] === f.date)![1] });
+    if (f.ad) out.push({ key: 'ad', label: 'Ad: ' + (f.ad === '__none' ? 'No ad name' : f.ad) });
+    if (f.callStatus) out.push({ key: 'callStatus', label: 'Call: ' + f.callStatus });
+    if (f.status) out.push({ key: 'status', label: 'Stage: ' + this.label(f.status as LeadStatus) });
+    if (f.assigned) {
+      const who = f.assigned === 'me' ? 'Me' : f.assigned === 'none' ? 'Unassigned' : this.options()?.assignees.find((u) => String(u.id) === f.assigned)?.name ?? '…';
+      out.push({ key: 'assigned', label: 'Assigned: ' + who });
+    }
+    return out;
+  });
+
+  openFilter(): void {
+    this.draft = { ...this.f() };
+    this.filterOpen.set(!this.filterOpen());
+  }
+
+  applyFilter(): void {
+    if (this.draft.date !== 'custom') {
+      this.draft.from = '';
+      this.draft.to = '';
+    }
+    this.f.set({ ...this.draft });
+    this.filterOpen.set(false);
+    this.load(1);
+  }
+
+  clearFilter(): void {
+    this.draft = { ...NO_FILTER };
+    this.f.set({ ...NO_FILTER });
+    this.filterOpen.set(false);
+    this.load(1);
+  }
+
+  removeChip(key: keyof LeadFilter): void {
+    const next = { ...this.f(), [key]: '' };
+    if (key === 'date') {
+      next.from = '';
+      next.to = '';
+    }
+    this.f.set(next);
+    this.load(1);
+  }
+
+  /** from/to (YYYY-MM-DD) for the chosen date preset. */
+  private range(f: LeadFilter): { from?: string; to?: string } {
+    const d = new Date();
+    const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+    const ago = (n: number) => iso(new Date(d.getFullYear(), d.getMonth(), d.getDate() - n));
+    switch (f.date) {
+      case 'today': return { from: iso(d), to: iso(d) };
+      case 'yesterday': return { from: ago(1), to: ago(1) };
+      case '7d': return { from: ago(6), to: iso(d) };
+      case '30d': return { from: ago(29), to: iso(d) };
+      case 'this_month': return { from: iso(new Date(d.getFullYear(), d.getMonth(), 1)), to: iso(d) };
+      case 'last_month': return { from: iso(new Date(d.getFullYear(), d.getMonth() - 1, 1)), to: iso(new Date(d.getFullYear(), d.getMonth(), 0)) };
+      case 'custom': return { from: f.from || undefined, to: f.to || undefined };
+      default: return {};
+    }
+  }
+
+  private short(v: string): string {
+    return v ? new Date(v + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+  }
 
   protected readonly openId = signal<number | null>(null);
   protected readonly adding = signal(false);
@@ -78,10 +166,7 @@ export class Leads {
     this.page = page;
     this.loading.set(true);
     this.api
-      .list({
-        view: this.view, search: this.search, status: this.status, call_status: this.callStatus, assigned: this.assigned,
-        page, per_page: this.layout() === 'board' ? 300 : 50,
-      })
+      .list({ ...this.filters(), page, per_page: this.layout() === 'board' ? 300 : 50 })
       .subscribe({
         next: (r) => {
           this.result.set(r);
@@ -160,11 +245,17 @@ export class Leads {
   }
 
   filtered(): boolean {
-    return !!(this.view || this.search || this.status || this.callStatus || this.assigned);
+    return !!(this.view || this.search || this.chips().length);
   }
 
-  private filters() {
-    return { view: this.view, search: this.search, status: this.status, call_status: this.callStatus, assigned: this.assigned };
+  private filters(): Record<string, string | undefined> {
+    const f = this.f();
+    return {
+      view: this.view, search: this.search, ad: f.ad, call_status: f.callStatus, assigned: f.assigned,
+      // On the board, stages are the columns.
+      status: this.layout() === 'board' ? '' : f.status,
+      ...this.range(f),
+    };
   }
 
   async bulkDelete(): Promise<void> {

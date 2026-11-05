@@ -12,6 +12,31 @@
 .vchip.on.crit b, .vchip.on.warn b { color: #fff; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
 .filters .grow { flex: 1; min-width: 220px; }
+.fwrap { position: relative; }
+.fbtn { display: inline-flex; align-items: center; gap: 8px; height: 100%; }
+.fbtn.on { border-color: var(--brand); color: var(--brand-deep); background: var(--brand-soft); }
+.fcount { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--brand); color: #fff; font-size: 11.5px; display: inline-grid; place-items: center; }
+.fscrim { position: fixed; inset: 0; z-index: 44; }
+.fpanel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 45; width: 320px; background: #fff; border: 1px solid var(--line);
+  border-radius: 16px; box-shadow: 0 20px 50px rgba(16, 24, 40, 0.18); padding: 16px; display: grid; gap: 6px; animation: fpop 0.2s var(--ease); transform-origin: top right;
+}
+@keyframes fpop { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+.fh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.fl { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; }
+.fpanel .select-sm, .fpanel .input-sm { width: 100%; }
+.frow { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-3); } .frow .input-sm { flex: 1; min-width: 0; }
+.fbtns { display: flex; gap: 8px; margin-top: 14px; } .fbtns > * { flex: 1; justify-content: center; }
+.fchips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: -4px 0 12px; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 99px; background: var(--brand-soft); color: var(--brand-deep); font-size: 13px; font-weight: 600; animation: rise 0.25s var(--ease); }
+.fchip button { width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, 0.06); color: inherit; cursor: pointer; font-size: 10px; }
+.fchip button:hover { background: rgba(0, 0, 0, 0.14); }
+.fres { font-size: 13px; color: var(--ink-3); margin-left: auto; }
+.fchips .linkish { font-size: 13px; }
+@media (max-width: 860px) {
+  .fpanel { width: min(320px, calc(100vw - 40px)); max-height: calc(100dvh - 520px); min-height: 280px; overflow-y: auto; padding-bottom: 0; }
+  .fbtns { position: sticky; bottom: 0; background: #fff; padding: 10px 0 14px; margin-top: 8px; }
+}
 .all-note { flex-basis: 100%; font-size: 13px; color: var(--ink-2); }
 .linkish { background: none; border: 0; padding: 0; color: var(--brand-deep); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
 .btn-ghost.danger { color: #c0262d; border-color: rgba(192, 38, 45, 0.35); }
@@ -21,10 +46,18 @@
 .table { display: flex; flex-direction: column; transition: opacity 0.2s; }
 .table.loading { opacity: 0.55; }
 .thead, .trow {
-  display: grid; grid-template-columns: 22px 84px minmax(160px, 1.4fr) minmax(110px, 1fr) 120px 120px 120px 110px 72px;
+  display: grid; grid-template-columns: 22px 70px minmax(0, 1.7fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.8fr) minmax(0, 0.9fr) 76px;
   gap: 10px; align-items: center; padding: 10px 8px;
 }
-.table:not(:has(input)) .thead, .table:not(:has(input)) .trow { grid-template-columns: 84px minmax(160px, 1.4fr) minmax(110px, 1fr) 120px 120px 120px 110px 72px; }
+.table:not(:has(input)) .thead, .table:not(:has(input)) .trow { grid-template-columns: 70px minmax(0, 1.7fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.8fr) minmax(0, 0.9fr) 76px; }
+.trow > span { min-width: 0; }
+.c-as { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Laptops: drop the Ad column (it is in the filter and the lead panel). */
+@media (max-width: 1280px) {
+  .thead, .trow { grid-template-columns: 22px 66px minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) 76px; }
+  .table:not(:has(input)) .thead, .table:not(:has(input)) .trow { grid-template-columns: 66px minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) 76px; }
+  .c-ad, .thead .h-ad { display: none; }
+}
 .thead { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); border-bottom: 2px solid var(--line); }
 .thead span:last-child { grid-column: span 2; }
 .trow { border-bottom: 1px solid var(--line); cursor: pointer; border-radius: 10px; transition: background 0.15s; animation: rise 0.35s var(--ease) both; }

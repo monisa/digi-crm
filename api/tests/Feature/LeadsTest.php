@@ -292,4 +292,17 @@ class LeadsTest extends TestCase
         $this->assertModelExists($other);
         $this->assertModelMissing($mine);
     }
+
+    public function test_filter_by_ad_and_date(): void
+    {
+        Lead::create(['full_name' => 'A', 'ad_name' => 'Course', 'created_at' => '2026-10-13 10:00:00']);
+        Lead::create(['full_name' => 'B', 'ad_name' => 'Course', 'created_at' => '2026-11-04 10:00:00']);
+        Lead::create(['full_name' => 'C', 'ad_name' => 'SEO offer', 'created_at' => '2026-11-04 11:00:00']);
+        Lead::create(['full_name' => 'D', 'created_at' => '2026-11-04 12:00:00']);
+
+        $r = $this->as($this->admin)->getJson('/v1/leads?ad=Course')->assertOk()->assertJsonCount(2, 'data');
+        $this->assertEquals(['Course' => 2, 'SEO offer' => 1], $r->json('ads'));
+        $this->getJson('/v1/leads?ad=Course&from=2026-11-01&to=2026-11-30')->assertJsonCount(1, 'data')->assertJsonPath('data.0.full_name', 'B');
+        $this->getJson('/v1/leads?ad=__none')->assertJsonCount(1, 'data')->assertJsonPath('data.0.full_name', 'D');
+    }
 }

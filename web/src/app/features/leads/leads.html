@@ -28,30 +28,63 @@
   <div class="toolbar">
     <div class="filters">
       <input class="input-sm grow" type="search" placeholder="Search name, phone, email, city or ad" [(ngModel)]="search" (ngModelChange)="onSearch()" />
-      @if (layout() === 'list') {
-        <select class="select-sm" [(ngModel)]="status" (ngModelChange)="load(1)" aria-label="Status">
-          <option value="">All stages</option>
-          @for (s of stages(); track s[0]) { <option [value]="s[0]">{{ s[1] }} ({{ result()?.counts?.by_status?.[s[0]] ?? 0 }})</option> }
-        </select>
-      }
-      <select class="select-sm" [(ngModel)]="callStatus" (ngModelChange)="load(1)" aria-label="Call status">
-        <option value="">Any call status</option>
-        @for (c of options()?.call_statuses ?? []; track c) { <option [value]="c">{{ c }}</option> }
-      </select>
-      @if (seesAll()) {
-        <select class="select-sm" [(ngModel)]="assigned" (ngModelChange)="load(1)" aria-label="Assigned to">
-          <option value="">Anyone</option>
-          <option value="me">Assigned to me</option>
-          <option value="none">Unassigned</option>
-          @for (u of options()?.assignees ?? []; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
-        </select>
-      }
+      <div class="fwrap">
+        <button class="btn-ghost fbtn" [class.on]="activeCount()" (click)="openFilter()" [attr.aria-expanded]="filterOpen()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4" /></svg>
+          Filter @if (activeCount()) { <span class="fcount">{{ activeCount() }}</span> }
+        </button>
+        @if (filterOpen()) {
+          <div class="fscrim" (click)="filterOpen.set(false)"></div>
+          <form class="fpanel" (ngSubmit)="applyFilter()">
+            <div class="fh"><b>Filter leads</b><button type="button" class="linkish" (click)="clearFilter()">Clear all</button></div>
+            <label class="fl" for="flt-date">Date</label>
+            <select id="flt-date" name="date" class="select-sm" [(ngModel)]="draft.date">@for (p of presets; track p[0]) { <option [value]="p[0]">{{ p[1] }}</option> }</select>
+            @if (draft.date === 'custom') {
+              <div class="frow"><input class="input-sm" type="date" name="from" [(ngModel)]="draft.from" aria-label="From" /><span>to</span><input class="input-sm" type="date" name="to" [(ngModel)]="draft.to" aria-label="To" /></div>
+            }
+            <label class="fl" for="flt-ad">Ad</label>
+            <select id="flt-ad" name="ad" class="select-sm" [(ngModel)]="draft.ad">
+              <option value="">All ads</option>
+              @for (a of ads(); track a[0]) { <option [value]="a[0]">{{ a[0] }} ({{ a[1] }})</option> }
+              <option value="__none">No ad name</option>
+            </select>
+            <label class="fl" for="flt-call">Call status</label>
+            <select id="flt-call" name="call" class="select-sm" [(ngModel)]="draft.callStatus">
+              <option value="">Any call status</option>
+              @for (c of options()?.call_statuses ?? []; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+            @if (layout() === 'list') {
+              <label class="fl" for="flt-stage">Stage</label>
+              <select id="flt-stage" name="stage" class="select-sm" [(ngModel)]="draft.status">
+                <option value="">All stages</option>
+                @for (s of stages(); track s[0]) { <option [value]="s[0]">{{ s[1] }} ({{ result()?.counts?.by_status?.[s[0]] ?? 0 }})</option> }
+              </select>
+            }
+            @if (seesAll()) {
+              <label class="fl" for="flt-as">Assigned to</label>
+              <select id="flt-as" name="as" class="select-sm" [(ngModel)]="draft.assigned">
+                <option value="">Anyone</option><option value="me">Me</option><option value="none">Unassigned</option>
+                @for (u of options()?.assignees ?? []; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+              </select>
+            }
+            <div class="fbtns"><button type="button" class="btn-ghost" (click)="filterOpen.set(false)">Cancel</button><button class="btn" type="submit">Show leads</button></div>
+          </form>
+        }
+      </div>
     </div>
     <div class="seg2" role="tablist" aria-label="Layout">
       <button [class.on]="layout() === 'list'" (click)="setLayout('list')">☰ List</button>
       <button [class.on]="layout() === 'board'" (click)="setLayout('board')">▦ Board</button>
     </div>
   </div>
+
+  @if (chips().length) {
+    <div class="fchips">
+      @for (c of chips(); track c.key) { <span class="fchip">{{ c.label }}<button (click)="removeChip(c.key)" [attr.aria-label]="'Remove ' + c.label">✕</button></span> }
+      <button class="linkish" (click)="clearFilter()">Clear all</button>
+      <span class="fres">{{ result()?.meta?.total ?? 0 }} match</span>
+    </div>
+  }
 
   @if (selected().size && canSelect()) {
     <div class="bulk">
@@ -80,7 +113,7 @@
     <div class="table" [class.loading]="loading()">
       <div class="thead">
         @if (canSelect()) { <input type="checkbox" aria-label="Select all" [checked]="selected().size && selected().size === result()?.data?.length" (change)="toggleAll()" /> }
-        <span>Date</span><span>Name</span><span>Ad</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
+        <span>Date</span><span>Name</span><span class="h-ad">Ad</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
       </div>
       @for (l of result()?.data ?? []; track l.id; let i = $index) {
         <div class="trow" (click)="openId.set(l.id)" [style.animation-delay.s]="i * 0.015" [class.sel]="selected().has(l.id)">

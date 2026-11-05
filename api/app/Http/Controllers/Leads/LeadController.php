@@ -25,6 +25,7 @@ class LeadController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'call_status' => ['nullable', 'string', 'max:60'],
+            'ad' => ['nullable', 'string', 'max:190'],
             'assigned' => ['nullable', 'string'], // user id | 'me' | 'none'
             'view' => ['nullable', Rule::in(['uncontacted', 'followups', 'today'])],
             'from' => ['nullable', 'date'],
@@ -52,6 +53,9 @@ class LeadController extends Controller
                 'today' => (clone $base)->where('created_at', '>=', today())->count(),
                 'by_status' => (clone $base)->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status'),
             ],
+            // Ad names for the filter, most leads first.
+            'ads' => (clone $base)->whereNotNull('ad_name')->where('ad_name', '!=', '')
+                ->selectRaw('ad_name, count(*) as n')->groupBy('ad_name')->orderByDesc('n')->limit(100)->pluck('n', 'ad_name'),
         ]);
     }
 
@@ -129,6 +133,7 @@ class LeadController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'call_status' => ['nullable', 'string', 'max:60'],
+            'ad' => ['nullable', 'string', 'max:190'],
             'assigned' => ['nullable', 'string'],
             'view' => ['nullable', Rule::in(['uncontacted', 'followups', 'today'])],
             'from' => ['nullable', 'date'],
@@ -307,6 +312,7 @@ class LeadController extends Controller
                 ->orWhere('email', 'like', "%$s%")->orWhere('city', 'like', "%$s%")->orWhere('ad_name', 'like', "%$s%")))
             ->when(in_array($f['status'] ?? null, $statuses, true), fn ($q) => $q->where('status', $f['status']))
             ->when($f['call_status'] ?? null, fn ($q, $c) => $q->where('call_status', $c))
+            ->when($f['ad'] ?? null, fn ($q, $a) => $a === '__none' ? $q->where(fn ($q) => $q->whereNull('ad_name')->orWhere('ad_name', '')) : $q->where('ad_name', $a))
             ->when($f['assigned'] ?? null, fn ($q, $a) => match ($a) {
                 'me' => $q->where('assigned_to', $user->id),
                 'none' => $q->whereNull('assigned_to'),
