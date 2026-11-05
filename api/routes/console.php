@@ -24,6 +24,10 @@ Schedule::call($run('meta:poll'))->name('meta-poll')->everyFifteenMinutes()->wit
 Schedule::call($run('crm:lead-sla'))->name('lead-sla')->everyFiveMinutes()->withoutOverlapping(10);
 Schedule::call($run('crm:invoice-reminders'))->name('invoice-reminders')->dailyAt('10:12');
 
+// Work
+Schedule::call($run('crm:repeat-tasks'))->name('repeat-tasks')->dailyAt('00:10');
+Schedule::call(fn () => app(\App\Services\AttendanceService::class)->closeOpenDays())->name('close-attendance')->dailyAt('00:20');
+
 // Housekeeping
 Schedule::call($run('sanctum:prune-expired', ['--hours' => 24]))->name('prune-tokens')->daily();
 Schedule::call($run('auth:clear-resets'))->name('clear-resets')->everyFifteenMinutes();

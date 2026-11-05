@@ -23,6 +23,8 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
 use App\Http\Controllers\Billing\OnlinePaymentController;
+use App\Http\Controllers\Work\AttendanceController;
+use App\Http\Controllers\Work\TaskController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\Portal\CampaignController;
 use App\Http\Controllers\Portal\ClientDashboardController;
@@ -193,6 +195,25 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('permission:campaigns.delete');
         Route::post('/campaigns/{campaign}/files', [CampaignController::class, 'upload'])->middleware('permission:campaigns.edit');
         Route::delete('/campaign-files/{file}', [CampaignController::class, 'deleteFile'])->middleware('permission:campaigns.edit');
+    });
+
+    // Tasks and attendance (staff only).
+    Route::middleware('staff')->group(function () {
+        Route::get('/tasks', [TaskController::class, 'index'])->middleware('permission:tasks.view');
+        Route::post('/tasks', [TaskController::class, 'store'])->middleware('permission:tasks.create');
+        Route::patch('/tasks/{task}', [TaskController::class, 'update'])->middleware('permission:tasks.view');
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->middleware('permission:tasks.view');
+        Route::post('/tickets/{ticket}/task', [TaskController::class, 'fromTicket'])->middleware('permission:tasks.create');
+
+        Route::get('/attendance/me', [AttendanceController::class, 'me'])->middleware('permission:attendance.view');
+        Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn'])->middleware(['permission:attendance.create', 'throttle:10,1']);
+        Route::post('/attendance/check-out', [AttendanceController::class, 'checkOut'])->middleware(['permission:attendance.create', 'throttle:10,1']);
+        Route::get('/attendance/timesheet', [AttendanceController::class, 'timesheet'])->middleware('permission:attendance.view');
+        Route::get('/attendance/register', [AttendanceController::class, 'register'])->middleware('permission:attendance.edit');
+        Route::get('/attendance/export', [AttendanceController::class, 'export'])->middleware('permission:attendance.export');
+        Route::post('/attendance', [AttendanceController::class, 'save'])->middleware('permission:attendance.edit');
+        Route::get('/attendance/settings', [AttendanceController::class, 'settings'])->middleware('permission:attendance.view');
+        Route::put('/attendance/settings', [AttendanceController::class, 'saveSettings'])->middleware('permission:settings.edit');
     });
 
     // Tickets: clients raise and reply to their own; staff reply, add internal notes, assign.

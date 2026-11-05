@@ -57,6 +57,16 @@
         <select id="tk-a" class="select-sm" [ngModel]="t.assigned_to?.id ?? null" (ngModelChange)="update({ assigned_to: $event })" [disabled]="!canManage()">
           <option [ngValue]="null">Unassigned</option>@for (u of staff(); track u.id) { <option [ngValue]="u.id">{{ u.name }}</option> }
         </select>
+        @if (auth.can('tasks.create') && canManage()) {
+          <div class="mk">
+            <label class="lbl" for="tk-task">Make it a task for</label>
+            <div class="mkrow">
+              <select id="tk-task" class="select-sm" [(ngModel)]="taskFor">@for (u of staff(); track u.id) { <option [ngValue]="u.id">{{ u.name }}</option> }</select>
+              <input class="input-sm" type="date" [(ngModel)]="taskDue" aria-label="Due date" />
+            </div>
+            <button class="btn-ghost wide" (click)="makeTask()" [disabled]="!taskFor || busy()">✓ Create task</button>
+          </div>
+        }
         <p class="hint">“Waiting for you” tells the client we need something from them.</p>
         @if (t.client) { <a class="link" [routerLink]="['/clients', t.client.id]">Open client →</a> }
       </aside>

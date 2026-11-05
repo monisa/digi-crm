@@ -22,6 +22,8 @@ import { IconName } from '../core/navigation';
           <circle cx="12" cy="12" r="3" />
           <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
         }
+        @case ('tasks') { <path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" /> }
+        @case ('clock') { <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /> }
         @case ('menu') { <path d="M4 6h16M4 12h16M4 18h16" /> }
         @case ('chevron-left') { <path d="M15 18l-6-6 6-6" /> }
         @case ('chevron-right') { <path d="M9 18l6-6-6-6" /> }

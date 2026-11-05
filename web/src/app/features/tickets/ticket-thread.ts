@@ -8,6 +8,7 @@ import { PortalService, TICKET_STATUS, Ticket, TicketStatus } from '../../core/p
 import { initials } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
 import { Dialog } from '../../shared/dialog';
+import { WorkService } from '../../core/work.service';
 
 /** /tickets/:id: the conversation, like a chat. */
 @Component({
@@ -31,6 +32,26 @@ export class TicketThread {
   protected readonly t = signal<Ticket | null>(null);
   protected readonly error = signal('');
   protected readonly staff = signal<{ id: number; name: string }[]>([]);
+  private work = inject(WorkService);
+  protected taskFor: number | null = null;
+  protected taskDue = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+  /** Turn this ticket into a task (also assigns the ticket to that person). */
+  makeTask(): void {
+    const t = this.t()!;
+    this.busy.set(true);
+    this.work.taskFromTicket(t.id, { assigned_to: this.taskFor!, due_date: this.taskDue }).subscribe({
+      next: (task) => {
+        this.busy.set(false);
+        this.toast.show(`Task created for ${task.assigned_to?.name}.`);
+        this.t.set({ ...t, assigned_to: task.assigned_to });
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Could not create the task.');
+      },
+    });
+  }
   protected body = '';
   protected internal = false;
   protected readonly file = signal<File | null>(null);
@@ -38,7 +59,10 @@ export class TicketThread {
   private end = viewChild<ElementRef<HTMLElement>>('end');
 
   constructor() {
-    if (!this.isClient()) inject(LeadsService).options().subscribe((o) => this.staff.set(o.assignees));
+    if (!this.isClient()) inject(LeadsService).options().subscribe((o) => {
+      this.staff.set(o.assignees);
+      this.taskFor ??= o.assignees[0]?.id ?? null;
+    });
   }
 
   ngOnInit(): void {
