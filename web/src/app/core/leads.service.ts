@@ -52,6 +52,9 @@ export interface LeadList {
   counts: { all: number; uncontacted: number; followups: number; today: number; by_status: Partial<Record<LeadStatus, number>> };
 }
 
+export interface RazorpayStatus { keys: boolean; live: boolean; webhook: boolean; webhook_url: string }
+export interface IntegrationsInfo { pages: MetaPage[]; webhook_url: string; webhook_ready: boolean; razorpay?: RazorpayStatus }
+
 export interface MetaPage { id: number; page_id: string; name: string | null; subscribed: boolean; last_polled_at: string | null; last_error: string | null }
 
 @Injectable({ providedIn: 'root' })
@@ -117,8 +120,8 @@ export class LeadsService {
   }
 
   // Meta integration
-  meta(): Observable<{ pages: MetaPage[]; webhook_url: string; webhook_ready: boolean }> {
-    return this.http.get<{ pages: MetaPage[]; webhook_url: string; webhook_ready: boolean }>(`${API_BASE}/integrations/meta`);
+  meta(): Observable<IntegrationsInfo> {
+    return this.http.get<IntegrationsInfo>(`${API_BASE}/integrations/meta`);
   }
   connectPage(page_id: string, access_token: string): Observable<MetaPage> {
     return this.http.post<MetaPage>(`${API_BASE}/integrations/meta/pages`, { page_id, access_token });

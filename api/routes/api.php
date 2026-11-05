@@ -22,6 +22,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
+use App\Http\Controllers\Billing\OnlinePaymentController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\Portal\CampaignController;
 use App\Http\Controllers\Portal\ClientDashboardController;
@@ -33,6 +34,10 @@ Route::get('/health', fn () => response()->json([
     'app' => config('app.name'),
     'time' => now()->toIso8601String(),
 ]));
+
+// Razorpay: webhook (signed) and the customer's return from the payment page (signed).
+Route::post('/webhooks/razorpay', [OnlinePaymentController::class, 'webhook'])->middleware('throttle:300,1');
+Route::post('/payments/razorpay/callback', [OnlinePaymentController::class, 'callback'])->middleware('throttle:30,1');
 
 // Meta Lead Ads webhook (verified by signature, not by login).
 Route::get('/webhooks/meta', [MetaController::class, 'verify']);
@@ -137,6 +142,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->middleware('permission:invoices.view');
+    Route::post('/invoices/{invoice}/pay-online', [OnlinePaymentController::class, 'link'])->middleware(['permission:invoices.view', 'throttle:20,1']);
     Route::post('/invoices/{invoice}/claims', [PaymentClaimController::class, 'store'])->middleware('permission:invoices.view');
     Route::middleware('staff')->group(function () {
         Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('permission:invoices.create');

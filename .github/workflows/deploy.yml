@@ -14,6 +14,8 @@ name: Deploy to Hostinger
 # Optional secrets, copied into the server settings on every run when set:
 #   META_APP_SECRET       Meta app → App settings → Basic → App secret (Lead Ads)
 #   META_VERIFY_TOKEN     any long phrase you choose; type the same in the Meta webhook setup
+#   RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET   Razorpay → Settings → API Keys (online invoice payments)
+#   RAZORPAY_WEBHOOK_SECRET                 any long phrase; the same in Razorpay → Settings → Webhooks
 # Repository variables (same page -> Variables), optional:
 #   HOSTINGER_USER (u311568037)  HOSTINGER_PORT (65002)  DB_DATABASE / DB_USERNAME (u311568037_crm)
 #   SITE_ROOT (domains/digifoxprosolutions.com/public_html/crm)  ADMIN_NAME  GOOGLE_CLIENT_ID
@@ -151,6 +153,9 @@ jobs:
           ADMIN_NAME: ${{ vars.ADMIN_NAME || 'Admin' }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_VERIFY_TOKEN: ${{ secrets.META_VERIFY_TOKEN }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
         run: |
           if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
           if [ -f ~/.ssh/id_deploy ]; then COPY="scp -i $HOME/.ssh/id_deploy -P $SSH_PORT"; else COPY="sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -P $SSH_PORT"; fi
@@ -162,8 +167,8 @@ jobs:
           $COPY deploy/server-deploy.sh "$SSH_USER@$SSH_HOST:.digi-crm-deploy.sh"
           # Admin details go through the SSH session's input, not the command line.
           # Meta Lead Ads keys travel the same way and are written into the server's .env.
-          printf 'export CRM_ADMIN_EMAIL=%q CRM_ADMIN_PASSWORD=%q CRM_ADMIN_NAME=%q BRANCH=%q SITE_ROOT=%q SET_META_APP_SECRET=%q SET_META_VERIFY_TOKEN=%q\nbash ~/.digi-crm-deploy.sh\n' \
-            "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$ADMIN_NAME" "$BRANCH" "$SITE_ROOT" "$META_APP_SECRET" "$META_VERIFY_TOKEN" | $RUN "$SSH_USER@$SSH_HOST" 'bash -s'
+          printf 'export CRM_ADMIN_EMAIL=%q CRM_ADMIN_PASSWORD=%q CRM_ADMIN_NAME=%q BRANCH=%q SITE_ROOT=%q SET_META_APP_SECRET=%q SET_META_VERIFY_TOKEN=%q SET_RAZORPAY_KEY_ID=%q SET_RAZORPAY_KEY_SECRET=%q SET_RAZORPAY_WEBHOOK_SECRET=%q\nbash ~/.digi-crm-deploy.sh\n' \
+            "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$ADMIN_NAME" "$BRANCH" "$SITE_ROOT" "$META_APP_SECRET" "$META_VERIFY_TOKEN" "$RAZORPAY_KEY_ID" "$RAZORPAY_KEY_SECRET" "$RAZORPAY_WEBHOOK_SECRET" | $RUN "$SSH_USER@$SSH_HOST" 'bash -s'
 
       - name: Upload the app
         env:

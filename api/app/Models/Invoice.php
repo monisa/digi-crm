@@ -75,6 +75,11 @@ class Invoice extends Model
         $this->save();
     }
 
+    public function onlineLinks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OnlinePaymentLink::class);
+    }
+
     public function toApiArray(bool $full = false): array
     {
         $data = [

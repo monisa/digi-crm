@@ -51,7 +51,7 @@ set_env() {
     if (! $n) { $t = rtrim($t)."\n".$line."\n"; }
     file_put_contents(".env", $t);'
 }
-for key in META_APP_SECRET META_VERIFY_TOKEN; do
+for key in META_APP_SECRET META_VERIFY_TOKEN RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET; do
   var="SET_$key"
   if [ -n "${!var:-}" ]; then echo "==> Updating $key"; set_env "$key" "${!var}"; fi
 done

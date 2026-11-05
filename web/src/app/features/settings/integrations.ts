@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
-import { LeadsService, MetaPage } from '../../core/leads.service';
+import { LeadsService, MetaPage, RazorpayStatus } from '../../core/leads.service';
 import { Toast } from '../../shared/toast.service';
 
 /** Settings → Integrations: connect Facebook Pages for Meta Lead Ads. */
@@ -68,6 +68,32 @@ import { Toast } from '../../shared/toast.service';
         <p class="hint">Instagram lead ads use the same Facebook Page, so they come in too. The CRM also re-checks every 15 minutes in case a notification was missed. If test leads arrive but real ones don’t, Meta wants Business Verification or Advanced Access for <code>leads_retrieval</code> (App Review).</p>
       </details>
     </div>
+
+    @if (rzp(); as r) {
+      <div class="card rz">
+        <div class="head">
+          <span class="logo rzl">₹</span>
+          <div><h3>Razorpay online payments</h3><p class="hint">Clients pay invoices by UPI, card, net banking or wallet; the invoice is marked paid automatically.</p></div>
+        </div>
+        <div class="checks">
+          <div [class.ok]="r.keys">{{ r.keys ? '✓' : '○' }} API keys {{ r.keys ? (r.live ? '(live)' : '(test mode)') : 'not added yet' }}</div>
+          <div [class.ok]="r.webhook">{{ r.webhook ? '✓' : '○' }} Webhook secret {{ r.webhook ? 'added' : 'not added yet' }}</div>
+        </div>
+        <details class="help">
+          <summary>How to set this up (one time, about 10 minutes)</summary>
+          <ol>
+            <li>In the Razorpay dashboard open <b>Settings → API Keys → Generate key</b> (use <i>Test mode</i> first if you want to try it).</li>
+            <li>In GitHub → repository Settings → Secrets → Actions add <code>RAZORPAY_KEY_ID</code>, <code>RAZORPAY_KEY_SECRET</code> and <code>RAZORPAY_WEBHOOK_SECRET</code> (a long phrase you make up). Then run <b>Deploy to Hostinger</b>.</li>
+            <li>In Razorpay open <b>Settings → Webhooks → Add new webhook</b>:
+              <div class="copy">Webhook URL: <code>{{ r.webhook_url }}</code></div>
+              <div class="copy">Secret: the same phrase as <code>RAZORPAY_WEBHOOK_SECRET</code></div>
+              Active event: <b>payment_link.paid</b>.</li>
+            <li>Open any unpaid invoice and press <b>Pay online</b> to test.</li>
+          </ol>
+          <p class="hint">Never type the key secret into chat or email. Razorpay’s fee for each payment is saved with the payment.</p>
+        </details>
+      </div>
+    }
   `,
   styles: `
     .head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -76,6 +102,10 @@ import { Toast } from '../../shared/toast.service';
     h3 { font-size: 16px; }
     h4 { font-size: 14px; margin-top: 18px; }
     .hint { color: var(--ink-3); font-size: 13px; }
+    .rz { margin-top: 16px; }
+    .logo.rzl { background: #0c2451 !important; color: #3395ff !important; }
+    .checks { display: flex; gap: 18px; flex-wrap: wrap; margin: 6px 0 4px; font-size: 14px; color: var(--ink-3); }
+    .checks .ok { color: #11803b; font-weight: 600; }
     .good { color: #11803b; font-weight: 600; margin-top: 4px; }
     .page { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; flex-wrap: wrap; }
     .page .grow { flex: 1; min-width: 200px; }
@@ -99,6 +129,7 @@ export class Integrations {
   protected readonly pages = signal<MetaPage[]>([]);
   protected readonly webhookUrl = signal('');
   protected readonly webhookReady = signal(false);
+  protected readonly rzp = signal<RazorpayStatus | null>(null);
   protected readonly busy = signal(false);
   protected readonly errors = signal<Record<string, string>>({});
   protected pageId = '';
@@ -113,6 +144,7 @@ export class Integrations {
       this.pages.set(m.pages);
       this.webhookUrl.set(m.webhook_url);
       this.webhookReady.set(m.webhook_ready);
+      this.rzp.set(m.razorpay ?? null);
     });
   }
 

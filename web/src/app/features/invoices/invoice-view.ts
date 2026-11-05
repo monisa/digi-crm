@@ -6,11 +6,13 @@ import { BillingService, Invoice, STATUS_LABEL } from '../../core/billing.servic
 import { readErrors } from '../../core/http-errors';
 import { money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
+import { Sheet } from '../../shared/sheet';
+import { ShareLink } from '../../shared/share-link';
 
 /** One invoice: looks like the PDF, with pay (clients) or manage (staff) actions. */
 @Component({
   selector: 'app-invoice-view',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Sheet, ShareLink],
   templateUrl: './invoice-view.html',
   styleUrl: './invoice-view.scss',
 })
@@ -40,8 +42,44 @@ export class InvoiceView {
     return !!i && (i.status === 'unpaid' || i.status === 'partial');
   });
 
+  /** Staff: the Razorpay link to send the client. */
+  protected readonly payLink = signal('');
+  protected readonly sharingLink = signal(false);
+
   ngOnInit(): void {
     this.load();
+  }
+
+  /** Client: go to Razorpay's payment page. */
+  payOnline(): void {
+    this.busy.set(true);
+    this.api.payOnline(this.inv()!.id).subscribe({
+      next: (r) => (window.location.href = r.url),
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Online payment is not available right now. Please use UPI below.');
+      },
+    });
+  }
+
+  /** Staff: get the link to share on WhatsApp / email. */
+  shareLink(): void {
+    this.busy.set(true);
+    this.api.payOnline(this.inv()!.id).subscribe({
+      next: (r) => {
+        this.busy.set(false);
+        this.payLink.set(r.url);
+        this.sharingLink.set(true);
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Could not make a payment link.');
+      },
+    });
+  }
+
+  modeLabel(m: string): string {
+    return ({ upi: 'UPI', online: 'Online (Razorpay)', bank_transfer: 'Bank transfer' } as Record<string, string>)[m] ?? m.replace('_', ' ');
   }
 
   load(): void {
