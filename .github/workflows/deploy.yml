@@ -1,6 +1,7 @@
 name: Deploy to Hostinger
 
-# Manual: Actions -> "Deploy to Hostinger" -> Run workflow.
+# Runs by itself after each merge into main whose CI tests pass, or by hand:
+# Actions -> "Deploy to Hostinger" -> Run workflow.
 # The first run sets the server up (code, settings, database, admin login);
 # later runs update it. Nothing secret is stored in the repository.
 #
@@ -20,27 +21,36 @@ name: Deploy to Hostinger
 #   HOSTINGER_USER (u311568037)  HOSTINGER_PORT (65002)  DB_DATABASE / DB_USERNAME (u311568037_crm)
 #   SITE_ROOT (domains/digifoxprosolutions.com/public_html/crm)  ADMIN_NAME  GOOGLE_CLIENT_ID
 on:
+  # Automatic: every merge into main, once the CI tests on it have passed.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # By hand: Actions -> "Deploy to Hostinger" -> Run workflow.
   workflow_dispatch:
     inputs:
       branch:
         description: Branch to deploy
         default: main
 
+# One deploy at a time; a newer merge waits for the running one.
 concurrency: deploy-hostinger
 
 jobs:
   deploy:
+    # Never deploy code whose tests failed.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     env:
       SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
       SSH_PORT: ${{ vars.HOSTINGER_PORT || '65002' }}
       SSH_USER: ${{ vars.HOSTINGER_USER || 'u311568037' }}
       SITE_ROOT: ${{ vars.SITE_ROOT || 'domains/digifoxprosolutions.com/public_html/crm' }}
-      BRANCH: ${{ inputs.branch }}
+      BRANCH: ${{ inputs.branch || 'main' }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ github.event.workflow_run.head_sha || inputs.branch || 'main' }}
 
       - name: Check secrets
         run: |
