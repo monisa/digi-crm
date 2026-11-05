@@ -5,6 +5,7 @@ import { Employee, HrService, LeaveSummary, Payslip, SalaryInfo } from '../../co
 import { readErrors } from '../../core/http-errors';
 import { initials, money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 import { LeaveBalances } from '../leave/leave-balances';
 import { EmployeeForm } from './employee-form';
 import { SalaryForm } from './salary-form';
@@ -25,6 +26,24 @@ export class EmployeeProfile {
   private router = inject(Router);
   private toast = inject(Toast);
   protected readonly auth = inject(AuthService);
+  private dialog = inject(Dialog);
+
+  /** Remove someone who has left (only inactive employees). */
+  async remove(e: Employee): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: `Delete ${e.name}?`,
+      message: 'Their login, salary, payslips, leave and attendance are deleted permanently. Leads, clients, invoices and tickets they worked on stay. Download any payslips you need first.',
+      confirmText: 'Delete permanently', danger: true, typeToConfirm: 'DELETE',
+    });
+    if (!ok) return;
+    this.hr.deleteEmployee(e.id).subscribe({
+      next: () => {
+        this.toast.show(`${e.name} deleted.`);
+        this.router.navigateByUrl('/employees');
+      },
+      error: (err) => this.toast.show(readErrors(err).message || 'Could not delete.'),
+    });
+  }
   protected readonly money = money;
   protected readonly initials = initials;
 

@@ -50,6 +50,9 @@ export class AdminService {
     return this.http.get<Page<AuthUser>>(`${this.base}/users`, { params });
   }
 
+  deleteUser(id: number): Observable<unknown> {
+    return this.http.delete(`${this.base}/users/${id}`);
+  }
   updateUser(id: number, data: { role?: Role; status?: Status; leads_scope?: string; clients_scope?: string }): Observable<AuthUser> {
     return this.http.patch<AuthUser>(`${this.base}/users/${id}`, data);
   }

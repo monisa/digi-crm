@@ -15,6 +15,7 @@
       </div>
     </div>
     @if (canEdit()) { <button class="btn-ghost" (click)="editing.set(true)">Edit details</button> }
+    @if (auth.can('employees.delete') && e.status === 'inactive') { <button class="btn-ghost danger" (click)="remove(e)">🗑 Delete</button> }
   </section>
 
   <div class="tabs2" role="tablist">

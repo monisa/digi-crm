@@ -37,6 +37,9 @@
         </select>
         <button class="btn-ghost" (click)="open(u)" [disabled]="u.role === 'admin'"
                 [attr.title]="u.role === 'admin' ? 'Admins have full access' : 'Set module access'">Access</button>
+        @if (canDelete && u.status !== 'active' && u.id !== auth.user()?.id) {
+          <button class="btn-ghost del" (click)="remove(u)" title="Delete this login" aria-label="Delete">🗑</button>
+        } @else { <span class="nodel"></span> }
       </div>
     } @empty {
       <p class="hint" style="padding:16px 4px">{{ loading() ? 'Loading…' : 'No users found.' }}</p>

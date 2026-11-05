@@ -30,3 +30,6 @@ h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 @keyframes shimmer { to { background-position: -200% 0; } }
 @media (max-width: 960px) { .sal-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .split { grid-template-columns: 1fr; } .ini { width: 56px; height: 56px; font-size: 19px; border-radius: 18px; } .slip { flex-wrap: wrap; } .slip .grow { flex-basis: 100%; } }
+
+.btn-ghost.danger { color: #c0262d; }
+.btn-ghost.danger:hover { background: #fdecec; border-color: rgba(192, 38, 45, 0.35); }
