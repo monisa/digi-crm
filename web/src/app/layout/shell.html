@@ -63,6 +63,17 @@
     <section class="content">
       <router-outlet />
     </section>
+    @if (chat.pings().length) {
+      <div class="pings" aria-live="polite">
+        @for (m of chat.pings(); track m.id) {
+          <button class="ping" (click)="chat.dismiss(m.id); chat.openChat(m.conversation_id)">
+            <span class="pav">{{ initials(m.from) }}</span>
+            <span class="pt"><b>{{ m.from }}@if (m.chat) { <i>· {{ m.chat }}</i> }</b><small>{{ m.text }}</small></span>
+            <span class="px" (click)="$event.stopPropagation(); chat.dismiss(m.id)" aria-label="Close">✕</span>
+          </button>
+        }
+      </div>
+    }
     @if (account(); as tab) { <app-account-sheet [start]="tab" (closed)="account.set(null)" /> }
     @if (toast.message()) { <div class="toast" role="status">{{ toast.message() }}</div> }
   </main>

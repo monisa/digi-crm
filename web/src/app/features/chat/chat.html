@@ -8,6 +8,15 @@
         @if (auth.can('chat.create')) { <button class="btn-ghost sm" (click)="startPicker('group')" title="New group">+ Group</button> }
       </div>
     </div>
+    @if (chatApi.desktopState() === 'off') {
+      <button class="notif" (click)="enableDesktop()">🔔 <span><b>Get notified of new messages</b><small>Turn on desktop notifications</small></span></button>
+    }
+    <div class="nprefs">
+      <label><input type="checkbox" [checked]="chatApi.prefs().sound" (change)="chatApi.setPrefs({ sound: $any($event.target).checked })" /> Sound</label>
+      @if (chatApi.desktopState() === 'on' || chatApi.desktopState() === 'blocked') {
+        <label [title]="chatApi.desktopState() === 'blocked' ? 'Blocked in the browser settings' : ''"><input type="checkbox" [checked]="chatApi.desktopState() === 'on'" [disabled]="chatApi.desktopState() === 'blocked'" (change)="chatApi.setPrefs({ desktop: $any($event.target).checked })" /> Desktop alerts@if (chatApi.desktopState() === 'blocked') { (blocked) }</label>
+      }
+    </div>
     <input class="input-sm" type="search" placeholder="Search chats" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     <div class="convs">
       @for (c of filtered(); track c.id) {

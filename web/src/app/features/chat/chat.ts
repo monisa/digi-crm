@@ -62,6 +62,7 @@ export class Chat implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.api.viewing.set(null);
     this.timers.forEach(clearInterval);
     Object.values(this.images()).forEach((u) => URL.revokeObjectURL(u));
   }
@@ -78,6 +79,7 @@ export class Chat implements OnDestroy {
   open(id: number): void {
     if (this.activeId() === id && this.msgs().length) return;
     this.activeId.set(id);
+    this.api.viewing.set(id);
     this.msgs.set([]);
     this.text = ''; // a half-typed message stays with the chat it was meant for only while it is open
     this.router.navigate([], { queryParams: { c: id }, replaceUrl: true });
@@ -93,6 +95,7 @@ export class Chat implements OnDestroy {
 
   back(): void {
     this.activeId.set(null);
+    this.api.viewing.set(null);
     this.router.navigate([], { queryParams: {}, replaceUrl: true });
   }
 
@@ -215,6 +218,14 @@ export class Chat implements OnDestroy {
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
+  }
+
+  // ---------- notifications ----------
+  protected readonly chatApi = this.api;
+
+  async enableDesktop(): Promise<void> {
+    const ok = await this.api.enableDesktop();
+    this.toast.show(ok ? 'Desktop notifications are on.' : 'Notifications are blocked in this browser. Allow them in the site settings (🔒 next to the address).');
   }
 
   // ---------- new chat / group ----------

@@ -52,7 +52,25 @@ class ChatController extends Controller
             ->whereColumn('messages.id', '>', 'cm.last_read_id')->whereNull('messages.deleted_at')
             ->where(fn ($q) => $q->where('messages.user_id', '!=', $me->id)->orWhereNull('messages.user_id'))->count();
 
-        return response()->json(['unread' => $n]);
+        // New messages since the app last asked (for pop-up / desktop notifications).
+        $since = $request->has('since_id') ? (int) $request->query('since_id') : null;
+        $base = Message::join('conversation_members as cm', fn ($j) => $j->on('cm.conversation_id', '=', 'messages.conversation_id')->where('cm.user_id', $me->id))
+            ->whereNull('messages.deleted_at');
+        $latest = [];
+        if ($since !== null) {
+            $latest = (clone $base)->where('messages.id', '>', $since)->whereColumn('messages.id', '>', 'cm.last_read_id')
+                ->whereNotNull('messages.user_id')->where('messages.user_id', '!=', $me->id)
+                ->orderByDesc('messages.id')->limit(5)->select('messages.*')->with(['user:id,name', 'conversation.members:id,name'])->get()
+                ->map(fn (Message $m) => [
+                    'id' => $m->id,
+                    'conversation_id' => $m->conversation_id,
+                    'chat' => $m->conversation->type === 'direct' ? null : $m->conversation->name,
+                    'from' => $m->user?->name,
+                    'text' => $m->body ? mb_strimwidth($m->body, 0, 140, '…') : ($m->file_name ? '📎 '.$m->file_name : ''),
+                ])->reverse()->values();
+        }
+
+        return response()->json(['unread' => $n, 'max_id' => (int) (clone $base)->max('messages.id'), 'latest' => $latest]);
     }
 
     /** Team members you can chat with. */
