@@ -101,4 +101,23 @@ class ChatTest extends TestCase
         $everyone = Conversation::where('is_everyone', true)->first();
         $this->postJson("/v1/chat/conversations/{$everyone->id}/leave")->assertStatus(422);
     }
+
+    public function test_unread_returns_new_messages_for_notifications(): void
+    {
+        $priya = $this->staff('Priya');
+        $arjun = $this->staff('Arjun');
+        $id = $this->as($priya)->postJson('/v1/chat/direct', ['user_id' => $arjun->id])->json('id');
+        $start = $this->as($arjun)->getJson('/v1/chat/unread')->assertJsonPath('latest', [])->json('max_id');
+
+        $this->as($priya)->postJson("/v1/chat/conversations/$id/messages", ['body' => 'Lunch at 1?']);
+        $r = $this->as($arjun)->getJson('/v1/chat/unread?since_id='.$start)->assertOk()->assertJsonPath('unread', 1);
+        $this->assertSame('Priya', $r->json('latest.0.from'));
+        $this->assertSame('Lunch at 1?', $r->json('latest.0.text'));
+        $this->assertNull($r->json('latest.0.chat')); // direct chat
+
+        // Nothing new after that point; own messages never notify.
+        $this->getJson('/v1/chat/unread?since_id='.$r->json('max_id'))->assertJsonPath('latest', []);
+        $this->postJson("/v1/chat/conversations/$id/messages", ['body' => 'Sure']);
+        $this->getJson('/v1/chat/unread?since_id='.$r->json('max_id'))->assertJsonPath('latest', []);
+    }
 }
