@@ -110,6 +110,12 @@ export class BillingService {
   payOnline(id: number): Observable<{ url: string; amount: number }> {
     return this.http.post<{ url: string; amount: number }>(`${API_BASE}/invoices/${id}/pay-online`, {});
   }
+  importRazorpay(id: number, paymentId: string): Observable<{ message: string; status: string }> {
+    return this.http.post<{ message: string; status: string }>(`${API_BASE}/invoices/${id}/pay-online/import`, { payment_id: paymentId });
+  }
+  checkOnline(id: number): Observable<{ found: number; status: string; balance: number; message: string }> {
+    return this.http.post<{ found: number; status: string; balance: number; message: string }>(`${API_BASE}/invoices/${id}/pay-online/check`, {});
+  }
   /** Back from Razorpay: verify and record. */
   razorpayReturn(params: Record<string, string>): Observable<{ paid: boolean; invoice_id: number; invoice_no: string | null; amount: number; balance: number }> {
     return this.http.post<{ paid: boolean; invoice_id: number; invoice_no: string | null; amount: number; balance: number }>(`${API_BASE}/payments/razorpay/callback`, params);

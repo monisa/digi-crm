@@ -19,7 +19,11 @@
             <button class="btn-ghost" (click)="email()" [disabled]="busy()">✉ {{ i.emailed_at ? 'Email again' : 'Email to client' }}</button>
             @if (i.amount_paid === 0) { <button class="btn-ghost danger" (click)="cancel()">Cancel</button> }
           }
-          @if (payable() && i.pay?.online && !isClient()) { <button class="btn-ghost" (click)="shareLink()" [disabled]="busy()">🔗 Payment link</button> }
+          @if (payable() && i.pay?.online && !isClient()) {
+            <button class="btn-ghost" (click)="shareLink()" [disabled]="busy()">🔗 Payment link</button>
+            <button class="btn-ghost" (click)="checkOnline()" [disabled]="busy()" title="Ask Razorpay whether the payment link was paid">↻ Check payment</button>
+            @if (auth.can('invoices.approve')) { <button class="btn-ghost" (click)="importRazorpay()" [disabled]="busy()" title="Paid through a link made in the Razorpay dashboard">+ Razorpay payment ID</button> }
+          }
           @if (payable() && auth.can('invoices.approve')) { <button class="btn" (click)="openForm('record')">+ Record payment</button> }
         }
       }
@@ -103,7 +107,7 @@
           <div class="field compact"><label for="p-mode">Paid by</label>
             <select id="p-mode" name="m" [(ngModel)]="pay.mode">
               <option value="upi">UPI (GPay, PhonePe…)</option><option value="bank_transfer">Bank transfer (NEFT/IMPS/RTGS)</option>
-              @if (recording()) { <option value="cash">Cash</option><option value="cheque">Cheque</option><option value="card">Card</option> }
+              @if (recording()) { <option value="cash">Cash</option><option value="cheque">Cheque</option><option value="card">Card</option><option value="online">Online (Razorpay)</option> }
             </select></div>
           <div class="field compact" [class.invalid]="payErrors()['reference']"><label for="p-ref">{{ pay.mode === 'upi' ? 'UPI transaction ID (UTR)' : 'Reference / UTR' }}@if (paying()) { <span class="req">*</span> }</label>
             <input id="p-ref" name="r" [(ngModel)]="pay.reference" [placeholder]="pay.mode === 'upi' ? '12-digit number from the payment app' : ''" />

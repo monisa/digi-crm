@@ -150,6 +150,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->middleware('permission:invoices.view');
+    Route::post('/invoices/{invoice}/pay-online/import', [OnlinePaymentController::class, 'import'])->middleware(['permission:invoices.approve', 'throttle:20,1']);
+    Route::post('/invoices/{invoice}/pay-online/check', [OnlinePaymentController::class, 'check'])->middleware(['permission:invoices.view', 'throttle:20,1']);
     Route::post('/invoices/{invoice}/pay-online', [OnlinePaymentController::class, 'link'])->middleware(['permission:invoices.view', 'throttle:20,1']);
     Route::post('/invoices/{invoice}/claims', [PaymentClaimController::class, 'store'])->middleware('permission:invoices.view');
     Route::middleware('staff')->group(function () {
