@@ -45,6 +45,9 @@ class AttendanceService
         }
         $s = $this->settings();
         $hasFix = isset($d['lat'], $d['lng']);
+        // No office set = a remote team: check-ins are work from home unless the person says otherwise.
+        $default = $s['office_lat'] === null ? 'wfh' : 'office';
+        $d['mode'] ??= $default === 'wfh' ? 'wfh' : null;
         if (! $hasFix && $s['require_location'] && ($d['mode'] ?? 'office') !== 'wfh') {
             throw ValidationException::withMessages(['location' => 'Allow location access to check in (or choose Work from home).']);
         }

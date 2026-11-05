@@ -194,4 +194,15 @@ class WorkTest extends TestCase
         $this->as($client)->getJson('/v1/tasks')->assertForbidden();
         $this->postJson('/v1/attendance/check-in', ['mode' => 'wfh'])->assertForbidden();
     }
+
+    public function test_without_an_office_check_in_is_work_from_home(): void
+    {
+        $priya = $this->staff();
+        $this->as($priya)->getJson('/v1/attendance/me')->assertJsonPath('office_set', false);
+        $this->postJson('/v1/attendance/check-in', [])->assertCreated()->assertJsonPath('mode', 'wfh')->assertJsonPath('late', false);
+
+        $arjun = $this->staff('Arjun');
+        $this->as($arjun)->postJson('/v1/attendance/check-in', ['mode' => 'field'])->assertStatus(422)->assertJsonValidationErrors('location');
+        $this->postJson('/v1/attendance/check-in', ['mode' => 'field', 'lat' => 9.93, 'lng' => 76.26, 'note' => 'Client visit'])->assertCreated()->assertJsonPath('mode', 'field');
+    }
 }
