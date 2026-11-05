@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
@@ -38,22 +38,37 @@ export class Shell {
   protected readonly scrolled = signal(false);
   protected readonly account = signal<AccountTab | null>(null);
 
+  private applyTitle(n: number): void {
+    const base = document.title.replace(/^\(\d+\+?\)\s/, '');
+    document.title = n ? `(${n > 99 ? '99+' : n}) ${base}` : base;
+  }
+
+  initials(n: string): string {
+    return n.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  }
+
   openAccount(tab: AccountTab): void {
     this.menuOpen.set(false);
     this.account.set(tab);
   }
 
   constructor() {
-    // Unread chat badge: check every 20 s while the tab is open (no WebSockets on shared hosting).
-    const pollChat = () => !document.hidden && this.auth.canView('chat') && this.chat.refreshUnread();
+    // Chat: unread badge + new-message notifications. Every 10 s (also in the background, so
+    // desktop notifications arrive; browsers slow background tabs to about once a minute).
+    const router = inject(Router);
+    this.chat.openChat = (id) => router.navigate(['/chat'], { queryParams: { c: id } });
+    const pollChat = () => this.auth.canView('chat') && this.chat.refreshUnread();
     setTimeout(pollChat, 1500);
-    setInterval(pollChat, 20000);
+    setInterval(pollChat, 10000);
+    // "(3) DigiFox Pro CRM" in the browser tab when chats are unread.
+    effect(() => this.applyTitle(this.chat.unread()));
 
     inject(Router)
       .events.pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe(() => {
         this.drawerOpen.set(false);
         this.menuOpen.set(false);
+        setTimeout(() => this.applyTitle(this.chat.unread())); // page titles change on navigation
       });
   }
 

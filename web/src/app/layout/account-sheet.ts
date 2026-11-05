@@ -56,7 +56,7 @@ export type AccountTab = 'profile' | 'password';
     .seg button { flex: 1; border: 0; background: none; padding: 9px; border-radius: 9px; font: inherit; font-weight: 600; font-size: 13.5px; color: var(--ink-3); cursor: pointer; }
     .seg button.on { background: var(--card); color: var(--ink); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
     .pw { position: relative; } .pw input { width: 100%; padding-right: 64px; }
-    .eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--brand-deep); font-weight: 600; font-size: 12.5px; cursor: pointer; }
+    .pw .eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: auto; height: auto; padding: 6px 8px; border: 0; background: none; color: var(--brand-deep); font-weight: 600; font-size: 12.5px; cursor: pointer; }
     .hint { display: block; margin-top: 6px; } .forgot { margin-top: 16px; }
   `,
 })
