@@ -29,6 +29,7 @@ import { Sheet } from '../../shared/sheet';
             <label for="f-email">Office email</label>
             <input id="f-email" type="email" formControlName="office_email" />
             @if (err('office_email')) { <div class="err">{{ err('office_email') }}</div> }
+            @else if (employee()?.has_login) { <small class="hint">This is also their CRM login. Changing it changes the email they log in with (same password).</small> }
           </div>
           <div class="field compact" [class.invalid]="err('mobile')">
             <label for="f-mobile">Mobile number</label>

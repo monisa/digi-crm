@@ -84,8 +84,12 @@ class EmployeeController extends Controller
 
         // Keep the login's name in step, and switch the login off when someone leaves.
         if ($employee->user) {
+            $newEmail = Str::lower(trim((string) $employee->office_email));
+            $emailChanged = $newEmail !== '' && $newEmail !== $employee->user->email;
             $employee->user->forceFill([
                 'name' => $employee->name,
+                // Changing the office email changes the login email; the password stays the same.
+                ...($emailChanged ? ['email' => $newEmail, 'google_id' => null] : []), // old Google sign-in no longer links
                 'status' => $employee->status === 'inactive' ? User::STATUS_INACTIVE : $employee->user->status,
             ])->save();
             if ($employee->status === 'inactive') {
@@ -98,7 +102,9 @@ class EmployeeController extends Controller
 
     private function validated(Request $request, ?Employee $employee = null): array
     {
-        $loginEmailRule = $request->boolean('create_login') ? ['required', Rule::unique('users', 'email')] : [];
+        // The office email is the login email: it must be free (other than their own login).
+        $loginEmailRule = $request->boolean('create_login') ? ['required', Rule::unique('users', 'email')]
+            : ($employee?->user_id ? [Rule::unique('users', 'email')->ignore($employee->user_id)] : []);
 
         return $request->validate([
             'emp_code' => ['nullable', 'string', 'max:30', Rule::unique('employees', 'emp_code')->ignore($employee)],
@@ -113,7 +119,7 @@ class EmployeeController extends Controller
             'reporting_manager_id' => ['nullable', Rule::exists('employees', 'id'), Rule::notIn([$employee?->id])],
             'status' => ['sometimes', Rule::in(['active', 'inactive'])],
             'create_login' => ['sometimes', 'boolean'],
-        ], ['dob.before' => 'Please check the date of birth.', 'office_email.required' => 'An office email is needed to create a login.']);
+        ], ['dob.before' => 'Please check the date of birth.', 'office_email.required' => 'An office email is needed for the CRM login.', 'office_email.unique' => 'Another CRM login already uses this email.']);
     }
 
     private function nextCode(): string

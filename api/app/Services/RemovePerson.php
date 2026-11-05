@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\DB;
  * Permanently remove a person who has left (or a test account): their login,
  * employee record, salary, payslips, leave and attendance. Records they
  * created elsewhere (leads, invoices, tickets…) stay, without their name.
- * Only inactive (or never-activated) people can be removed, never yourself
- * or the last admin.
+ * Never yourself or the last admin.
  */
 class RemovePerson
 {
@@ -19,12 +18,6 @@ class RemovePerson
     {
         if ($user?->is($by)) {
             return 'You cannot delete your own account.';
-        }
-        if ($user && $user->status === User::STATUS_ACTIVE) {
-            return 'Set this person to inactive first, then delete.';
-        }
-        if ($employee && $employee->status !== 'inactive') {
-            return 'Mark this employee as left the company (inactive) first, then delete.';
         }
         if ($user?->isAdmin() && User::where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)->whereKeyNot($user->id)->doesntExist()) {
             return 'This is the only admin.';

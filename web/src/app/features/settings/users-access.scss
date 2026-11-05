@@ -39,3 +39,5 @@
 .del { color: #c0262d; width: 44px; padding: 0; justify-content: center; }
 @media (max-width: 860px) { .urow .del { grid-column: auto; width: 100%; } .urow .nodel { display: none; } }
 .del:hover { background: #fdecec; border-color: rgba(192, 38, 45, 0.35); }
+.mail { border: 0; background: none; color: var(--brand-deep); cursor: pointer; font-size: 12px; padding: 0 4px; margin-left: 2px; }
+.mail:hover { text-decoration: underline; }

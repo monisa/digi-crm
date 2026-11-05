@@ -17,6 +17,7 @@
     <div class="acts">
       @if (auth.can('clients.edit')) {
         <button class="btn-ghost" (click)="editing.set(true)">Edit</button>
+        @if (auth.can('clients.delete')) { <button class="btn-ghost danger" (click)="removeClient()">🗑 Delete</button> }
         <a class="btn-ghost" [routerLink]="['/clients', c.id, 'onboarding']">{{ c.onboarded_at ? 'Edit onboarding form' : 'Fill onboarding form' }}</a>
         @if (!c.onboarded_at) { <button class="btn-ghost" (click)="sendLink()">🔗 Send form link</button> }
       }

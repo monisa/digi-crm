@@ -33,6 +33,7 @@ class UserController extends Controller
     {
         $data = $request->validate([
             'role' => ['sometimes', Rule::in(config('crm.roles'))],
+            'email' => ['sometimes', 'email', 'max:190', Rule::unique('users', 'email')->ignore($user->id)],
             'status' => ['sometimes', Rule::in(config('crm.statuses'))],
             'leads_scope' => ['sometimes', Rule::in(['assigned', 'all'])],
             'clients_scope' => ['sometimes', Rule::in(['assigned', 'all'])],
@@ -50,6 +51,14 @@ class UserController extends Controller
             $data['status'] = User::STATUS_ACTIVE;
         }
 
+        if (isset($data['email'])) {
+            $data['email'] = \Illuminate\Support\Str::lower(trim($data['email']));
+            if ($data['email'] !== $user->email) {
+                $data['google_id'] = null; // the old Google account no longer signs in
+            }
+            // Keep the HR record in step.
+            \App\Models\Employee::where('user_id', $user->id)->update(['office_email' => $data['email']]);
+        }
         $user->forceFill($data)->save();
 
         if (($data['status'] ?? null) === User::STATUS_INACTIVE) {

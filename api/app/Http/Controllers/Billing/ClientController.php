@@ -96,6 +96,37 @@ class ClientController extends Controller
         return response()->json(['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'status' => $user->status], 201);
     }
 
+    /**
+     * Delete a client added by mistake or for testing. Clients with issued
+     * invoices or payments cannot be deleted (GST records must be kept):
+     * mark them as a past client instead.
+     */
+    public function destroy(Request $request, Client $client): JsonResponse
+    {
+        $this->authorizeClient($request->user(), $client);
+        if ($client->invoices()->where('status', '!=', 'draft')->exists() || \App\Models\Payment::where('client_id', $client->id)->exists()) {
+            return response()->json(['message' => 'This client has issued invoices or payments, which must be kept for GST. Set the client to "Past client" instead.'], 422);
+        }
+
+        $campaignIds = \App\Models\Campaign::where('client_id', $client->id)->pluck('id');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client) {
+            // Their portal logins go too.
+            foreach ($client->users()->get() as $login) {
+                $login->tokens()->delete();
+                \Illuminate\Support\Facades\DB::table('notifications')->where('notifiable_type', User::class)->where('notifiable_id', $login->id)->delete();
+                $login->delete();
+            }
+            $client->delete(); // drafts, campaigns, tickets, files and onboarding answers go with it
+        });
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        $disk->deleteDirectory("clients/{$client->id}");
+        foreach ($campaignIds as $id) {
+            $disk->deleteDirectory("campaigns/{$id}");
+        }
+
+        return response()->json(['deleted' => true]);
+    }
+
     private function authorizeClient(User $user, Client $client): void
     {
         abort_unless(Client::visibleTo($user)->whereKey($client->id)->exists(), 403, 'This client is managed by someone else.');
