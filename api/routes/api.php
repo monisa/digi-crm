@@ -19,6 +19,7 @@ use App\Http\Controllers\Hr\SalaryController;
 use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
@@ -64,6 +65,8 @@ Route::prefix('auth')->middleware('throttle:20,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::put('/auth/profile', [AccountController::class, 'update']);
+    Route::post('/auth/password', [AccountController::class, 'password'])->middleware('throttle:6,1');
     Route::get('/onboarding', [OnboardingController::class, 'show']);
     Route::post('/onboarding', [OnboardingController::class, 'store']);
 });
@@ -78,6 +81,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.create');
     Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->middleware('permission:employees.view');
     Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.edit');
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:employees.delete');
     Route::get('/employees/{employee}/salary', [SalaryController::class, 'show'])->middleware('permission:employees.view');
     Route::post('/employees/{employee}/salary', [SalaryController::class, 'store'])->middleware('permission:employees.edit');
     Route::patch('/employees/{employee}/salary/{structure}', [SalaryController::class, 'move'])->middleware('permission:employees.edit');
@@ -241,6 +245,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:settings.view');
         Route::patch('/users/{user}', [UserController::class, 'update'])->middleware('permission:settings.edit');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('permission:settings.delete');
         Route::get('/users/{user}/permissions', [UserController::class, 'permissions'])->middleware('permission:settings.view');
         Route::put('/users/{user}/permissions', [UserController::class, 'updatePermissions'])->middleware('permission:settings.edit');
     });

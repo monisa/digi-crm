@@ -5,6 +5,7 @@ import { AdminService, ModuleDef, UserAccess } from '../../core/admin.service';
 import { AuthUser, Role, Status } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
+import { Dialog } from '../../shared/dialog';
 
 type Override = 'inherit' | 'allow' | 'deny';
 
@@ -18,6 +19,25 @@ export class UsersAccess {
   private admin = inject(AdminService);
   protected readonly auth = inject(AuthService);
   protected readonly canEdit = this.auth.can('settings.edit');
+  protected readonly canDelete = this.auth.can('settings.delete');
+  private dialog = inject(Dialog);
+
+  /** Delete an inactive or never-activated login (test accounts, people who left). */
+  async remove(u: AuthUser): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: `Delete ${u.name}?`,
+      message: `${u.email} can no longer log in. Their employee record, salary, payslips, leave and attendance are deleted too. Leads, clients, invoices and tickets they worked on stay (without their name). This cannot be undone.`,
+      confirmText: 'Delete permanently', danger: true, typeToConfirm: 'DELETE',
+    });
+    if (!ok) return;
+    this.admin.deleteUser(u.id).subscribe({
+      next: () => {
+        this.users.update((l) => l.filter((x) => x.id !== u.id));
+        this.flash(`${u.name} deleted.`);
+      },
+      error: (e) => this.flash(readErrors(e).message || 'Could not delete.'),
+    });
+  }
 
   protected readonly roles: Role[] = ['admin', 'employee', 'client'];
   protected readonly statuses: Status[] = ['active', 'pending_onboarding', 'pending_approval', 'inactive'];

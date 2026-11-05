@@ -2,7 +2,7 @@
 .filters .input-sm { flex: 1; min-width: 200px; max-width: 360px; }
 .ulist { display: flex; flex-direction: column; }
 .urow {
-  display: grid; grid-template-columns: 1fr 110px 150px 160px 140px auto; gap: 10px; align-items: center; padding: 12px 6px;
+  display: grid; grid-template-columns: 1fr 110px 150px 160px 140px auto 44px; gap: 10px; align-items: center; padding: 12px 6px;
   border-bottom: 1px solid var(--line); animation: rise 0.45s var(--ease) both; transition: background 0.2s;
 }
 .urow:hover { background: var(--bg); }
@@ -35,3 +35,7 @@
   .sheet { top: auto; max-height: 88vh; border-radius: 22px 22px 0 0; padding: 18px; animation: up 0.35s var(--ease); }
   @keyframes up { from { transform: translateY(40px); opacity: 0; } }
 }
+
+.del { color: #c0262d; width: 44px; padding: 0; justify-content: center; }
+@media (max-width: 860px) { .urow .del { grid-column: auto; width: 100%; } .urow .nodel { display: none; } }
+.del:hover { background: #fdecec; border-color: rgba(192, 38, 45, 0.35); }

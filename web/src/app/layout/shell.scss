@@ -107,7 +107,10 @@ main { min-width: 0; }
   width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; background: none;
   border-radius: 10px; cursor: pointer; font-size: 14px; color: var(--ink-2);
 }
-.menu button:hover { background: var(--bg); color: var(--crit); }
+.menu button:hover { background: var(--bg); color: var(--ink); }
+.menu button.out:hover { color: var(--crit); }
+.menu-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.menu button app-icon { width: 18px; height: 18px; }
 @media (max-width: 860px) {
   .me-txt { display: none; }
   .collapsed .logout span { display: inline; }

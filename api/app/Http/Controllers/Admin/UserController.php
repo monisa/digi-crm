@@ -99,4 +99,17 @@ class UserController extends Controller
 
         return $this->permissions($user);
     }
+
+    /** Delete an inactive login (e.g. a test account or someone who left). */
+    public function destroy(Request $request, User $user, \App\Services\RemovePerson $remove): JsonResponse
+    {
+        $employee = \App\Models\Employee::where('user_id', $user->id)->first();
+        // The login is what matters here; an attached employee record goes too.
+        if ($why = $remove->check($user, null, $request->user())) {
+            return response()->json(['message' => $why], 422);
+        }
+        $remove->remove($user, $employee);
+
+        return response()->json(['deleted' => true]);
+    }
 }
