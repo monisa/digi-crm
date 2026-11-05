@@ -38,9 +38,12 @@ import { Toast } from '../../shared/toast.service';
             </div>
           }
           <button class="btn big" (click)="checkIn()" [disabled]="busy()">
-            @if (busy()) { <span class="spinner"></span> Getting your location… } @else { Check in }
+            @if (busy()) { <span class="spinner"></span> Checking in… } @else if (askMode()) { Check in } @else if (remote()) { 🏠 Check in · Work from home } @else { Check in }
           </button>
-          @if (!askMode()) { <button class="linkish" (click)="askMode.set(true); mode = 'wfh'">Working from home or on a field visit?</button> }
+          @if (!askMode()) {
+            @if (!remote()) { <p class="hint center">At the office it’s marked Office; anywhere else, Work from home.</p> }
+            <button class="linkish" (click)="askMode.set(true); mode = 'field'">On a field visit today?</button>
+          }
         }
         @case ('in') {
           <p class="sub">Checked in at <b>{{ time(me()!.today!.check_in_at) }}</b> · <b>{{ hours(worked()) }}</b> so far</p>
@@ -65,6 +68,7 @@ import { Toast } from '../../shared/toast.service';
     .big { width: 100%; justify-content: center; height: 50px; font-size: 16px; }
     .outb { background: #16181d; box-shadow: none; }
     .outb:hover:not(:disabled) { background: #000; }
+    .center { text-align: center; margin-top: 8px; font-size: 12.5px; }
     .linkish { display: block; margin: 10px auto 0; background: none; border: 0; color: var(--brand-deep); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
     .away { background: var(--brand-soft); border-radius: 14px; padding: 12px; margin-bottom: 12px; display: grid; gap: 10px; }
     .away p { font-size: 13.5px; color: var(--ink-2); }
@@ -96,6 +100,8 @@ export class CheckInCard implements OnDestroy {
     if (!m.today) return 'none';
     return m.today.check_out_at || m.today.auto_closed ? 'out' : 'in';
   });
+  /** No office location set: the team works from home by default. */
+  protected readonly remote = computed(() => this.me()?.office_set === false);
   protected readonly worked = computed(() => {
     const t = this.me()?.today;
     return t?.check_in_at ? Math.max(0, Math.round((this.now().getTime() - new Date(t.check_in_at).getTime()) / 60000)) : 0;
@@ -115,8 +121,11 @@ export class CheckInCard implements OnDestroy {
 
   async checkIn(): Promise<void> {
     this.busy.set(true);
-    const fix = await this.api.locate();
-    const body = { ...(fix ?? {}), ...(this.askMode() ? { mode: this.mode, note: this.note.trim() || undefined } : {}) };
+    const asking = this.askMode();
+    // Location is only needed at the office or on a field visit.
+    const needFix = !this.remote() || (asking && this.mode === 'field');
+    const fix = needFix ? await this.api.locate() : null;
+    const body = { ...(fix ?? {}), ...(asking ? { mode: this.mode, note: this.note.trim() || undefined } : {}) };
     this.api.checkIn(body).subscribe({
       next: (a) => {
         this.busy.set(false);
@@ -141,7 +150,8 @@ export class CheckInCard implements OnDestroy {
 
   async checkOut(): Promise<void> {
     this.busy.set(true);
-    const fix = await this.api.locate();
+    const t = this.me()?.today;
+    const fix = t && t.mode !== 'wfh' ? await this.api.locate() : null;
     this.api.checkOut(fix ?? {}).subscribe({
       next: (a) => {
         this.busy.set(false);

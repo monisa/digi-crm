@@ -19,7 +19,7 @@ const STATUS: Record<string, [string, string]> = {
   imports: [FormsModule, CheckInCard, Sheet],
   template: `
     <div class="page-head">
-      <div><h1>Attendance</h1><p>Check in and out from your phone or laptop. Your location is saved with each check-in.</p></div>
+      <div><h1>Attendance</h1><p>Check in when you start work and check out when you finish, from your phone or laptop.</p></div>
       @if (canManage() && auth.can('attendance.export')) { <div class="actions"><button class="btn-ghost" (click)="exportCsv()">⬇ Export month</button></div> }
     </div>
 
@@ -72,13 +72,14 @@ const STATUS: Record<string, [string, string]> = {
         @if (cfg(); as c) {
           <form class="card set" (ngSubmit)="saveSettings()">
             <h3>Office location</h3>
-            <p class="hint">Check-ins within this distance count as <b>Office</b>. Further away, people choose Field visit or Work from home.</p>
+            <p class="hint">Check-ins within this distance of the office count as <b>Office</b>; anywhere else they count as <b>Work from home</b> (people can pick <b>Field visit</b> instead). Leave it empty and every check-in is Work from home, without asking for location.</p>
             <div class="row-3">
               <div class="field compact"><label for="a-lat">Latitude</label><input id="a-lat" name="lat" type="number" step="any" [(ngModel)]="c.office_lat" /></div>
               <div class="field compact"><label for="a-lng">Longitude</label><input id="a-lng" name="lng" type="number" step="any" [(ngModel)]="c.office_lng" /></div>
               <div class="field compact"><label for="a-r">Radius (metres)</label><input id="a-r" name="r" type="number" min="30" [(ngModel)]="c.radius_m" /></div>
             </div>
             <button type="button" class="btn-ghost" (click)="useHere()" [disabled]="busy()">📍 Use my current location (stand in the office)</button>
+            @if (c.office_lat !== null) { <button type="button" class="btn-ghost" (click)="clearOffice()">Remove office (work from home)</button> }
             @if (c.office_lat !== null && c.office_lng !== null) { <a class="maplink" [href]="'https://maps.google.com/?q=' + c.office_lat + ',' + c.office_lng" target="_blank" rel="noopener">Check it on the map ↗</a> }
             <h3 style="margin-top: 22px">Rules</h3>
             <div class="row-3">
@@ -289,6 +290,10 @@ export class AttendancePage {
     if (!fix) return this.toast.show('Could not get your location. Allow location access in the browser.');
     this.cfg.update((c) => (c ? { ...c, office_lat: fix.lat!, office_lng: fix.lng! } : c));
     this.toast.show(`Location set (accurate to about ${fix.accuracy} m). Press Save.`);
+  }
+
+  clearOffice(): void {
+    this.cfg.update((c) => (c ? { ...c, office_lat: null, office_lng: null } : c));
   }
 
   saveSettings(): void {
