@@ -48,6 +48,33 @@ export class Leads {
   protected view: View = '';
   protected search = '';
   protected page = 1;
+  protected readonly pageSizes = [25, 50, 100, 200];
+  protected readonly pageSize = signal<number>(this.savedSize());
+
+  private savedSize(): number {
+    try {
+      const n = +(localStorage.getItem('dfp_leads_page_size') ?? 50);
+      return [25, 50, 100, 200].includes(n) ? n : 50;
+    } catch {
+      return 50;
+    }
+  }
+
+  setPageSize(n: number): void {
+    this.pageSize.set(n);
+    try {
+      localStorage.setItem('dfp_leads_page_size', String(n));
+    } catch {}
+    this.load(1);
+  }
+
+  /** "51–100 of 240" */
+  protected rangeLabel(): string {
+    const m = this.result()?.meta;
+    if (!m) return '';
+    const from = (m.page - 1) * this.pageSize() + 1;
+    return `${from}–${Math.min(m.total, from + this.pageSize() - 1)} of ${m.total}`;
+  }
 
   /** Applied filters, and the copy being edited in the panel. */
   protected readonly f = signal<LeadFilter>({ ...NO_FILTER });
@@ -67,7 +94,7 @@ export class Leads {
     const f = this.f();
     const out: { key: keyof LeadFilter; label: string }[] = [];
     if (f.date) out.push({ key: 'date', label: f.date === 'custom' ? `${this.short(f.from) || '…'} – ${this.short(f.to) || '…'}` : DATE_PRESETS.find((p) => p[0] === f.date)![1] });
-    if (f.ad) out.push({ key: 'ad', label: 'Ad: ' + (f.ad === '__none' ? 'No ad name' : f.ad) });
+    if (f.ad) out.push({ key: 'ad', label: 'Service: ' + (f.ad === '__none' ? 'Not set' : f.ad) });
     if (f.callStatus) out.push({ key: 'callStatus', label: 'Call: ' + f.callStatus });
     if (f.status) out.push({ key: 'status', label: 'Stage: ' + this.label(f.status as LeadStatus) });
     if (f.assigned) {
@@ -166,7 +193,7 @@ export class Leads {
     this.page = page;
     this.loading.set(true);
     this.api
-      .list({ ...this.filters(), page, per_page: this.layout() === 'board' ? 300 : 50 })
+      .list({ ...this.filters(), page, per_page: this.layout() === 'board' ? 300 : this.pageSize() })
       .subscribe({
         next: (r) => {
           this.result.set(r);

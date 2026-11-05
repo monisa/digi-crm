@@ -189,7 +189,7 @@ class LeadsTest extends TestCase
         Lead::create(['full_name' => 'Rahul', 'phone' => '+91 98470 11111', 'status' => 'qualified', 'call_status' => 'Connected']);
         $csv = $this->as($this->admin)->get('/v1/leads/export')->assertOk()->streamedContent();
 
-        $this->assertStringContainsString('Date,"AD Name",Name,"Phone Number","Email ID","Location (City)","Call Status"', $csv);
+        $this->assertStringContainsString('Date,Service,Name,"Phone Number","Email ID","Location (City)","Call Status"', $csv);
         $this->assertStringContainsString('Rahul,"+91 98470 11111",,,Connected,Interested', $csv);
     }
 

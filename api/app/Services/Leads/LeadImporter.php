@@ -18,6 +18,8 @@ class LeadImporter
     private const COLUMNS = [
         'date' => 'date',
         'adname' => 'ad_name',
+        'service' => 'ad_name',
+        'services' => 'ad_name',
         'name' => 'full_name',
         'fullname' => 'full_name',
         'phonenumber' => 'phone',

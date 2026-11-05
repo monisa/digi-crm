@@ -1,4 +1,4 @@
-<app-sheet [title]="lead()?.full_name ?? 'Lead'" [subtitle]="lead() ? (lead()!.ad_name ? 'Ad: ' + lead()!.ad_name : 'Source: ' + lead()!.source) : ''" width="640px" (closed)="closed.emit()">
+<app-sheet [title]="lead()?.full_name ?? 'Lead'" [subtitle]="lead() ? (lead()!.ad_name ? 'Service: ' + lead()!.ad_name : 'Source: ' + lead()!.source) : ''" width="640px" (closed)="closed.emit()">
   @if (lead(); as l) {
     <div class="contact">
       @if (l.phone) {

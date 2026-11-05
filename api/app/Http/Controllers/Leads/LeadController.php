@@ -262,7 +262,7 @@ class LeadController extends Controller
         return response()->streamDownload(function () use ($query, $statuses) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // so Excel reads ₹ and Malayalam names correctly
-            fputcsv($out, ['Date', 'AD Name', 'Name', 'Phone Number', 'Email ID', 'Location (City)', 'Call Status', 'Status ', 'Package ', 'Requirement', 'Follow-up Status', 'Notes / Remarks', 'Assigned to'], escape: '\\');
+            fputcsv($out, ['Date', 'Service', 'Name', 'Phone Number', 'Email ID', 'Location (City)', 'Call Status', 'Status ', 'Package ', 'Requirement', 'Follow-up Status', 'Notes / Remarks', 'Assigned to'], escape: '\\');
             $query->chunk(500, function ($leads) use ($out, $statuses) {
                 foreach ($leads as $l) {
                     fputcsv($out, [

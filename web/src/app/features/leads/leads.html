@@ -27,7 +27,7 @@
 <div class="card">
   <div class="toolbar">
     <div class="filters">
-      <input class="input-sm grow" type="search" placeholder="Search name, phone, email, city or ad" [(ngModel)]="search" (ngModelChange)="onSearch()" />
+      <input class="input-sm grow" type="search" placeholder="Search name, phone, email, city or service" [(ngModel)]="search" (ngModelChange)="onSearch()" />
       <div class="fwrap">
         <button class="btn-ghost fbtn" [class.on]="activeCount()" (click)="openFilter()" [attr.aria-expanded]="filterOpen()">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4" /></svg>
@@ -42,11 +42,11 @@
             @if (draft.date === 'custom') {
               <div class="frow"><input class="input-sm" type="date" name="from" [(ngModel)]="draft.from" aria-label="From" /><span>to</span><input class="input-sm" type="date" name="to" [(ngModel)]="draft.to" aria-label="To" /></div>
             }
-            <label class="fl" for="flt-ad">Ad</label>
+            <label class="fl" for="flt-ad">Service</label>
             <select id="flt-ad" name="ad" class="select-sm" [(ngModel)]="draft.ad">
-              <option value="">All ads</option>
+              <option value="">All services</option>
               @for (a of ads(); track a[0]) { <option [value]="a[0]">{{ a[0] }} ({{ a[1] }})</option> }
-              <option value="__none">No ad name</option>
+              <option value="__none">Not set</option>
             </select>
             <label class="fl" for="flt-call">Call status</label>
             <select id="flt-call" name="call" class="select-sm" [(ngModel)]="draft.callStatus">
@@ -113,7 +113,7 @@
     <div class="table" [class.loading]="loading()">
       <div class="thead">
         @if (canSelect()) { <input type="checkbox" aria-label="Select all" [checked]="selected().size && selected().size === result()?.data?.length" (change)="toggleAll()" /> }
-        <span>Date</span><span>Name</span><span class="h-ad">Ad</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
+        <span>Date</span><span>Name</span><span class="h-ad">Service</span><span>Call status</span><span>Stage</span><span>Follow-up</span><span>Assigned</span>
       </div>
       @for (l of result()?.data ?? []; track l.id; let i = $index) {
         <div class="trow" (click)="openId.set(l.id)" [style.animation-delay.s]="i * 0.015" [class.sel]="selected().has(l.id)">
@@ -144,11 +144,21 @@
         </div>
       }
     </div>
-    @if ((result()?.meta?.last_page ?? 1) > 1) {
+    @if ((result()?.meta?.total ?? 0) > pageSizes[0]!) {
       <div class="pager">
-        <button class="btn-ghost" [disabled]="page <= 1" (click)="load(page - 1)">← Newer</button>
-        <span>Page {{ page }} of {{ result()?.meta?.last_page }}</span>
-        <button class="btn-ghost" [disabled]="page >= (result()?.meta?.last_page ?? 1)" (click)="load(page + 1)">Older →</button>
+        <label class="psize">Rows per page
+          <select class="select-sm" [ngModel]="pageSize()" (ngModelChange)="setPageSize($event)" aria-label="Rows per page">
+            @for (n of pageSizes; track n) { <option [ngValue]="n">{{ n }}</option> }
+          </select>
+        </label>
+        <span class="prange">{{ rangeLabel() }}</span>
+        <div class="pbtns">
+          <button class="btn-ghost" [disabled]="page <= 1" (click)="load(1)" aria-label="First page">«</button>
+          <button class="btn-ghost" [disabled]="page <= 1" (click)="load(page - 1)">← Newer</button>
+          <span>Page {{ page }} of {{ result()?.meta?.last_page }}</span>
+          <button class="btn-ghost" [disabled]="page >= (result()?.meta?.last_page ?? 1)" (click)="load(page + 1)">Older →</button>
+          <button class="btn-ghost" [disabled]="page >= (result()?.meta?.last_page ?? 1)" (click)="load(result()?.meta?.last_page ?? 1)" aria-label="Last page">»</button>
+        </div>
       </div>
     }
   } @else {

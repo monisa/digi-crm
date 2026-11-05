@@ -82,7 +82,11 @@
 .qbtn { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; border: 1px solid var(--line); background: #fff; font-size: 14px; transition: transform 0.2s var(--ease); }
 .qbtn:hover { transform: scale(1.1); }
 .qbtn.wa { background: #e7f9ee; border-color: #b7ebc9; }
-.pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 14px; color: var(--ink-3); font-size: 13px; }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; color: var(--ink-3); font-size: 13px; }
+.psize { display: inline-flex; align-items: center; gap: 8px; } .psize .select-sm { width: auto; padding-right: 30px; }
+.pbtns { display: flex; align-items: center; gap: 8px; }
+.pbtns .btn-ghost { padding: 7px 12px; }
+@media (max-width: 860px) { .pager { justify-content: center; } .prange { display: none; } }
 .hint { color: var(--ink-3); font-size: 13px; margin-top: 10px; }
 
 /* Board */
