@@ -72,7 +72,7 @@ const STATUS: Record<string, [string, string]> = {
         @if (cfg(); as c) {
           <form class="card set" (ngSubmit)="saveSettings()">
             <h3>Office location</h3>
-            <p class="hint">Leave this empty if your team works from home: check-ins are then <b>Work from home</b> by default (no location asked), with a “field visit” option. With an office set, check-ins within the radius count as <b>Office</b>.</p>
+            <p class="hint">Check-ins within this distance of the office count as <b>Office</b>; anywhere else they count as <b>Work from home</b> (people can pick <b>Field visit</b> instead). Leave it empty and every check-in is Work from home, without asking for location.</p>
             <div class="row-3">
               <div class="field compact"><label for="a-lat">Latitude</label><input id="a-lat" name="lat" type="number" step="any" [(ngModel)]="c.office_lat" /></div>
               <div class="field compact"><label for="a-lng">Longitude</label><input id="a-lng" name="lng" type="number" step="any" [(ngModel)]="c.office_lng" /></div>

@@ -38,11 +38,11 @@ import { Toast } from '../../shared/toast.service';
             </div>
           }
           <button class="btn big" (click)="checkIn()" [disabled]="busy()">
-            @if (busy()) { <span class="spinner"></span> Checking in… } @else if (remote() && !askMode()) { 🏠 Check in · Work from home } @else { Check in }
+            @if (busy()) { <span class="spinner"></span> Checking in… } @else if (askMode()) { Check in } @else if (remote()) { 🏠 Check in · Work from home } @else { Check in }
           </button>
           @if (!askMode()) {
-            @if (remote()) { <button class="linkish" (click)="askMode.set(true); mode = 'field'">On a field visit today?</button> }
-            @else { <button class="linkish" (click)="askMode.set(true); mode = 'wfh'">Working from home or on a field visit?</button> }
+            @if (!remote()) { <p class="hint center">At the office it’s marked Office; anywhere else, Work from home.</p> }
+            <button class="linkish" (click)="askMode.set(true); mode = 'field'">On a field visit today?</button>
           }
         }
         @case ('in') {
@@ -68,6 +68,7 @@ import { Toast } from '../../shared/toast.service';
     .big { width: 100%; justify-content: center; height: 50px; font-size: 16px; }
     .outb { background: #16181d; box-shadow: none; }
     .outb:hover:not(:disabled) { background: #000; }
+    .center { text-align: center; margin-top: 8px; font-size: 12.5px; }
     .linkish { display: block; margin: 10px auto 0; background: none; border: 0; color: var(--brand-deep); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
     .away { background: var(--brand-soft); border-radius: 14px; padding: 12px; margin-bottom: 12px; display: grid; gap: 10px; }
     .away p { font-size: 13.5px; color: var(--ink-2); }

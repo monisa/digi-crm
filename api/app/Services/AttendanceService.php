@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Check in / check out with the phone's location.
- * - Within the office radius → "office"; otherwise the person picks field visit or WFH.
+ * - Within the office radius → "office"; anywhere else → work from home, or "field" when the person says so.
  * - Checking in after the admin's "late after" time on a working day marks it late.
  */
 class AttendanceService
@@ -45,20 +45,18 @@ class AttendanceService
         }
         $s = $this->settings();
         $hasFix = isset($d['lat'], $d['lng']);
-        // No office set = a remote team: check-ins are work from home unless the person says otherwise.
-        $default = $s['office_lat'] === null ? 'wfh' : 'office';
-        $d['mode'] ??= $default === 'wfh' ? 'wfh' : null;
-        if (! $hasFix && $s['require_location'] && ($d['mode'] ?? 'office') !== 'wfh') {
+        // Mostly remote team: unless the person is at the office (or says field visit), it is work from home.
+        if (! $hasFix && $s['require_location'] && in_array($d['mode'] ?? null, ['office', 'field'], true)) {
             throw ValidationException::withMessages(['location' => 'Allow location access to check in (or choose Work from home).']);
         }
 
         $distance = $hasFix && $s['office_lat'] !== null ? (int) round($this->metres($d['lat'], $d['lng'], $s['office_lat'], $s['office_lng'])) : null;
         $atOffice = $distance !== null && $distance <= $s['radius_m'] + min((int) ($d['accuracy'] ?? 0), 100);
         $mode = $d['mode'] ?? null;
-        if (($mode === 'office' || $mode === null) && $distance !== null && ! $atOffice) {
+        if ($mode === 'office' && $distance !== null && ! $atOffice) {
             throw ValidationException::withMessages(['mode' => sprintf('You are %s from the office. Choose Field visit or Work from home.', $this->km($distance))]);
         }
-        $mode ??= 'office';
+        $mode ??= $atOffice ? 'office' : 'wfh';
 
         $now = now();
         $lateAt = CarbonImmutable::parse(today()->toDateString().' '.$s['late_after']);
