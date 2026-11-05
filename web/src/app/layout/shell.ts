@@ -6,10 +6,11 @@ import { NAV_ITEMS, NavItem } from '../core/navigation';
 import { Toast } from '../shared/toast.service';
 import { Bell } from './bell';
 import { Icon } from './icon';
+import { AccountSheet, AccountTab } from './account-sheet';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, Bell],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, Bell, AccountSheet],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
@@ -33,6 +34,12 @@ export class Shell {
   protected readonly drawerOpen = signal(false);
   protected readonly menuOpen = signal(false);
   protected readonly scrolled = signal(false);
+  protected readonly account = signal<AccountTab | null>(null);
+
+  openAccount(tab: AccountTab): void {
+    this.menuOpen.set(false);
+    this.account.set(tab);
+  }
 
   constructor() {
     inject(Router)
