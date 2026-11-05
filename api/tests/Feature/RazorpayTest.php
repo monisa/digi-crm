@@ -126,4 +126,48 @@ class RazorpayTest extends TestCase
         $this->getJson("/v1/invoices/{$inv['id']}")->assertJsonPath('pay.online', false);
         $this->postJson("/v1/invoices/{$inv['id']}/pay-online")->assertStatus(422);
     }
+
+    public function test_missed_payment_is_found_by_asking_razorpay(): void
+    {
+        [, $inv] = $this->invoice();
+        Http::fake([
+            'api.razorpay.com/v1/payment_links/plink_123' => Http::response(['id' => 'plink_123', 'status' => 'paid',
+                'payments' => [['payment_id' => 'pay_MISSED', 'amount' => 1180000, 'status' => 'captured', 'method' => 'upi']]]),
+            'api.razorpay.com/v1/payment_links' => Http::response(['id' => 'plink_123', 'short_url' => 'https://rzp.io/i/plink_123']),
+        ]);
+        $this->as($this->admin)->postJson("/v1/invoices/{$inv['id']}/pay-online")->assertOk();
+
+        // Neither the webhook nor the return arrived; the scheduled check finds it.
+        \Illuminate\Support\Facades\Artisan::call('crm:razorpay-sync');
+        $this->assertSame('paid', Invoice::find($inv['id'])->status);
+        $this->assertSame('pay_MISSED', Invoice::find($inv['id'])->payments()->first()->reference);
+
+        // Button: nothing more to find, and no duplicate.
+        $this->postJson("/v1/invoices/{$inv['id']}/pay-online/check")->assertOk()->assertJsonPath('found', 0)->assertJsonPath('status', 'paid');
+        $this->assertSame(1, Invoice::find($inv['id'])->payments()->count());
+    }
+
+    public function test_check_explains_when_no_crm_link_exists(): void
+    {
+        [, $inv] = $this->invoice();
+        $this->as($this->admin)->postJson("/v1/invoices/{$inv['id']}/pay-online/check")->assertOk()
+            ->assertJsonPath('found', 0)->assertJsonPath('message', fn ($m) => str_contains($m, 'Razorpay dashboard'));
+    }
+
+    public function test_payment_made_from_a_razorpay_dashboard_link_is_added_by_id(): void
+    {
+        [, $inv] = $this->invoice();
+        Http::fake([
+            'api.razorpay.com/v1/payments/pay_DASH123456' => Http::response(['id' => 'pay_DASH123456', 'status' => 'captured', 'amount' => 1180000, 'fee' => 27848, 'method' => 'upi', 'created_at' => 1762300000]),
+            'api.razorpay.com/v1/payments/pay_FAILED1234' => Http::response(['id' => 'pay_FAILED1234', 'status' => 'failed', 'amount' => 1180000]),
+            'api.razorpay.com/v1/payments/*' => Http::response(['error' => ['description' => 'not found']], 400),
+        ]);
+        $this->as($this->admin);
+        $this->postJson("/v1/invoices/{$inv['id']}/pay-online/import", ['payment_id' => 'hello'])->assertStatus(422)->assertJsonValidationErrors('payment_id');
+        $this->postJson("/v1/invoices/{$inv['id']}/pay-online/import", ['payment_id' => 'pay_NOPE123456'])->assertStatus(422);
+        $this->postJson("/v1/invoices/{$inv['id']}/pay-online/import", ['payment_id' => 'pay_FAILED1234'])->assertStatus(422)->assertJsonPath('message', fn ($m) => str_contains($m, 'failed'));
+        $this->postJson("/v1/invoices/{$inv['id']}/pay-online/import", ['payment_id' => 'pay_DASH123456'])->assertCreated()->assertJsonPath('status', 'paid');
+        $this->postJson("/v1/invoices/{$inv['id']}/pay-online/import", ['payment_id' => 'pay_DASH123456'])->assertStatus(422);
+        $this->assertEquals(278.48, Invoice::find($inv['id'])->payments()->first()->gateway_fee);
+    }
 }

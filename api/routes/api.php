@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Billing\ClientAssetsController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\Billing\ClientOnboardingController;
 use App\Http\Controllers\Billing\OnlinePaymentController;
+use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Work\AttendanceController;
 use App\Http\Controllers\Work\TaskController;
 use App\Http\Controllers\PasswordResetController;
@@ -143,6 +145,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // Clients → "approve" = may reveal shared passwords (admins always can).
         Route::post('/clients/{client}/credentials', [ClientAssetsController::class, 'credentials'])->middleware('permission:clients.approve');
 
+        Route::get('/settings/backups', [BackupController::class, 'index']);
+        Route::post('/settings/backups', [BackupController::class, 'run'])->middleware('throttle:6,1');
+        Route::get('/settings/backups/{name}', [BackupController::class, 'download'])->where('name', '[A-Za-z0-9.\-]+');
         Route::get('/settings/company', [CompanyController::class, 'show'])->middleware('permission:settings.view');
         Route::put('/settings/company', [CompanyController::class, 'update'])->middleware('permission:settings.edit');
     });
@@ -151,6 +156,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices.view');
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->middleware('permission:invoices.view');
+    Route::post('/invoices/{invoice}/pay-online/import', [OnlinePaymentController::class, 'import'])->middleware(['permission:invoices.approve', 'throttle:20,1']);
+    Route::post('/invoices/{invoice}/pay-online/check', [OnlinePaymentController::class, 'check'])->middleware(['permission:invoices.view', 'throttle:20,1']);
     Route::post('/invoices/{invoice}/pay-online', [OnlinePaymentController::class, 'link'])->middleware(['permission:invoices.view', 'throttle:20,1']);
     Route::post('/invoices/{invoice}/claims', [PaymentClaimController::class, 'store'])->middleware('permission:invoices.view');
     Route::middleware('staff')->group(function () {
@@ -204,6 +211,22 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('permission:campaigns.delete');
         Route::post('/campaigns/{campaign}/files', [CampaignController::class, 'upload'])->middleware('permission:campaigns.edit');
         Route::delete('/campaign-files/{file}', [CampaignController::class, 'deleteFile'])->middleware('permission:campaigns.edit');
+    });
+
+    // Team chat (staff only; the app polls).
+    Route::middleware(['staff', 'permission:chat.view'])->prefix('chat')->group(function () {
+        Route::get('/conversations', [ChatController::class, 'index']);
+        Route::get('/unread', [ChatController::class, 'unread']);
+        Route::get('/people', [ChatController::class, 'people']);
+        Route::post('/direct', [ChatController::class, 'direct']);
+        Route::post('/groups', [ChatController::class, 'createGroup'])->middleware('permission:chat.create');
+        Route::patch('/conversations/{conversation}', [ChatController::class, 'updateGroup']);
+        Route::post('/conversations/{conversation}/leave', [ChatController::class, 'leave']);
+        Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages']);
+        Route::post('/conversations/{conversation}/messages', [ChatController::class, 'send'])->middleware('throttle:60,1');
+        Route::post('/conversations/{conversation}/read', [ChatController::class, 'read']);
+        Route::delete('/messages/{message}', [ChatController::class, 'destroy']);
+        Route::get('/messages/{message}/file', [ChatController::class, 'file']);
     });
 
     // Tasks and attendance (staff only).

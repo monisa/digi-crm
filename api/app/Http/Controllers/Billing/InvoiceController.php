@@ -158,7 +158,7 @@ class InvoiceController extends Controller
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:1', 'max:'.$invoice->balance()],
             'paid_on' => ['required', 'date', 'before_or_equal:today'],
-            'mode' => ['required', Rule::in(['upi', 'bank_transfer', 'cash', 'cheque', 'card'])],
+            'mode' => ['required', Rule::in(['upi', 'bank_transfer', 'cash', 'cheque', 'card', 'online'])],
             'reference' => ['nullable', 'string', 'max:60'],
             'note' => ['nullable', 'string', 'max:500'],
         ], ['amount.max' => 'The amount is more than the balance due (Rs. '.number_format($invoice->balance(), 2).').']);

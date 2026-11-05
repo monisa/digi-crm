@@ -32,6 +32,41 @@ class OnlinePaymentController extends Controller
         return response()->json(['url' => $link->url, 'amount' => $link->amount]);
     }
 
+    /** "Check payment status": ask Razorpay about this invoice's links now. */
+    public function check(Request $request, Invoice $invoice): JsonResponse
+    {
+        abort_unless(Invoice::visibleTo($request->user())->whereKey($invoice->id)->exists(), 404);
+        abort_unless($this->razorpay->configured(), 422, 'Online payment is not set up yet (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET).');
+        $found = $invoice->onlineLinks()->where('status', 'created')->get()->sum(fn ($l) => $this->razorpay->sync($l));
+        $invoice->refresh();
+
+        return response()->json([
+            'found' => $found,
+            'links' => $invoice->onlineLinks()->count(),
+            'status' => $invoice->status,
+            'balance' => $invoice->balance(),
+            'message' => $found ? "Found $found online payment(s) and recorded them." : ($invoice->onlineLinks()->exists()
+                ? 'No completed payment on Razorpay yet for this invoice\'s payment link.'
+                : 'No CRM payment link was made for this invoice. Links made directly in the Razorpay dashboard are not linked to invoices; record those with “Record payment”.'),
+        ]);
+    }
+
+    /** Add a Razorpay payment made outside the CRM, by its payment id (pay_…). */
+    public function import(Request $request, Invoice $invoice): JsonResponse
+    {
+        abort_unless(Invoice::visibleTo($request->user())->whereKey($invoice->id)->exists(), 404);
+        abort_if(in_array($invoice->status, ['draft', 'cancelled'], true), 422, 'Payments can only be recorded on issued invoices.');
+        $id = $request->validate(['payment_id' => ['required', 'string', 'regex:/^pay_[A-Za-z0-9]{6,40}$/']],
+            ['payment_id.regex' => 'A Razorpay payment ID looks like pay_N2xyzABC123.'])['payment_id'];
+        try {
+            $p = $this->razorpay->importPayment($invoice, $id);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['message' => 'Rs. '.number_format($p->amount, 2).' recorded from Razorpay.', 'status' => $invoice->fresh()->status], 201);
+    }
+
     /** The customer is back from Razorpay: record the payment straight away (signed by Razorpay). */
     public function callback(Request $request): JsonResponse
     {
