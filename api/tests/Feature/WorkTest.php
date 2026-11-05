@@ -128,7 +128,7 @@ class WorkTest extends TestCase
     {
         $this->office();
         $priya = $this->staff();
-        $this->as($priya)->postJson('/v1/attendance/check-in', [])->assertStatus(422)->assertJsonValidationErrors('location');
+        $this->as($priya)->postJson('/v1/attendance/check-in', ['mode' => 'office'])->assertStatus(422)->assertJsonValidationErrors('location');
         $this->postJson('/v1/attendance/check-in', ['lat' => 10.0162, 'lng' => 76.3421, 'accuracy' => 20])->assertCreated()
             ->assertJsonPath('mode', 'office')->assertJsonPath('late', false);
         $this->postJson('/v1/attendance/check-in', ['lat' => 10.0162, 'lng' => 76.3421])->assertStatus(422);
@@ -145,7 +145,6 @@ class WorkTest extends TestCase
         $priya = $this->staff();
         $far = ['lat' => 9.9312, 'lng' => 76.2673]; // ~12 km away
         $this->as($priya)->postJson('/v1/attendance/check-in', $far + ['mode' => 'office'])->assertStatus(422)->assertJsonValidationErrors('mode');
-        $this->postJson('/v1/attendance/check-in', $far)->assertStatus(422)->assertJsonValidationErrors('mode'); // asked to choose
         $this->postJson('/v1/attendance/check-in', $far + ['mode' => 'field', 'note' => 'Client visit'])->assertCreated()
             ->assertJsonPath('mode', 'field')->assertJsonPath('late', true);
     }
@@ -193,5 +192,23 @@ class WorkTest extends TestCase
         $client = User::factory()->client()->create(['client_id' => Client::create(['company_name' => 'X'])->id]);
         $this->as($client)->getJson('/v1/tasks')->assertForbidden();
         $this->postJson('/v1/attendance/check-in', ['mode' => 'wfh'])->assertForbidden();
+    }
+
+    public function test_without_an_office_check_in_is_work_from_home(): void
+    {
+        $priya = $this->staff();
+        $this->as($priya)->getJson('/v1/attendance/me')->assertJsonPath('office_set', false);
+        $this->postJson('/v1/attendance/check-in', [])->assertCreated()->assertJsonPath('mode', 'wfh')->assertJsonPath('late', false);
+
+        $arjun = $this->staff('Arjun');
+        $this->as($arjun)->postJson('/v1/attendance/check-in', ['mode' => 'field'])->assertStatus(422)->assertJsonValidationErrors('location');
+        $this->postJson('/v1/attendance/check-in', ['mode' => 'field', 'lat' => 9.93, 'lng' => 76.26, 'note' => 'Client visit'])->assertCreated()->assertJsonPath('mode', 'field');
+    }
+
+    public function test_with_an_office_elsewhere_is_work_from_home(): void
+    {
+        $this->office();
+        $this->as($this->staff())->postJson('/v1/attendance/check-in', ['lat' => 9.9312, 'lng' => 76.2673])->assertCreated()->assertJsonPath('mode', 'wfh')->assertJsonPath('distance', 12468);
+        $this->as($this->staff('Arjun'))->postJson('/v1/attendance/check-in', [])->assertCreated()->assertJsonPath('mode', 'wfh'); // location refused
     }
 }
