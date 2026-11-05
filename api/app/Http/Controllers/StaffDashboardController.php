@@ -25,15 +25,20 @@ class StaffDashboardController extends Controller
         if ($user->hasPermission('leads.view')) {
             $mine = Lead::where('assigned_to', $user->id);
             $sla = now()->subMinutes(config('crm.lead_sla_minutes'));
+            // Not contacted yet: the leads this person can see (theirs, or all for "all leads" users), oldest first.
+            $waiting = Lead::visibleTo($user)->where('status', 'new')->whereNull('first_contacted_at');
             $data['leads'] = [
                 'open' => (clone $mine)->whereNotIn('status', ['won', 'lost'])->count(),
-                'uncontacted' => (clone $mine)->where('status', 'new')->whereNull('first_contacted_at')->where('created_at', '<=', $sla)->count(),
+                'uncontacted' => (clone $waiting)->count(),
+                'overdue' => (clone $waiting)->where('created_at', '<=', $sla)->count(),
                 'won_this_month' => (clone $mine)->where('status', 'won')->where('updated_at', '>=', today()->startOfMonth())->count(),
+                'uncontacted_list' => (clone $waiting)->with('assignee:id,name')->orderBy('created_at')->limit(8)->get()
+                    ->map(fn (Lead $l) => ['id' => $l->id, 'name' => $l->full_name, 'phone' => $l->phone, 'service' => $l->ad_name,
+                        'at' => $l->created_at->toIso8601String(), 'late' => $l->created_at->lte($sla),
+                        'assigned' => $l->assigned_to === $user->id ? null : ($l->assignee?->name ?? 'Unassigned')]),
                 'followups' => (clone $mine)->whereNotNull('next_followup_at')->where('next_followup_at', '<=', now()->endOfDay())
                     ->whereNotIn('status', ['won', 'lost'])->orderBy('next_followup_at')->limit(6)->get()
                     ->map(fn (Lead $l) => ['id' => $l->id, 'name' => $l->full_name, 'phone' => $l->phone, 'at' => $l->next_followup_at->toIso8601String(), 'overdue' => $l->next_followup_at->isPast()]),
-                'new' => (clone $mine)->where('status', 'new')->whereNull('first_contacted_at')->latest()->limit(4)->get()
-                    ->map(fn (Lead $l) => ['id' => $l->id, 'name' => $l->full_name, 'phone' => $l->phone, 'ad' => $l->ad_name, 'at' => $l->created_at->toIso8601String()]),
             ];
         }
 
@@ -57,6 +62,19 @@ class StaffDashboardController extends Controller
                 'leave' => $balances,
                 'next_leave' => $next ? ['from' => $next->from_date->toDateString(), 'to' => $next->to_date->toDateString(), 'type' => $next->leaveType->name, 'status' => $next->status] : null,
                 'payslip' => $slip ? ['id' => $slip->id, 'label' => $slip->periodLabel(), 'net' => $slip->net, 'employee' => ['emp_code' => $employee->emp_code], 'year' => $slip->year, 'month' => $slip->month] : null,
+            ];
+        }
+
+        // Leave: my own recent requests, and (for approvers) the team's requests waiting for a decision.
+        if ($user->hasPermission('leave.view')) {
+            $data['leave'] = [
+                'mine' => $employee ? LeaveRequest::with('leaveType')->where('employee_id', $employee->id)->latest()->limit(4)->get()
+                    ->map(fn (LeaveRequest $r) => ['id' => $r->id, 'type' => $r->leaveType?->code, 'from' => $r->from_date->toDateString(), 'to' => $r->to_date->toDateString(), 'days' => (float) $r->days, 'status' => $r->status]) : [],
+                'to_approve' => $user->hasPermission('leave.approve')
+                    ? LeaveRequest::with(['leaveType', 'employee:id,name'])->where('status', 'pending')->whereHas('employee', fn ($q) => $q->where('user_id', '!=', $user->id)->orWhereNull('user_id'))
+                        ->orderBy('from_date')->limit(6)->get()
+                        ->map(fn (LeaveRequest $r) => ['id' => $r->id, 'name' => $r->employee?->name, 'type' => $r->leaveType?->code, 'from' => $r->from_date->toDateString(), 'to' => $r->to_date->toDateString(), 'days' => (float) $r->days, 'reason' => $r->reason])
+                    : null,
             ];
         }
 

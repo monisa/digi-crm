@@ -43,7 +43,9 @@ class Ticket extends Model
 
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        return $q->whereIn('client_id', Client::visibleTo($user)->select('id'));
+        // Clients they can see, plus (for staff) any ticket assigned to them.
+        return $q->where(fn ($q) => $q->whereIn('client_id', Client::visibleTo($user)->select('id'))
+            ->when(! $user->isClient(), fn ($q) => $q->orWhere('assigned_to', $user->id)));
     }
 
     public function toApiArray(?User $viewer = null, bool $full = false): array
