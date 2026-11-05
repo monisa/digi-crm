@@ -13,7 +13,7 @@ import { Sheet } from '../../shared/sheet';
         <li><b>File → Download → Comma-separated values (.csv)</b></li>
         <li>Choose that file below.</li>
       </ol>
-      <p class="hint">Columns are matched by name: Date, AD Name, Name, Phone Number, Email ID, Location (City), Call Status, Status, Package, Requirement, Follow-up Status, Notes / Remarks.
+      <p class="hint">Columns are matched by name: Date, Service (or AD Name), Name, Phone Number, Email ID, Location (City), Call Status, Status, Package, Requirement, Follow-up Status, Notes / Remarks.
         Leads whose phone or email is already in the CRM are skipped, so importing twice is safe.</p>
 
       <label class="drop" [class.has]="file()">

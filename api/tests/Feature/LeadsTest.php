@@ -189,7 +189,7 @@ class LeadsTest extends TestCase
         Lead::create(['full_name' => 'Rahul', 'phone' => '+91 98470 11111', 'status' => 'qualified', 'call_status' => 'Connected']);
         $csv = $this->as($this->admin)->get('/v1/leads/export')->assertOk()->streamedContent();
 
-        $this->assertStringContainsString('Date,"AD Name",Name,"Phone Number","Email ID","Location (City)","Call Status"', $csv);
+        $this->assertStringContainsString('Date,Service,Name,"Phone Number","Email ID","Location (City)","Call Status"', $csv);
         $this->assertStringContainsString('Rahul,"+91 98470 11111",,,Connected,Interested', $csv);
     }
 
@@ -291,5 +291,35 @@ class LeadsTest extends TestCase
         $this->as($staff->fresh())->postJson('/v1/leads/bulk-delete', ['ids' => [$mine->id, $other->id]])->assertOk()->assertJsonPath('deleted', 1);
         $this->assertModelExists($other);
         $this->assertModelMissing($mine);
+    }
+
+    public function test_filter_by_ad_and_date(): void
+    {
+        Lead::create(['full_name' => 'A', 'ad_name' => 'Course', 'created_at' => '2026-10-13 10:00:00']);
+        Lead::create(['full_name' => 'B', 'ad_name' => 'Course', 'created_at' => '2026-11-04 10:00:00']);
+        Lead::create(['full_name' => 'C', 'ad_name' => 'SEO offer', 'created_at' => '2026-11-04 11:00:00']);
+        Lead::create(['full_name' => 'D', 'created_at' => '2026-11-04 12:00:00']);
+
+        $r = $this->as($this->admin)->getJson('/v1/leads?ad=Course')->assertOk()->assertJsonCount(2, 'data');
+        $this->assertEquals(['Course' => 2, 'SEO offer' => 1], $r->json('ads'));
+        $this->getJson('/v1/leads?ad=Course&from=2026-11-01&to=2026-11-30')->assertJsonCount(1, 'data')->assertJsonPath('data.0.full_name', 'B');
+        $this->getJson('/v1/leads?ad=__none')->assertJsonCount(1, 'data')->assertJsonPath('data.0.full_name', 'D');
+    }
+
+    public function test_sorting_by_date_service_and_assignee(): void
+    {
+        $zara = User::factory()->create(['name' => 'Zara', 'role' => 'employee']);
+        $anu = User::factory()->create(['name' => 'Anu', 'role' => 'employee']);
+        Lead::create(['full_name' => 'Old', 'ad_name' => 'SEO', 'assigned_to' => $zara->id, 'created_at' => '2026-10-01 10:00']);
+        Lead::create(['full_name' => 'Mid', 'ad_name' => 'Course', 'created_at' => '2026-10-15 10:00']);
+        Lead::create(['full_name' => 'New', 'assigned_to' => $anu->id, 'created_at' => '2026-11-04 10:00']);
+        $names = fn ($q) => collect($this->getJson('/v1/leads'.$q)->assertOk()->json('data'))->pluck('full_name')->all();
+
+        $this->as($this->admin);
+        $this->assertSame(['New', 'Mid', 'Old'], $names(''));
+        $this->assertSame(['Old', 'Mid', 'New'], $names('?sort=date&dir=asc'));
+        $this->assertSame(['Mid', 'Old', 'New'], $names('?sort=service'));          // Course, SEO, then empty
+        $this->assertSame(['Old', 'Mid', 'New'], $names('?sort=service&dir=desc'));
+        $this->assertSame(['New', 'Old', 'Mid'], $names('?sort=assigned'));         // Anu, Zara, then unassigned
     }
 }
