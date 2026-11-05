@@ -132,6 +132,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/attendance/attendance').then((m) => m.AttendancePage),
       },
       {
+        path: 'chat',
+        title: T('Team chat'),
+        canActivate: [moduleGuard],
+        data: { module: 'chat' },
+        loadComponent: () => import('./features/chat/chat').then((m) => m.Chat),
+      },
+      {
         path: 'leave',
         title: T('Leave'),
         canActivate: [moduleGuard],

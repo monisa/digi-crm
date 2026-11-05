@@ -36,6 +36,11 @@
         <app-icon [name]="collapsed() ? 'chevron-right' : 'chevron-left'" />
       </button>
       <div class="spacer"></div>
+      @if (auth.canView('chat')) {
+        <a class="icon-btn chatb" routerLink="/chat" aria-label="Team chat" title="Team chat">
+          <app-icon name="chat" />@if (chat.unread()) { <span class="cnt">{{ chat.unread() > 99 ? '99+' : chat.unread() }}</span> }
+        </a>
+      }
       <app-bell />
       <div class="me">
         <button class="me-btn" (click)="menuOpen.update((v) => !v)" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">

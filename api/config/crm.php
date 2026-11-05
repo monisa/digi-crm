@@ -26,6 +26,8 @@ return [
         'tasks' => ['Tasks', false],
         // Check in / out: everyone their own; "edit" = register, timesheets, corrections.
         'attendance' => ['Attendance', false],
+        // Internal team chat (staff only).
+        'chat' => ['Team chat', false],
         'campaigns' => ['Campaigns', true],
         'invoices' => ['Invoices & Payments', true],
         'tickets' => ['Tickets', true],
@@ -115,6 +117,7 @@ return [
             'leave.view', 'leave.create',
             'tasks.view', 'tasks.create',
             'attendance.view', 'attendance.create',
+            'chat.view', 'chat.create',
             'notifications.view',
         ],
         'client' => [

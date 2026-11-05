@@ -1,0 +1,101 @@
+<div class="chat" [class.has-active]="activeId()">
+  <!-- Chat list -->
+  <aside class="list card">
+    <div class="lh">
+      <h1>Team chat</h1>
+      <div class="lacts">
+        <button class="btn-ghost sm" (click)="startPicker('direct')" title="Message someone">✎ New</button>
+        @if (auth.can('chat.create')) { <button class="btn-ghost sm" (click)="startPicker('group')" title="New group">+ Group</button> }
+      </div>
+    </div>
+    <input class="input-sm" type="search" placeholder="Search chats" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    <div class="convs">
+      @for (c of filtered(); track c.id) {
+        <button class="conv" [class.on]="c.id === activeId()" [class.unread]="c.unread" (click)="open(c.id)">
+          <span class="av" [class.grp]="c.type === 'group'" [class.all]="c.everyone">{{ c.everyone ? '★' : initials(c.name) }}</span>
+          <span class="cm">
+            <span class="cn"><b>{{ c.name }}</b><small>{{ when(c.last?.at) }}</small></span>
+            <span class="cl"><span>@if (c.last) { @if (c.last.by && c.type === 'group' || c.last.by === 'You') { {{ c.last.by }}: } {{ c.last.text }} } @else { No messages yet }</span>
+              @if (c.unread) { <i class="badge-n">{{ c.unread > 99 ? '99+' : c.unread }}</i> }</span>
+          </span>
+        </button>
+      } @empty {
+        <p class="hint pad">{{ loadingList() ? 'Loading…' : 'No chats yet. Press “New” to message someone.' }}</p>
+      }
+    </div>
+  </aside>
+
+  <!-- Open chat -->
+  <section class="room card">
+    @if (active(); as c) {
+      <header class="rh">
+        <button class="icon-btn backb" (click)="back()" aria-label="Back to chats">←</button>
+        <span class="av" [class.grp]="c.type === 'group'" [class.all]="c.everyone">{{ c.everyone ? '★' : initials(c.name) }}</span>
+        <div class="rt"><b>{{ c.name }}</b><small>@if (c.type === 'group') { {{ c.members.length }} members } @else { Direct message }</small></div>
+        @if (c.can_edit) { <button class="btn-ghost sm" (click)="startPicker('edit')">Edit group</button> }
+        @if (c.type === 'group' && !c.everyone) { <button class="btn-ghost sm" (click)="leaveGroup()">Leave</button> }
+      </header>
+
+      <div class="thread" #thread>
+        @if (hasMore()) { <button class="more" (click)="older()">Load older messages</button> }
+        @for (m of msgs(); track m.id; let i = $index) {
+          @if (newDay(i); as d) { <div class="day"><span>{{ d }}</span></div> }
+          @if (!m.user) {
+            <div class="sys">{{ m.body }}</div>
+          } @else {
+            <div class="row" [class.mine]="m.user.id === me()">
+              <div class="bubble" [class.gone]="m.deleted">
+                @if (showName(i)) { <span class="who">{{ m.user.name }}</span> }
+                @if (m.deleted) { <i>🚫 Message deleted</i> }
+                @else {
+                  @if (m.file; as f) {
+                    @if (f.image) {
+                      @if (images()[m.id]) { <img class="pic" [src]="images()[m.id]" [alt]="f.name" (click)="download(m)" /> } @else { <div class="pic ph"></div> }
+                    } @else {
+                      <button class="filec" (click)="download(m)"><span class="fi">📄</span><span><b>{{ f.name }}</b><small>{{ size(f.size) }} · Download</small></span></button>
+                    }
+                  }
+                  @if (m.body) { <p>@for (p of parts(m.body); track $index) { @if (p.url) { <a [href]="p.url" target="_blank" rel="noopener">{{ p.t }}</a> } @else { {{ p.t }} } }</p> }
+                }
+                <span class="meta">{{ time(m.created_at) }}@if (m.user.id === me() && c.type === 'direct' && !m.deleted) { <span class="tick" [class.seen]="m.id <= readUpto()">{{ m.id <= readUpto() ? '✓✓' : '✓' }}</span> }</span>
+                @if (m.user.id === me() && !m.deleted) { <button class="del" (click)="removeMsg(m)" title="Delete" aria-label="Delete message">✕</button> }
+              </div>
+            </div>
+          }
+        } @empty { <div class="emptyc">👋 Say hello to {{ c.type === 'direct' ? c.name : 'the group' }}</div> }
+      </div>
+
+      <form class="composer" (ngSubmit)="send()">
+        @if (file(); as f) { <div class="att"><span>📎 {{ f.name }} · {{ size(f.size) }}</span><button type="button" (click)="file.set(null)" aria-label="Remove file">✕</button></div> }
+        <div class="crow">
+          <label class="icon-btn clip" title="Attach a file or photo"><input type="file" hidden (change)="pickFile($event)" />📎</label>
+          <textarea #box name="t" rows="1" [(ngModel)]="text" (keydown)="onKey($event)" placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)" maxlength="5000"></textarea>
+          <button class="btn send" type="submit" [disabled]="sending() || (!text.trim() && !file())" aria-label="Send">➤</button>
+        </div>
+      </form>
+    } @else {
+      <div class="pick"><span class="big">💬</span><h3>Your team chat</h3><p>Pick a chat on the left, or start a new one.</p></div>
+    }
+  </section>
+</div>
+
+@if (picker(); as kind) {
+  <app-sheet [title]="kind === 'direct' ? 'Message someone' : kind === 'edit' ? 'Edit group' : 'New group'" [width]="'440px'" (closed)="picker.set(null)">
+    @if (kind !== 'direct') {
+      <div class="field compact" style="margin-top: 12px"><label for="g-n">Group name</label><input id="g-n" name="gn" [(ngModel)]="groupName" maxlength="80" placeholder="e.g. Spice Route team" /></div>
+    }
+    <input class="input-sm wide" type="search" placeholder="Search people" [(ngModel)]="personSearch" />
+    <div class="ppl">
+      @for (p of shownPeople(); track p.id) {
+        @if (kind === 'direct') {
+          <button class="pp" (click)="chatWith(p)"><span class="av">{{ initials(p.name) }}</span><b>{{ p.name }}</b><span class="go">Message →</span></button>
+        } @else {
+          <label class="pp"><input type="checkbox" [checked]="picked.has(p.id)" (change)="togglePick(p.id)" /><span class="av">{{ initials(p.name) }}</span><b>{{ p.name }}</b></label>
+        }
+      } @empty { <p class="hint">No one found.</p> }
+    </div>
+    @if (kind !== 'direct') {
+      <div class="form-actions"><button class="btn-ghost" (click)="picker.set(null)">Cancel</button><button class="btn" (click)="saveGroup()">{{ kind === 'edit' ? 'Save' : 'Create group' }} ({{ picked.size + 1 }})</button></div>
+    }
+  </app-sheet>
+}
