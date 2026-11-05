@@ -80,6 +80,47 @@ export class InvoiceView {
     });
   }
 
+  /** Ask Razorpay now (if the payer did not come back to the CRM after paying). */
+  checkOnline(): void {
+    this.busy.set(true);
+    this.api.checkOnline(this.inv()!.id).subscribe({
+      next: (r) => {
+        this.busy.set(false);
+        if (r.found) {
+          this.toast.show(r.message);
+          this.load();
+        } else this.importRazorpay(r.message);
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Could not reach Razorpay.');
+      },
+    });
+  }
+
+  /** Paid through a link made in the Razorpay dashboard: add it by its payment ID. */
+  async importRazorpay(why = ''): Promise<void> {
+    const id = await this.dialog.prompt({
+      title: 'Add a Razorpay payment',
+      message: (why ? why + '\n\n' : '') + 'Paste the payment ID from Razorpay → Transactions → Payments (it starts with pay_). The CRM checks it with Razorpay and records the amount.',
+      label: 'Razorpay payment ID', value: '', confirmText: 'Check & record', required: true,
+    });
+    if (!id) return;
+    this.busy.set(true);
+    this.api.importRazorpay(this.inv()!.id, id.trim()).subscribe({
+      next: (r) => {
+        this.busy.set(false);
+        this.toast.show(r.message);
+        this.load();
+      },
+      error: (e) => {
+        this.busy.set(false);
+        const r = readErrors(e);
+        this.toast.show(Object.values(r.fields)[0] || r.message || 'Could not add the payment.');
+      },
+    });
+  }
+
   modeLabel(m: string): string {
     return ({ upi: 'UPI', online: 'Online (Razorpay)', bank_transfer: 'Bank transfer' } as Record<string, string>)[m] ?? m.replace('_', ' ');
   }

@@ -84,6 +84,88 @@ class Razorpay
         ]);
     }
 
+    /**
+     * Ask Razorpay whether a link was paid and record it (for when neither the
+     * webhook nor the payer's return reached the CRM). Returns payments recorded.
+     */
+    public function sync(OnlinePaymentLink $link): int
+    {
+        if (! $this->configured() || $link->status === 'paid') {
+            return 0;
+        }
+        try {
+            $res = Http::withBasicAuth(config('services.razorpay.key_id'), config('services.razorpay.key_secret'))
+                ->acceptJson()->timeout(15)->get(self::API.'/payment_links/'.$link->link_id);
+        } catch (ConnectionException) {
+            return 0;
+        }
+        if (! $res->successful()) {
+            return 0;
+        }
+        $status = (string) $res->json('status');
+        if (in_array($status, ['cancelled', 'expired'], true)) {
+            $link->update(['status' => $status]);
+
+            return 0;
+        }
+        $n = 0;
+        foreach ((array) $res->json('payments', []) as $p) {
+            if (($p['status'] ?? '') === 'captured' && ! empty($p['payment_id'])) {
+                $made = $this->markPaid($link->link_id, $p['payment_id'], isset($p['amount']) ? $p['amount'] / 100 : null, null, $p['method'] ?? null);
+                $n += $made?->wasRecentlyCreated ? 1 : 0;
+            }
+        }
+
+        return $n;
+    }
+
+    /**
+     * Record a payment made outside the CRM (e.g. a link made in the Razorpay
+     * dashboard) by its payment id, after checking it with Razorpay.
+     */
+    public function importPayment(Invoice $invoice, string $paymentId): Payment
+    {
+        if (! $this->configured()) {
+            throw new RuntimeException('Add the Razorpay keys first (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET), or use “Record payment”.');
+        }
+        if (Payment::where('reference', $paymentId)->exists()) {
+            throw new RuntimeException('This Razorpay payment is already recorded.');
+        }
+        try {
+            $res = Http::withBasicAuth(config('services.razorpay.key_id'), config('services.razorpay.key_secret'))
+                ->acceptJson()->timeout(15)->get(self::API.'/payments/'.$paymentId);
+        } catch (ConnectionException) {
+            throw new RuntimeException('Could not reach Razorpay. Please try again in a minute.');
+        }
+        if ($res->status() === 404 || $res->status() === 400) {
+            throw new RuntimeException('Razorpay has no payment with this ID. It starts with pay_ (Razorpay → Transactions → Payments).');
+        }
+        if (! $res->successful()) {
+            throw new RuntimeException($res->status() === 401 ? 'Razorpay rejected the API keys.' : ($res->json('error.description') ?: 'Razorpay refused the request.'));
+        }
+        if ($res->json('status') !== 'captured') {
+            throw new RuntimeException('This payment is “'.$res->json('status').'” on Razorpay, not completed (captured).');
+        }
+        $amount = round($res->json('amount') / 100, 2);
+        if ($amount > $invoice->balance() + 0.009) {
+            throw new RuntimeException('This payment (Rs. '.number_format($amount, 2).') is more than the balance due (Rs. '.number_format($invoice->balance(), 2).').');
+        }
+
+        return DB::transaction(function () use ($invoice, $paymentId, $amount, $res) {
+            $p = $invoice->payments()->create([
+                'client_id' => $invoice->client_id, 'amount' => $amount,
+                'paid_on' => \Illuminate\Support\Carbon::createFromTimestamp((int) $res->json('created_at'), config('app.timezone'))->toDateString(),
+                'mode' => 'online', 'reference' => $paymentId,
+                'note' => 'Razorpay payment added by ID'.($res->json('method') ? ' ('.$res->json('method').')' : ''),
+                'gateway_fee' => $res->json('fee') !== null ? $res->json('fee') / 100 : null,
+                'recorded_by' => request()->user()?->id,
+            ]);
+            $invoice->refreshPaidStatus();
+
+            return $p;
+        });
+    }
+
     /** X-Razorpay-Signature on webhooks: HMAC-SHA256 of the raw body with the webhook secret. */
     public function validWebhook(string $body, ?string $signature): bool
     {
