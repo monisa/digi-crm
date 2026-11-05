@@ -26,11 +26,31 @@ export interface Overview {
   leave: { pending: number; items: { id: number; employee: string | null; type: string | null; from: string; to: string; days: number }[] };
 }
 
+export interface StaffHome {
+  name: string;
+  leads?: {
+    open: number; uncontacted: number; overdue: number; won_this_month: number;
+    uncontacted_list: { id: number; name: string; phone: string | null; service: string | null; at: string; late: boolean; assigned: string | null }[];
+    followups: { id: number; name: string; phone: string | null; at: string; overdue: boolean }[];
+  };
+  tickets?: { open: number; needs_reply: number; items: { id: number; number: string; subject: string; status: string; priority: string; awaiting_staff: boolean; client?: { company_name: string } | null }[] };
+  leave?: {
+    mine: { id: number; type: string | null; from: string; to: string; days: number; status: string }[];
+    to_approve: { id: number; name: string | null; type: string | null; from: string; to: string; days: number; reason: string | null }[] | null;
+  };
+  me?: { employee_id: number; designation: string | null; leave: { type: { code: string; name: string }; allotted: number | null; remaining: number | null; used: number; pending: number }[] };
+  holidays: { id: number; name: string; date: string }[];
+  birthdays: { name: string; date: string; today: boolean }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private http = inject(HttpClient);
 
   overview(period: Period): Observable<Overview> {
     return this.http.get<Overview>(`${API_BASE}/dashboard/overview`, { params: { period } });
+  }
+  staffHome(): Observable<StaffHome> {
+    return this.http.get<StaffHome>(`${API_BASE}/dashboard/me`);
   }
 }

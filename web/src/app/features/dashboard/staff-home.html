@@ -1,0 +1,114 @@
+<div class="head">
+  <div><h1>{{ hello }}, {{ (auth.user()?.name ?? '').split(' ')[0] }} 👋</h1><p>Here’s what needs you today.</p></div>
+</div>
+
+@if (d(); as d) {
+  <!-- Quick numbers -->
+  <div class="kpis">
+    @if (d.leads) {
+      <a class="kpi" [class.hot]="d.leads.overdue" routerLink="/leads" [queryParams]="{ view: 'uncontacted' }">
+        <b>{{ d.leads.uncontacted }}</b><span>Leads not contacted</span>@if (d.leads.overdue) { <i>{{ d.leads.overdue }} overdue</i> }</a>
+      <a class="kpi" routerLink="/leads" [queryParams]="{ view: 'followups' }"><b>{{ d.leads.followups.length }}</b><span>Follow-ups today</span></a>
+    }
+    @if (d.tickets) {
+      <a class="kpi" [class.warm]="d.tickets.needs_reply" routerLink="/tickets"><b>{{ d.tickets.open }}</b><span>Open tickets</span>@if (d.tickets.needs_reply) { <i>{{ d.tickets.needs_reply }} need a reply</i> }</a>
+    }
+    @if (d.leave?.to_approve; as ta) {
+      <a class="kpi" [class.warm]="ta.length" routerLink="/leave"><b>{{ ta.length }}</b><span>Leave to approve</span></a>
+    } @else if (d.me?.leave?.length) {
+      <a class="kpi" routerLink="/leave"><b>{{ d.me!.leave[0]!.remaining ?? '—' }}</b><span>{{ d.me!.leave[0]!.type.code }} days left</span></a>
+    }
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      @if (auth.canView('attendance')) { <app-check-in-card /> }
+
+      <!-- Uncontacted leads -->
+      @if (d.leads; as L) {
+        <section class="card">
+          <div class="ch"><h3>Leads not contacted yet</h3><a class="more" routerLink="/leads" [queryParams]="{ view: 'uncontacted' }">View all →</a></div>
+          @for (l of L.uncontacted_list; track l.id) {
+            <div class="li">
+              <a class="lm" routerLink="/leads" [queryParams]="{ open: l.id }">
+                <b>{{ l.name }}</b>
+                <small>@if (l.service) { {{ l.service }} · } <span [class.late]="l.late">{{ ago(l.at) }}</span>@if (l.assigned) { · {{ l.assigned }} }</small>
+              </a>
+              @if (l.phone) {
+                <a class="q" [href]="'tel:' + l.phone" aria-label="Call" title="Call">📞</a>
+                <a class="q wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp">💬</a>
+              }
+            </div>
+          } @empty { <p class="ok">🎉 Every lead has been contacted.</p> }
+          @if (L.followups.length) {
+            <h4>Follow-ups due</h4>
+            @for (f of L.followups; track f.id) {
+              <div class="li">
+                <a class="lm" routerLink="/leads" [queryParams]="{ open: f.id }"><b>{{ f.name }}</b><small [class.late]="f.overdue">{{ f.overdue ? 'Overdue · ' : '' }}{{ time(f.at) }}</small></a>
+                @if (f.phone) { <a class="q" [href]="'tel:' + f.phone" aria-label="Call">📞</a> }
+              </div>
+            }
+          }
+        </section>
+      }
+    </div>
+
+    <div class="col">
+      <!-- Tickets -->
+      @if (d.tickets; as T) {
+        <section class="card">
+          <div class="ch"><h3>Tickets</h3><a class="more" routerLink="/tickets">View all →</a></div>
+          @for (t of T.items; track t.id) {
+            <a class="li link" [routerLink]="['/tickets', t.id]">
+              <span class="tn">{{ t.number }}</span>
+              <span class="lm"><b>{{ t.subject }}</b><small>{{ t.client?.company_name }}</small></span>
+              @if (t.awaiting_staff) { <span class="badge b-warn">Needs reply</span> } @else if (t.priority === 'high') { <span class="badge b-crit">Urgent</span> }
+            </a>
+          } @empty { <p class="ok">No open tickets for you.</p> }
+        </section>
+      }
+
+      <!-- Leave -->
+      @if (d.leave; as V) {
+        <section class="card">
+          <div class="ch"><h3>Leave</h3><a class="more" routerLink="/leave">Apply / view →</a></div>
+          @if (d.me?.leave?.length) {
+            <div class="bal">
+              @for (b of d.me!.leave; track b.type.code) {
+                <span class="bchip"><b>{{ b.remaining }}</b>/{{ b.allotted }} {{ b.type.code }}</span>
+              }
+            </div>
+          }
+          @if (V.to_approve?.length) {
+            <h4>Waiting for your approval</h4>
+            @for (r of V.to_approve; track r.id) {
+              <div class="li">
+                <span class="lm"><b>{{ r.name }} · {{ r.type }} {{ r.days }}d</b><small>{{ range(r.from, r.to) }}@if (r.reason) { · {{ r.reason }} }</small></span>
+                <button class="btn sm" (click)="decide(r.id, 'approve')" [disabled]="busy() === r.id">Approve</button>
+                <button class="btn-ghost sm" (click)="decide(r.id, 'reject')" [disabled]="busy() === r.id">Reject</button>
+              </div>
+            }
+          }
+          @if (V.mine.length) {
+            <h4>My requests</h4>
+            @for (r of V.mine; track r.id) {
+              <div class="li">
+                <span class="lm"><b>{{ r.type }} · {{ r.days }} day{{ r.days === 1 ? '' : 's' }}</b><small>{{ range(r.from, r.to) }}</small></span>
+                <span class="badge" [class.b-warn]="r.status === 'pending'" [class.b-good]="r.status === 'approved'" [class.b-crit]="r.status === 'rejected'">{{ statusLabel(r.status) }}</span>
+              </div>
+            }
+          } @else if (!V.to_approve?.length) { <p class="ok">No leave requests yet.</p> }
+        </section>
+      }
+
+      @if (d.holidays.length || d.birthdays.length) {
+        <section class="card soft">
+          @if (d.holidays.length) { <h4 class="first">Coming holidays</h4> @for (h of d.holidays; track h.id) { <div class="mini"><span>🎉 {{ h.name }}</span><small>{{ day(h.date) }}</small></div> } }
+          @if (d.birthdays.length) { <h4>Birthdays</h4> @for (b of d.birthdays; track b.name) { <div class="mini"><span>🎂 {{ b.name }}</span><small>{{ b.today ? 'Today!' : day(b.date) }}</small></div> } }
+        </section>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="grid"><div class="card skel"></div><div class="card skel"></div></div>
+}

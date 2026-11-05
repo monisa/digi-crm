@@ -2,8 +2,7 @@ import { Component, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { ClientHome } from './client-home';
 import { Overview } from './overview/overview';
-import { RouterLink } from '@angular/router';
-import { CheckInCard } from '../attendance/check-in-card';
+import { StaffHome } from './staff-home';
 
 /**
  * Users with the "Business Overview" permission (admins, or anyone the admin
@@ -12,26 +11,14 @@ import { CheckInCard } from '../attendance/check-in-card';
  */
 @Component({
   selector: 'app-dashboard',
-  imports: [Overview, ClientHome, CheckInCard, RouterLink],
+  imports: [Overview, ClientHome, StaffHome],
   template: `
     @if (auth.canView('overview')) {
       <app-overview />
     } @else if (auth.user()?.role === 'client') {
       <app-client-home />
     } @else {
-      <div class="head">
-        <h1>Welcome, {{ auth.user()?.name }}</h1>
-        <p>Here’s your DigiFox Pro workspace.</p>
-      </div>
-      <div class="home">
-        @if (auth.canView('attendance')) { <app-check-in-card /> }
-        @if (auth.canView('tasks')) {
-          <a class="card go" routerLink="/tasks"><span class="ic">✓</span><div><h3>My tasks</h3><p>See what’s due today and tick things off.</p></div><span class="arr">→</span></a>
-        }
-        @if (auth.canView('leave')) {
-          <a class="card go" routerLink="/leave"><span class="ic">🌴</span><div><h3>Leave</h3><p>Apply for leave and see your balance.</p></div><span class="arr">→</span></a>
-        }
-      </div>
+      <app-staff-home />
     }
   `,
   styles: `
