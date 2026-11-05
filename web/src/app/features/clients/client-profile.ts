@@ -10,6 +10,7 @@ import { Toast } from '../../shared/toast.service';
 import { ClientForm } from './client-form';
 import { Sheet } from '../../shared/sheet';
 import { ShareLink, formUrl } from '../../shared/share-link';
+import { Dialog } from '../../shared/dialog';
 
 type Tab = 'overview' | 'invoices';
 
@@ -20,6 +21,7 @@ type Tab = 'overview' | 'invoices';
   styleUrl: './client-profile.scss',
 })
 export class ClientProfile {
+  protected readonly dialog = inject(Dialog);
   id = input.required<string>();
   private api = inject(BillingService);
   private toast = inject(Toast);
@@ -134,8 +136,8 @@ export class ClientProfile {
 
   protected readonly creds = signal<{ credentials: Record<string, Record<string, string>>; views: { name: string; viewed_at: string }[] } | null>(null);
 
-  reveal(): void {
-    if (!confirm('Show this client\'s shared passwords? Your name and the time are recorded.')) return;
+  async reveal(): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Show shared passwords?', message: 'Your name and the time are recorded.', confirmText: 'Show passwords' }))) return;
     this.api.revealCredentials(this.c()!.id).subscribe({
       next: (r) => {
         this.creds.set(r);

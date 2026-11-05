@@ -265,4 +265,21 @@ class HrTest extends TestCase
         $this->as($priya)->get("/v1/payslips/{$slip->id}/pdf")->assertForbidden();
         $this->postJson('/v1/payslips/generate', ['year' => 2026, 'month' => 10])->assertForbidden();
     }
+
+    public function test_salary_starting_later_is_explained_and_can_be_moved_back(): void
+    {
+        [, $pe] = $this->staff();
+        $id = $this->as($this->admin)->postJson("/v1/employees/{$pe->id}/salary", ['effective_from' => '2026-12-01', 'basic' => 20000])->assertCreated()->json('id');
+
+        // The profile still shows it, marked upcoming.
+        $this->getJson("/v1/employees/{$pe->id}/salary")->assertJsonPath('current.upcoming', true)->assertJsonPath('current.basic', 20000);
+
+        $r = $this->postJson('/v1/payslips/generate', ['year' => 2026, 'month' => 10])->assertOk();
+        $this->assertSame(0, $r->json('generated'));
+        $this->assertSame('Salary starts 1 Dec 2026', $r->json('skipped.0.reason'));
+        $this->assertSame($id, $r->json('skipped.0.salary_id'));
+
+        $this->patchJson("/v1/employees/{$pe->id}/salary/{$id}", ['effective_from' => '2026-10-01'])->assertOk();
+        $this->postJson('/v1/payslips/generate', ['year' => 2026, 'month' => 10])->assertJsonPath('generated', 1);
+    }
 }

@@ -22,6 +22,8 @@ export interface Employee {
 export interface Salary {
   id: number;
   effective_from: string;
+  /** Saved to start on a later date. */
+  upcoming?: boolean;
   basic: number; hra: number; special_allowance: number; other_allowance: number;
   pf: number; esi: number; professional_tax: number; tds: number; other_deduction: number;
   bank_account_last4: string | null;
@@ -30,6 +32,9 @@ export interface Salary {
   net: number;
   ctc_yearly: number;
 }
+
+export interface SkippedSlip { employee: string; reason: string; employee_id?: number; salary_id?: number; starts?: string }
+export interface GenerateResult { generated: number; skipped: SkippedSlip[]; employees: number }
 
 export interface SalaryInfo {
   current: Salary | null;
@@ -123,8 +128,12 @@ export class HrService {
   payroll(year: number, month: number): Observable<{ data: Payslip[]; totals: { gross: number; net: number; count: number } }> {
     return this.http.get<{ data: Payslip[]; totals: { gross: number; net: number; count: number } }>(`${API_BASE}/payslips`, { params: { year, month } });
   }
-  generate(year: number, month: number): Observable<{ generated: number; skipped: { employee: string; reason: string }[] }> {
-    return this.http.post<{ generated: number; skipped: { employee: string; reason: string }[] }>(`${API_BASE}/payslips/generate`, { year, month });
+  generate(year: number, month: number): Observable<GenerateResult> {
+    return this.http.post<GenerateResult>(`${API_BASE}/payslips/generate`, { year, month });
+  }
+  /** Change when a salary starts (e.g. so it also covers last month's payroll). */
+  moveSalary(employeeId: number, salaryId: number, effective_from: string): Observable<Salary> {
+    return this.http.patch<Salary>(`${API_BASE}/employees/${employeeId}/salary/${salaryId}`, { effective_from });
   }
   publish(year: number, month: number): Observable<{ published: number }> {
     return this.http.post<{ published: number }>(`${API_BASE}/payslips/publish`, { year, month });

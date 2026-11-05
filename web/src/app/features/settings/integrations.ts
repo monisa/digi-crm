@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
 import { LeadsService, MetaPage, RazorpayStatus } from '../../core/leads.service';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 
 /** Settings → Integrations: connect Facebook Pages for Meta Lead Ads. */
 @Component({
@@ -123,6 +124,7 @@ import { Toast } from '../../shared/toast.service';
   `,
 })
 export class Integrations {
+  protected readonly dialog = inject(Dialog);
   private api = inject(LeadsService);
   private toast = inject(Toast);
   protected readonly canEdit = inject(AuthService).can('settings.edit');
@@ -179,8 +181,8 @@ export class Integrations {
     });
   }
 
-  remove(p: MetaPage): void {
-    if (!confirm(`Disconnect ${p.name}? New leads from this Page will stop arriving.`)) return;
+  async remove(p: MetaPage): Promise<void> {
+    if (!(await this.dialog.confirm({ title: `Disconnect ${p.name}?`, message: 'New leads from this Page will stop arriving.', confirmText: 'Disconnect', danger: true }))) return;
     this.api.removePage(p.id).subscribe(() => this.load());
   }
 

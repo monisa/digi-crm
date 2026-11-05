@@ -6,6 +6,7 @@ import { BillingService, Client, InvoiceItem } from '../../core/billing.service'
 import { readErrors } from '../../core/http-errors';
 import { money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 
 /** /invoices/new and /invoices/:id/edit (drafts only). */
 @Component({
@@ -15,6 +16,7 @@ import { Toast } from '../../shared/toast.service';
   styleUrl: './invoice-editor.scss',
 })
 export class InvoiceEditor {
+  protected readonly dialog = inject(Dialog);
   id = input<string>(); // edit mode when set
   private api = inject(BillingService);
   private router = inject(Router);
@@ -112,8 +114,8 @@ export class InvoiceEditor {
     this.tick.update((n) => n + 1);
   }
 
-  save(issue: boolean): void {
-    if (issue && !confirm('Issue this invoice? It gets its number and can no longer be edited (you can still cancel it).')) return;
+  async save(issue: boolean): Promise<void> {
+    if (issue && !(await this.dialog.confirm({ title: 'Issue this invoice?', message: 'It gets its number and can no longer be edited (you can still cancel it).', confirmText: 'Issue invoice' }))) return;
     const body = {
       client_id: this.clientId,
       issue_date: this.issueDate,

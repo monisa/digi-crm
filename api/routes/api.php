@@ -77,6 +77,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.edit');
     Route::get('/employees/{employee}/salary', [SalaryController::class, 'show'])->middleware('permission:employees.view');
     Route::post('/employees/{employee}/salary', [SalaryController::class, 'store'])->middleware('permission:employees.edit');
+    Route::patch('/employees/{employee}/salary/{structure}', [SalaryController::class, 'move'])->middleware('permission:employees.edit');
     Route::get('/employees/{employee}/leave', [LeaveController::class, 'forEmployee'])->middleware('permission:employees.view');
     Route::get('/employees/{employee}/payslips', [PayslipController::class, 'forEmployee'])->middleware('permission:employees.view');
 
