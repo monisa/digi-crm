@@ -36,6 +36,13 @@ return [
     ],
 
 
+    // Razorpay online payments: Dashboard -> Settings -> API Keys / Webhooks.
+    'razorpay' => [
+        'key_id' => env('RAZORPAY_KEY_ID'),
+        'key_secret' => env('RAZORPAY_KEY_SECRET'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
+    ],
+
     // Meta (Facebook/Instagram) Lead Ads: from developers.facebook.com -> your app.
     'meta' => [
         'app_secret' => env('META_APP_SECRET'),

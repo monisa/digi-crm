@@ -19,6 +19,7 @@
             <button class="btn-ghost" (click)="email()" [disabled]="busy()">✉ {{ i.emailed_at ? 'Email again' : 'Email to client' }}</button>
             @if (i.amount_paid === 0) { <button class="btn-ghost danger" (click)="cancel()">Cancel</button> }
           }
+          @if (payable() && i.pay?.online && !isClient()) { <button class="btn-ghost" (click)="shareLink()" [disabled]="busy()">🔗 Payment link</button> }
           @if (payable() && auth.can('invoices.approve')) { <button class="btn" (click)="openForm('record')">+ Record payment</button> }
         }
       }
@@ -49,7 +50,7 @@
         } @else { <div><span>Export (zero-rated)</span><span>₹0</span></div> }
         <div class="grand"><span>Total</span><b class="money">{{ money(i.total) }}</b></div>
         @for (p of i.payments; track p.id) {
-          <div class="paid"><span>Paid {{ date(p.paid_on) }} · {{ p.mode === 'upi' ? 'UPI' : p.mode.replace('_', ' ') }}@if (p.reference) { · {{ p.reference }} }</span><span class="money">− {{ money(p.amount) }}</span></div>
+          <div class="paid"><span>Paid {{ date(p.paid_on) }} · {{ modeLabel(p.mode) }}@if (p.reference) { · {{ p.reference }} }</span><span class="money">− {{ money(p.amount) }}</span></div>
         }
         @if (i.amount_paid > 0) { <div class="grand bal"><span>Balance due</span><b class="money">{{ money(i.balance) }}</b></div> }
       </div>
@@ -63,6 +64,13 @@
       } @else if (payable()) {
         <div class="card payc">
           <h3>Pay {{ money(i.balance) }}</h3>
+          @if (i.pay?.online && isClient()) {
+            <button class="btn wide online" (click)="payOnline()" [disabled]="busy()">
+              @if (busy()) { <span class="spinner"></span> Opening… } @else { Pay online }
+            </button>
+            <p class="hint center">UPI, debit/credit card, net banking or wallet · secured by Razorpay. Marked paid instantly.</p>
+            @if (i.pay?.qr) { <div class="or"><span>or scan to pay by UPI</span></div> }
+          }
           @if (i.pay?.qr) {
             <img class="qr" [src]="i.pay!.qr" alt="UPI QR code to pay this invoice" />
             <p class="hint">Scan with <b>GPay, PhonePe, Paytm</b> or any UPI app. The amount and invoice number are filled in for you.</p>
@@ -80,7 +88,7 @@
           @if (pendingClaim(); as pc) {
             <div class="alert info">We’ve received your payment note for {{ money(pc.amount) }} (UTR {{ pc.reference }}). It will show as paid once confirmed.</div>
           } @else if (isClient() && auth.can('invoices.view')) {
-            @if (!paying()) { <button class="btn wide" (click)="openForm('claim')">I’ve paid</button> }
+            @if (!paying()) { <button [class]="i.pay?.online ? 'btn-ghost wide' : 'btn wide'" (click)="openForm('claim')">{{ i.pay?.online ? 'Paid by UPI / bank? Tell us' : 'I’ve paid' }}</button> }
           }
         </div>
       }
@@ -121,3 +129,10 @@
     </aside>
   </div>
 } @else { <div class="card skel"></div> }
+
+@if (sharingLink()) {
+  <app-sheet title="Online payment link" [subtitle]="inv()?.invoice_no ?? ''" (closed)="sharingLink.set(false)">
+    <p class="hint" style="margin: 10px 0 14px">Send this to the client. They can pay {{ money(inv()?.balance ?? 0) }} by UPI, card or net banking, and the invoice is marked paid automatically.</p>
+    <app-share-link [url]="payLink()" [phone]="inv()?.client_detail?.phone ?? null" [message]="'Hi! Here is the payment link for invoice ' + (inv()?.invoice_no ?? '') + ' (' + money(inv()?.balance ?? 0) + '):'" />
+  </app-sheet>
+}

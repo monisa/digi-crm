@@ -64,6 +64,7 @@ return [
         'leave_requested' => ['Leave request to approve', 'leave', 'staff'],
         'leave_decided' => ['My leave was approved or rejected', 'leave', 'staff'],
         'payment_claim' => ['Client says they have paid', 'billing', 'staff'],
+        'payment_online' => ['Client paid an invoice online', 'billing', 'staff'],
         'payment_decided' => ['My payment was confirmed', 'billing', 'client'],
         'invoice_issued' => ['New invoice', 'billing', 'client'],
         'invoice_overdue' => ['Invoice overdue reminder', 'billing', 'client'],

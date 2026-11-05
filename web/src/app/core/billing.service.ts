@@ -85,7 +85,7 @@ export interface Invoice extends InvoiceRow {
   payments: { id: number; amount: number; paid_on: string; mode: string; reference: string | null }[];
   claims: Claim[];
   client_detail: Client | null;
-  pay?: { upi_id: string | null; upi_link: string | null; qr: string | null; bank: Record<string, string> | null };
+  pay?: { online?: boolean; upi_id: string | null; upi_link: string | null; qr: string | null; bank: Record<string, string> | null };
 }
 
 export interface InvoiceSummary { outstanding: number; overdue: number; overdue_count: number; paid_this_month: number; pending_claims: number }
@@ -105,6 +105,14 @@ export class BillingService {
     const p: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) if (v) p[k] = v;
     return this.http.get<{ data: Client[]; pending: number }>(`${API_BASE}/clients`, { params: p });
+  }
+  /** Razorpay payment link for the balance due. */
+  payOnline(id: number): Observable<{ url: string; amount: number }> {
+    return this.http.post<{ url: string; amount: number }>(`${API_BASE}/invoices/${id}/pay-online`, {});
+  }
+  /** Back from Razorpay: verify and record. */
+  razorpayReturn(params: Record<string, string>): Observable<{ paid: boolean; invoice_id: number; invoice_no: string | null; amount: number; balance: number }> {
+    return this.http.post<{ paid: boolean; invoice_id: number; invoice_no: string | null; amount: number; balance: number }>(`${API_BASE}/payments/razorpay/callback`, params);
   }
   /** The general "new client" onboarding form link. */
   onboardingLink(): Observable<{ token: string }> {

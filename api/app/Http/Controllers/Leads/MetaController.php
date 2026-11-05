@@ -57,6 +57,12 @@ class MetaController extends Controller
             'pages' => MetaPage::orderBy('name')->get()->map->toApiArray(),
             'webhook_url' => rtrim(config('app.url'), '/').'/v1/webhooks/meta',
             'webhook_ready' => (bool) (config('services.meta.app_secret') && config('services.meta.verify_token')),
+            'razorpay' => [
+                'keys' => app(\App\Services\Billing\Razorpay::class)->configured(),
+                'live' => str_starts_with((string) config('services.razorpay.key_id'), 'rzp_live_'),
+                'webhook' => filled(config('services.razorpay.webhook_secret')),
+                'webhook_url' => rtrim(config('app.url'), '/').'/v1/webhooks/razorpay',
+            ],
         ]);
     }
 
