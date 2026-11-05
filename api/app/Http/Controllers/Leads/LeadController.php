@@ -25,17 +25,29 @@ class LeadController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'call_status' => ['nullable', 'string', 'max:60'],
+            'ad' => ['nullable', 'string', 'max:190'],
             'assigned' => ['nullable', 'string'], // user id | 'me' | 'none'
             'view' => ['nullable', Rule::in(['uncontacted', 'followups', 'today'])],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:500'],
+            'sort' => ['nullable', Rule::in(['date', 'service', 'assigned'])],
+            'dir' => ['nullable', Rule::in(['asc', 'desc'])],
         ]);
         $user = $request->user();
         $base = Lead::visibleTo($user);
+        $sort = $filters['sort'] ?? 'date';
+        $dir = $filters['dir'] ?? ($sort === 'date' ? 'desc' : 'asc'); // newest first by default
 
         $leads = $this->filtered(clone $base, $filters, $user)
             ->with('assignee:id,name')
+            ->tap(fn ($q) => match ($sort) {
+                // Empty service / unassigned always go last; ties show the newest first.
+                'service' => $q->orderByRaw("CASE WHEN ad_name IS NULL OR ad_name = '' THEN 1 ELSE 0 END")->orderBy('ad_name', $dir),
+                'assigned' => $q->orderByRaw('CASE WHEN assigned_to IS NULL THEN 1 ELSE 0 END')
+                    ->orderBy(User::select('name')->whereColumn('users.id', 'leads.assigned_to'), $dir),
+                default => $q->orderBy('created_at', $dir)->orderBy('id', $dir),
+            })
             ->orderByDesc('created_at')->orderByDesc('id')
             ->paginate($filters['per_page'] ?? 50);
 
@@ -52,6 +64,9 @@ class LeadController extends Controller
                 'today' => (clone $base)->where('created_at', '>=', today())->count(),
                 'by_status' => (clone $base)->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status'),
             ],
+            // Ad names for the filter, most leads first.
+            'ads' => (clone $base)->whereNotNull('ad_name')->where('ad_name', '!=', '')
+                ->selectRaw('ad_name, count(*) as n')->groupBy('ad_name')->orderByDesc('n')->limit(100)->pluck('n', 'ad_name'),
         ]);
     }
 
@@ -129,6 +144,7 @@ class LeadController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'call_status' => ['nullable', 'string', 'max:60'],
+            'ad' => ['nullable', 'string', 'max:190'],
             'assigned' => ['nullable', 'string'],
             'view' => ['nullable', Rule::in(['uncontacted', 'followups', 'today'])],
             'from' => ['nullable', 'date'],
@@ -257,7 +273,7 @@ class LeadController extends Controller
         return response()->streamDownload(function () use ($query, $statuses) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // so Excel reads ₹ and Malayalam names correctly
-            fputcsv($out, ['Date', 'AD Name', 'Name', 'Phone Number', 'Email ID', 'Location (City)', 'Call Status', 'Status ', 'Package ', 'Requirement', 'Follow-up Status', 'Notes / Remarks', 'Assigned to'], escape: '\\');
+            fputcsv($out, ['Date', 'Service', 'Name', 'Phone Number', 'Email ID', 'Location (City)', 'Call Status', 'Status ', 'Package ', 'Requirement', 'Follow-up Status', 'Notes / Remarks', 'Assigned to'], escape: '\\');
             $query->chunk(500, function ($leads) use ($out, $statuses) {
                 foreach ($leads as $l) {
                     fputcsv($out, [
@@ -307,6 +323,7 @@ class LeadController extends Controller
                 ->orWhere('email', 'like', "%$s%")->orWhere('city', 'like', "%$s%")->orWhere('ad_name', 'like', "%$s%")))
             ->when(in_array($f['status'] ?? null, $statuses, true), fn ($q) => $q->where('status', $f['status']))
             ->when($f['call_status'] ?? null, fn ($q, $c) => $q->where('call_status', $c))
+            ->when($f['ad'] ?? null, fn ($q, $a) => $a === '__none' ? $q->where(fn ($q) => $q->whereNull('ad_name')->orWhere('ad_name', '')) : $q->where('ad_name', $a))
             ->when($f['assigned'] ?? null, fn ($q, $a) => match ($a) {
                 'me' => $q->where('assigned_to', $user->id),
                 'none' => $q->whereNull('assigned_to'),

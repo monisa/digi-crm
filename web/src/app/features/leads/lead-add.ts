@@ -19,7 +19,7 @@ import { Sheet } from '../../shared/sheet';
           <div class="field compact" [class.invalid]="err('email')"><label for="la-e">Email ID</label><input id="la-e" name="e" type="email" [(ngModel)]="f.email" />
             @if (err('email')) { <div class="err">{{ err('email') }}</div> }</div>
           <div class="field compact"><label for="la-c">Location (city)</label><input id="la-c" name="c" [(ngModel)]="f.city" /></div>
-          <div class="field compact"><label for="la-ad">Source / AD name</label><input id="la-ad" name="ad" placeholder="Referral, walk-in…" [(ngModel)]="f.ad_name" /></div>
+          <div class="field compact"><label for="la-ad">Service</label><input id="la-ad" name="ad" placeholder="e.g. Course, SEO, Website" [(ngModel)]="f.ad_name" /></div>
           <div class="field compact"><label for="la-pk">Package</label>
             <select id="la-pk" name="pk" [(ngModel)]="f.package"><option [ngValue]="null">—</option>
               @for (p of options().packages; track p) { <option [value]="p">{{ p }}</option> }</select></div>

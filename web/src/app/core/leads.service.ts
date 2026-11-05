@@ -50,6 +50,8 @@ export interface LeadList {
   data: Lead[];
   meta: { total: number; page: number; last_page: number };
   counts: { all: number; uncontacted: number; followups: number; today: number; by_status: Partial<Record<LeadStatus, number>> };
+  /** Ad name → number of leads, for the filter. */
+  ads?: Record<string, number>;
 }
 
 export interface RazorpayStatus { keys: boolean; live: boolean; webhook: boolean; webhook_url: string }
