@@ -17,8 +17,14 @@ class SalaryController extends Controller
     {
         $this->authorizeEmployee($request->user(), $employee);
 
+        // A salary set to start later still shows (marked as upcoming).
+        $current = $employee->salaryOn()?->toApiArray();
+        if (! $current && ($next = $employee->salaryStructures->last())) {
+            $current = $next->toApiArray() + ['upcoming' => true];
+        }
+
         return response()->json([
-            'current' => $employee->salaryOn()?->toApiArray(),
+            'current' => $current,
             'history' => $employee->salaryStructures->map->toApiArray(),
             'components' => ['earnings' => SalaryStructure::EARNINGS, 'deductions' => SalaryStructure::DEDUCTIONS],
         ]);
@@ -37,5 +43,18 @@ class SalaryController extends Controller
         $structure = $employee->salaryStructures()->create(array_map(fn ($v) => $v ?? 0, $data) + ['bank_account_last4' => $data['bank_account_last4'] ?? null]);
 
         return response()->json($structure->toApiArray(), 201);
+    }
+
+    /** Move a salary's start date, e.g. so it also covers earlier months' payroll. */
+    public function move(Request $request, Employee $employee, SalaryStructure $structure): JsonResponse
+    {
+        $this->authorizeEmployee($request->user(), $employee);
+        abort_unless($structure->employee_id === $employee->id, 404);
+        $data = $request->validate([
+            'effective_from' => ['required', 'date', Rule::unique('salary_structures')->where('employee_id', $employee->id)->ignore($structure->id)],
+        ], ['effective_from.unique' => 'A salary already starts on this date.']);
+        $structure->update($data);
+
+        return response()->json($structure->fresh()->toApiArray());
     }
 }

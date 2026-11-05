@@ -47,7 +47,7 @@
         <section class="card">
           <div class="card-h">
             <div><h3>Salary</h3>
-              @if (salary()?.current; as s) { <p class="sub">Since {{ date(s.effective_from) }}</p> }
+              @if (salary()?.current; as s) { <p class="sub">{{ s.upcoming ? 'Starts' : 'Since' }} {{ date(s.effective_from) }}</p> }
             </div>
             @if (canEdit()) { <button class="btn-ghost" (click)="editingSalary.set(true)">{{ salary()?.current ? 'Revise salary' : 'Set salary' }}</button> }
           </div>

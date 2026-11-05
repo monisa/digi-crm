@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { HrService, Payslip } from '../../core/hr.service';
+import { HrService, Payslip, SkippedSlip } from '../../core/hr.service';
 import { readErrors } from '../../core/http-errors';
 import { money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
@@ -31,7 +31,7 @@ export class Payroll {
 
   protected readonly slips = signal<Payslip[]>([]);
   protected readonly totals = signal({ gross: 0, net: 0, count: 0 });
-  protected readonly skipped = signal<{ employee: string; reason: string }[]>([]);
+  protected readonly skipped = signal<SkippedSlip[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly drafts = computed(() => this.slips().filter((s) => s.status === 'draft').length);
@@ -45,9 +45,14 @@ export class Payroll {
     return this.months.find((m) => m.key === this.selected)!;
   }
 
+  /** Month changed: forget the last run's "not prepared" list. */
+  changeMonth(): void {
+    this.skipped.set([]);
+    this.load();
+  }
+
   load(): void {
     this.loading.set(true);
-    this.skipped.set([]);
     this.hr.payroll(this.period.year, this.period.month).subscribe((r) => {
       this.slips.set(r.data);
       this.totals.set(r.totals);
@@ -61,7 +66,9 @@ export class Payroll {
       next: (r) => {
         this.busy.set(false);
         this.skipped.set(r.skipped.filter((s) => s.reason !== 'Already published'));
-        this.toast.show(`${r.generated} payslip(s) prepared as drafts. Check them, then publish.`);
+        if (!r.employees) this.toast.show('No active employees yet. Add them in Employees first.');
+        else if (!r.generated) this.toast.show('No payslips prepared. See the reasons below.');
+        else this.toast.show(`${r.generated} payslip(s) prepared as drafts. Check them, then publish.`);
         this.load();
       },
       error: (e) => {
@@ -82,6 +89,23 @@ export class Payroll {
       },
       error: () => this.busy.set(false),
     });
+  }
+
+  /** "Salary starts 1 Dec": move the start back to this month and try again. */
+  startFromThisMonth(s: SkippedSlip): void {
+    const p = this.period;
+    this.busy.set(true);
+    this.hr.moveSalary(s.employee_id!, s.salary_id!, `${p.year}-${String(p.month).padStart(2, '0')}-01`).subscribe({
+      next: () => this.generate(),
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.show(readErrors(e).message || 'Could not change the start date.');
+      },
+    });
+  }
+
+  label(): string {
+    return this.period.label;
   }
 
   download(p: Payslip): void {
