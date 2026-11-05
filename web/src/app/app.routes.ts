@@ -118,6 +118,20 @@ export const routes: Routes = [
         loadComponent: () => import('./features/employees/employee-profile').then((m) => m.EmployeeProfile),
       },
       {
+        path: 'tasks',
+        title: T('Tasks'),
+        canActivate: [moduleGuard],
+        data: { module: 'tasks' },
+        loadComponent: () => import('./features/tasks/tasks').then((m) => m.Tasks),
+      },
+      {
+        path: 'attendance',
+        title: T('Attendance'),
+        canActivate: [moduleGuard],
+        data: { module: 'attendance' },
+        loadComponent: () => import('./features/attendance/attendance').then((m) => m.AttendancePage),
+      },
+      {
         path: 'leave',
         title: T('Leave'),
         canActivate: [moduleGuard],

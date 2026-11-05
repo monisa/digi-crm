@@ -22,6 +22,10 @@ return [
         'clients' => ['Clients', false],
         'employees' => ['Employees', false],
         'leave' => ['Leave Management', false],
+        // Daily tasks: everyone sees their own; "edit" = assign and see the whole team's.
+        'tasks' => ['Tasks', false],
+        // Check in / out: everyone their own; "edit" = register, timesheets, corrections.
+        'attendance' => ['Attendance', false],
         'campaigns' => ['Campaigns', true],
         'invoices' => ['Invoices & Payments', true],
         'tickets' => ['Tickets', true],
@@ -64,6 +68,8 @@ return [
         'leave_requested' => ['Leave request to approve', 'leave', 'staff'],
         'leave_decided' => ['My leave was approved or rejected', 'leave', 'staff'],
         'payment_claim' => ['Client says they have paid', 'billing', 'staff'],
+        'task_assigned' => ['A task is assigned to me', 'tasks', 'staff'],
+        'task_done' => ['A task I gave was finished', 'tasks', 'staff'],
         'payment_online' => ['Client paid an invoice online', 'billing', 'staff'],
         'payment_decided' => ['My payment was confirmed', 'billing', 'client'],
         'invoice_issued' => ['New invoice', 'billing', 'client'],
@@ -107,6 +113,8 @@ return [
             'dashboard.view',
             'employees.view',   // own profile, payslips
             'leave.view', 'leave.create',
+            'tasks.view', 'tasks.create',
+            'attendance.view', 'attendance.create',
             'notifications.view',
         ],
         'client' => [
