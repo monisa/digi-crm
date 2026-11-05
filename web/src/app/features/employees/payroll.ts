@@ -5,6 +5,7 @@ import { HrService, Payslip } from '../../core/hr.service';
 import { readErrors } from '../../core/http-errors';
 import { money } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 
 /** Monthly payroll: generate drafts from salary + leave, check them, publish to employees. */
 @Component({
@@ -14,6 +15,7 @@ import { Toast } from '../../shared/toast.service';
   styleUrl: './payroll.scss',
 })
 export class Payroll {
+  protected readonly dialog = inject(Dialog);
   private hr = inject(HrService);
   private toast = inject(Toast);
   protected readonly money = money;
@@ -69,8 +71,8 @@ export class Payroll {
     });
   }
 
-  publish(): void {
-    if (!confirm(`Publish ${this.drafts()} payslip(s) for ${this.period.label}? Employees will be able to download them, and they can no longer be regenerated.`)) return;
+  async publish(): Promise<void> {
+    if (!(await this.dialog.confirm({ title: `Publish ${this.drafts()} payslip(s)?`, message: `For ${this.period.label}. Employees will be able to download them, and they can no longer be regenerated.`, confirmText: 'Publish' }))) return;
     this.busy.set(true);
     this.hr.publish(this.period.year, this.period.month).subscribe({
       next: (r) => {

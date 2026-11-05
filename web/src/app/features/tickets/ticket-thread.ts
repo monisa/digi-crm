@@ -7,6 +7,7 @@ import { LeadsService } from '../../core/leads.service';
 import { PortalService, TICKET_STATUS, Ticket, TicketStatus } from '../../core/portal.service';
 import { initials } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
+import { Dialog } from '../../shared/dialog';
 
 /** /tickets/:id: the conversation, like a chat. */
 @Component({
@@ -16,6 +17,7 @@ import { Toast } from '../../shared/toast.service';
   styleUrl: './ticket-thread.scss',
 })
 export class TicketThread {
+  protected readonly dialog = inject(Dialog);
   id = input.required<string>();
   private api = inject(PortalService);
   private toast = inject(Toast);
@@ -87,8 +89,8 @@ export class TicketThread {
     });
   }
 
-  close(): void {
-    if (confirm('Close this request? You can reopen it by replying.')) this.update({ status: 'closed' as TicketStatus });
+  async close(): Promise<void> {
+    if (await this.dialog.confirm({ title: 'Close this request?', message: 'You can reopen it by replying.', confirmText: 'Close request' })) this.update({ status: 'closed' as TicketStatus });
   }
 
   download(a: { id: number; name: string }): void {

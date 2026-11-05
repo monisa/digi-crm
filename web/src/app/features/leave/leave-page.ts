@@ -8,6 +8,7 @@ import { initials } from '../../shared/format';
 import { Toast } from '../../shared/toast.service';
 import { LeaveBalances } from './leave-balances';
 import { LeaveRequestForm } from './leave-request-form';
+import { Dialog } from '../../shared/dialog';
 
 type Tab = 'mine' | 'approvals' | 'holidays' | 'policy';
 
@@ -18,6 +19,7 @@ type Tab = 'mine' | 'approvals' | 'holidays' | 'policy';
   styleUrl: './leave-page.scss',
 })
 export class LeavePage {
+  protected readonly dialog = inject(Dialog);
   private hr = inject(HrService);
   private toast = inject(Toast);
   protected readonly auth = inject(AuthService);
@@ -74,8 +76,8 @@ export class LeavePage {
     if (this.canApprove) this.loadApprovals();
   }
 
-  cancel(r: LeaveRequest): void {
-    if (!confirm('Cancel this leave request?')) return;
+  async cancel(r: LeaveRequest): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Cancel this leave request?', confirmText: 'Cancel request', cancelText: 'Keep it', danger: true }))) return;
     this.hr.cancelLeave(r.id).subscribe(() => {
       this.toast.show('Request cancelled.');
       this.loadMine();
@@ -120,8 +122,8 @@ export class LeavePage {
     });
   }
 
-  removeHoliday(h: Holiday): void {
-    if (!confirm(`Remove ${h.name}?`)) return;
+  async removeHoliday(h: Holiday): Promise<void> {
+    if (!(await this.dialog.confirm({ title: `Remove ${h.name}?`, message: 'It will no longer count as a holiday.', confirmText: 'Remove', danger: true }))) return;
     this.hr.deleteHoliday(h.id).subscribe(() => this.loadHolidays());
   }
 

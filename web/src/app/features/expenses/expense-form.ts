@@ -6,6 +6,7 @@ import { Expense, ExpensesService } from '../../core/expenses.service';
 import { readErrors } from '../../core/http-errors';
 import { money } from '../../shared/format';
 import { Sheet } from '../../shared/sheet';
+import { Dialog } from '../../shared/dialog';
 
 @Component({
   selector: 'app-expense-form',
@@ -74,6 +75,7 @@ import { Sheet } from '../../shared/sheet';
   `,
 })
 export class ExpenseForm {
+  protected readonly dialog = inject(Dialog);
   expense = input<Expense | null>(null);
   categories = input.required<string[]>();
   canApprove = input(false);
@@ -136,8 +138,8 @@ export class ExpenseForm {
     });
   }
 
-  remove(): void {
-    if (!confirm('Delete this expense?')) return;
+  async remove(): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Delete this expense?', message: 'This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
     this.api.remove(this.expense()!.id).subscribe(() => this.saved.emit());
   }
 }

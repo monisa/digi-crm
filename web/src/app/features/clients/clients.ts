@@ -9,6 +9,7 @@ import { Toast } from '../../shared/toast.service';
 import { ClientForm } from './client-form';
 import { Sheet } from '../../shared/sheet';
 import { ShareLink, formUrl } from '../../shared/share-link';
+import { Dialog } from '../../shared/dialog';
 
 @Component({
   selector: 'app-clients',
@@ -78,6 +79,7 @@ import { ShareLink, formUrl } from '../../shared/share-link';
   `,
 })
 export class Clients {
+  protected readonly dialog = inject(Dialog);
   private api = inject(BillingService);
   private router = inject(Router);
   private toast = inject(Toast);
@@ -113,8 +115,8 @@ export class Clients {
     if (!this.link()) this.api.onboardingLink().subscribe((r) => this.link.set(formUrl(r.token)));
   }
 
-  resetLink(): void {
-    if (!confirm('Make a new link? The old link will stop working for anyone you already sent it to.')) return;
+  async resetLink(): Promise<void> {
+    if (!(await this.dialog.confirm({ title: 'Make a new link?', message: 'The old link will stop working for anyone you already sent it to.', confirmText: 'Make new link', danger: true }))) return;
     this.api.resetOnboardingLink().subscribe((r) => {
       this.link.set(formUrl(r.token));
       this.toast.show('New link ready. The old one no longer works.');
