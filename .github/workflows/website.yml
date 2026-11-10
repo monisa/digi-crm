@@ -1,0 +1,88 @@
+name: Publish website (digifoxprosolutions.com)
+
+# Uploads the pages in website/public_html to the company website's
+# public_html on Hostinger. Only the files in that folder are replaced; the
+# CRM (public_html/crm) and every other file are never touched.
+# Each replaced page is first copied to ~/website-backups/<date-time>/.
+# Safety: if a page on the server was edited by hand since website/live-base.sha256
+# was taken, the upload stops instead of overwriting that edit.
+#
+# Runs after a merge into main that changes website/, or by hand.
+# Uses the same secrets as "Deploy to Hostinger".
+on:
+  push:
+    branches: [main]
+    paths: ['website/**']
+  workflow_dispatch:
+
+concurrency: deploy-website
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_PORT || '65002' }}
+      SSH_USER: ${{ vars.HOSTINGER_USER || 'u311568037' }}
+      WEB_ROOT: ${{ vars.WEBSITE_ROOT || 'domains/digifoxprosolutions.com/public_html' }}
+      SSHPASS: ${{ secrets.HOSTINGER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Prepare SSH
+        shell: bash
+        env:
+          KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+        run: |
+          sudo apt-get -qq install -y sshpass >/dev/null
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          HOST=$(echo "$SSH_HOST" | tr -s ' ' '\n' | grep -v '^-' | grep -vE '^(ssh|[0-9]{2,5})$' | tail -1)
+          HOST=${HOST##*@}
+          PORT=$(echo "$SSH_HOST" | grep -oE -- '-p ?[0-9]+' | grep -oE '[0-9]+' || true)
+          echo "SSH_HOST=$HOST" >> "$GITHUB_ENV"
+          [ -n "$PORT" ] && echo "SSH_PORT=$PORT" >> "$GITHUB_ENV" || true
+          if [ -n "$KEY" ]; then
+            printf '%s\n' "$KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+            ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null 2>&1 || mv ~/.ssh/id_deploy ~/.ssh/id_deploy.unusable
+          fi
+          printf 'Host *\n  StrictHostKeyChecking accept-new\n  ConnectTimeout 25\n' > ~/.ssh/config
+
+      - name: Upload the pages (with backup)
+        shell: bash
+        run: |
+          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; COPY="scp -i $HOME/.ssh/id_deploy -P $SSH_PORT";
+          else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; COPY="sshpass -e scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -P $SSH_PORT"; fi
+          cd website/public_html
+          FILES=$(find . -type f | sed 's#^\./##' | sort)
+          echo "Pages to publish:"; echo "$FILES"
+          # 1) The server's current pages must still be the versions we started from (or already the new ones).
+          for f in $FILES; do
+            server=$($RUN "$SSH_USER@$SSH_HOST" "sha256sum \"$WEB_ROOT/$f\" 2>/dev/null | cut -d' ' -f1" || true)
+            base=$(grep "  $f\$" ../live-base.sha256 | cut -d' ' -f1)
+            new=$(sha256sum "$f" | cut -d' ' -f1)
+            if [ -n "$server" ] && [ "$server" != "$base" ] && [ "$server" != "$new" ]; then
+              echo "::error::$f was changed on the server since these files were prepared. Nothing was uploaded. Ask Claude to redo the change from the live page."
+              exit 1
+            fi
+          done
+          # 2) Back up, then upload.
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          for f in $FILES; do
+            $RUN "$SSH_USER@$SSH_HOST" "mkdir -p \"website-backups/$STAMP/$(dirname "$f")\" && { [ ! -f \"$WEB_ROOT/$f\" ] || cp -p \"$WEB_ROOT/$f\" \"website-backups/$STAMP/$f\"; } && mkdir -p \"$WEB_ROOT/$(dirname "$f")\""
+            $COPY "$f" "$SSH_USER@$SSH_HOST:$WEB_ROOT/$f.uploading"
+            $RUN "$SSH_USER@$SSH_HOST" "chmod 644 \"$WEB_ROOT/$f.uploading\" && mv \"$WEB_ROOT/$f.uploading\" \"$WEB_ROOT/$f\""
+            echo "Published $f (old copy in ~/website-backups/$STAMP/$f)"
+          done
+
+      - name: Check the live pages
+        shell: bash
+        run: |
+          sleep 3
+          ok=1
+          for p in "" our-services/ quiz/; do
+            html=$(curl -fsS "https://digifoxprosolutions.com/$p?check=$GITHUB_RUN_ID")
+            for tag in "G-JCKWC42TF9" "2137139433844948" "w8uxl1npqn"; do
+              if grep -q "$tag" <<<"$html"; then echo "OK   /$p has $tag"; else echo "MISS /$p has no $tag"; ok=0; fi
+            done
+          done
+          [ $ok = 1 ] || { echo "::error::A tracking tag is missing on the live site (a cache may need clearing in hPanel)."; exit 1; }
