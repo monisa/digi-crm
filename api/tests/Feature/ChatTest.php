@@ -83,17 +83,18 @@ class ChatTest extends TestCase
         $g = $this->as($priya)->postJson('/v1/chat/groups', ['name' => 'Spice Route team', 'member_ids' => [$arjun->id]])->assertCreated()
             ->assertJsonPath('can_edit', true)->assertJsonCount(2, 'members')->json('id');
         $msg = $this->post("/v1/chat/conversations/$g/messages", ['file' => UploadedFile::fake()->image('poster.png')], ['Accept' => 'application/json'])
-            ->assertCreated()->assertJsonPath('file.image', true)->json('id');
-        $this->get("/v1/chat/messages/$msg/file")->assertOk();
+            ->assertCreated()->assertJsonPath('files.0.image', true)->json('id');
+        $fid = \App\Models\MessageFile::where('message_id', $msg)->value('id');
+        $this->get("/v1/chat/files/$fid")->assertOk();
 
-        $this->as($arjun)->get("/v1/chat/messages/$msg/file")->assertOk();
+        $this->as($arjun)->get("/v1/chat/files/$fid")->assertOk();
         $this->deleteJson("/v1/chat/messages/$msg")->assertForbidden(); // not his
         $this->patchJson("/v1/chat/conversations/$g", ['name' => 'Renamed'])->assertForbidden();
-        $this->as($nina)->get("/v1/chat/messages/$msg/file")->assertNotFound();
+        $this->as($nina)->get("/v1/chat/files/$fid")->assertNotFound();
 
         $this->as($priya)->patchJson("/v1/chat/conversations/$g", ['member_ids' => [$arjun->id, $nina->id]])->assertOk()->assertJsonCount(3, 'members');
         $this->deleteJson("/v1/chat/messages/$msg")->assertOk();
-        $this->getJson("/v1/chat/conversations/$g/messages")->assertJsonPath('data.1.deleted', true)->assertJsonPath('data.1.file', null);
+        $this->getJson("/v1/chat/conversations/$g/messages")->assertJsonPath('data.1.deleted', true)->assertJsonPath('data.1.files', []);
 
         $this->as($arjun)->postJson("/v1/chat/conversations/$g/leave")->assertOk();
         $this->getJson("/v1/chat/conversations/$g/messages")->assertNotFound();
@@ -119,5 +120,37 @@ class ChatTest extends TestCase
         $this->getJson('/v1/chat/unread?since_id='.$r->json('max_id'))->assertJsonPath('latest', []);
         $this->postJson("/v1/chat/conversations/$id/messages", ['body' => 'Sure']);
         $this->getJson('/v1/chat/unread?since_id='.$r->json('max_id'))->assertJsonPath('latest', []);
+    }
+
+    public function test_several_attachments_in_one_message(): void
+    {
+        Storage::fake('local');
+        $priya = $this->staff('Priya');
+        $arjun = $this->staff('Arjun');
+        $nina = $this->staff('Nina');
+        $id = $this->as($priya)->postJson('/v1/chat/direct', ['user_id' => $arjun->id])->json('id');
+
+        $r = $this->post("/v1/chat/conversations/$id/messages", ['body' => 'Drafts for review', 'files' => [
+            UploadedFile::fake()->image('poster-1.png'), UploadedFile::fake()->image('poster-2.jpg'), UploadedFile::fake()->create('brief.pdf', 200, 'application/pdf'),
+        ]], ['Accept' => 'application/json'])->assertCreated()->assertJsonCount(3, 'files');
+        $this->assertTrue($r->json('files.0.image'));
+        $this->assertFalse($r->json('files.2.image'));
+        $fileId = $r->json('files.2.id');
+
+        // Files only, no text; preview says how many.
+        $this->post("/v1/chat/conversations/$id/messages", ['files' => [UploadedFile::fake()->image('a.png'), UploadedFile::fake()->image('b.png')]], ['Accept' => 'application/json'])->assertCreated();
+        $list = $this->as($arjun)->getJson('/v1/chat/conversations')->json('data');
+        $this->assertSame('📎 2 files', collect($list)->firstWhere('id', $id)['last']['text']);
+
+        $this->get("/v1/chat/files/$fileId")->assertOk();
+        $this->as($nina)->get("/v1/chat/files/$fileId")->assertNotFound();
+
+        // Too many files at once.
+        $this->as($priya)->post("/v1/chat/conversations/$id/messages", ['files' => array_map(fn ($i) => UploadedFile::fake()->image("$i.png"), range(1, 11))], ['Accept' => 'application/json'])
+            ->assertStatus(422)->assertJsonValidationErrors('files');
+
+        // Deleting the message removes its files.
+        $this->deleteJson('/v1/chat/messages/'.$r->json('id'))->assertOk();
+        $this->assertSame(0, \App\Models\MessageFile::where('message_id', $r->json('id'))->count());
     }
 }

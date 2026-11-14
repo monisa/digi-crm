@@ -227,6 +227,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/conversations/{conversation}/read', [ChatController::class, 'read']);
         Route::delete('/messages/{message}', [ChatController::class, 'destroy']);
         Route::get('/messages/{message}/file', [ChatController::class, 'file']);
+        Route::get('/files/{file}', [ChatController::class, 'attachment']);
     });
 
     // Tasks and attendance (staff only).
