@@ -66,7 +66,7 @@ class ChatController extends Controller
                     'conversation_id' => $m->conversation_id,
                     'chat' => $m->conversation->type === 'direct' ? null : $m->conversation->name,
                     'from' => $m->user?->name,
-                    'text' => $m->body ? mb_strimwidth($m->body, 0, 140, '…') : ($m->file_name ? '📎 '.$m->file_name : ''),
+                    'text' => $m->body ? mb_strimwidth($m->body, 0, 140, '…') : $m->attachmentLabel(),
                 ])->reverse()->values();
         }
 
@@ -154,7 +154,7 @@ class ChatController extends Controller
         abort_unless($conversation->hasMember($me), 404);
         $d = $request->validate(['after_id' => ['nullable', 'integer'], 'before_id' => ['nullable', 'integer']]);
 
-        $q = $conversation->messages()->with('user:id,name');
+        $q = $conversation->messages()->with(['user:id,name', 'files']);
         if (isset($d['after_id'])) {
             $list = $q->where('id', '>', $d['after_id'])->orderBy('id')->limit(200)->get();
         } else {
@@ -177,13 +177,22 @@ class ChatController extends Controller
         $me = $request->user();
         abort_unless($conversation->hasMember($me), 404);
         $d = $request->validate([
-            'body' => ['nullable', 'string', 'max:5000', 'required_without:file'],
+            'body' => ['nullable', 'string', 'max:5000', 'required_without_all:file,files'],
             'file' => ['nullable', 'file', 'max:20480', 'mimes:'.self::FILE_TYPES],
-        ], ['file.max' => 'Files must be under 20 MB.', 'file.mimes' => 'This type of file cannot be sent.', 'body.required_without' => 'Type a message.']);
+            'files' => ['nullable', 'array', 'max:10'],
+            'files.*' => ['file', 'max:20480', 'mimes:'.self::FILE_TYPES],
+        ], [
+            'file.max' => 'Files must be under 20 MB.', 'files.*.max' => 'Each file must be under 20 MB.',
+            'file.mimes' => 'This type of file cannot be sent.', 'files.*.mimes' => 'One of the files is a type that cannot be sent.',
+            'files.max' => 'Send up to 10 files at a time.', 'body.required_without_all' => 'Type a message.',
+        ]);
+        $files = array_values(array_filter([$request->file('file'), ...(array) $request->file('files', [])]));
+        $total = array_sum(array_map(fn ($f) => $f->getSize(), $files));
+        abort_if($total > 60 * 1024 * 1024, 422, 'Files together must be under 60 MB.');
 
-        $msg = $this->post($conversation, $me, trim((string) ($d['body'] ?? '')) ?: null, file: $request->file('file'));
+        $msg = $this->post($conversation, $me, trim((string) ($d['body'] ?? '')) ?: null, files: $files);
 
-        return response()->json($msg->load('user:id,name')->toApiArray(), 201);
+        return response()->json($msg->load(['user:id,name', 'files'])->toApiArray(), 201);
     }
 
     /** Mark everything up to a message as read. */
@@ -204,6 +213,10 @@ class ChatController extends Controller
         if ($message->file_path) {
             Storage::disk('local')->delete($message->file_path);
         }
+        foreach ($message->files as $f) {
+            Storage::disk('local')->delete($f->path);
+        }
+        $message->files()->delete();
         $message->update(['deleted_at' => now(), 'body' => null, 'file_path' => null]);
 
         return response()->json(['deleted' => true]);
@@ -218,20 +231,31 @@ class ChatController extends Controller
         ]);
     }
 
+    /** One of several attachments of a message. */
+    public function attachment(Request $request, \App\Models\MessageFile $file): StreamedResponse
+    {
+        abort_unless($file->message->conversation->hasMember($request->user()), 404);
+
+        return Storage::disk('local')->download($file->path, $file->name, ['Content-Type' => $file->mime ?: 'application/octet-stream']);
+    }
+
     // ---------------------------------------------------------------
 
-    private function post(Conversation $c, User $by, ?string $body, ?\Illuminate\Http\UploadedFile $file = null, bool $system = false): Message
+    /** @param list<\Illuminate\Http\UploadedFile> $files */
+    private function post(Conversation $c, User $by, ?string $body, array $files = [], bool $system = false): Message
     {
         $msg = $c->messages()->create([
             'user_id' => $system ? null : $by->id,
             'body' => $body,
-            ...($file ? [
-                'file_path' => $file->store("chat/{$c->id}", 'local'),
-                'file_name' => mb_substr($file->getClientOriginalName(), 0, 250),
-                'file_mime' => $file->getClientMimeType(),
-                'file_size' => $file->getSize(),
-            ] : []),
         ]);
+        foreach ($files as $file) {
+            $msg->files()->create([
+                'path' => $file->store("chat/{$c->id}", 'local'),
+                'name' => mb_substr($file->getClientOriginalName(), 0, 250),
+                'mime' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+            ]);
+        }
         $c->forceFill(['last_message_at' => $msg->created_at])->save();
         // Your own message counts as read.
         DB::table('conversation_members')->where('conversation_id', $c->id)->where('user_id', $by->id)->update(['last_read_id' => $msg->id]);
@@ -251,7 +275,7 @@ class ChatController extends Controller
             'members' => $c->members->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
             'can_edit' => $c->type === 'group' && ! $c->is_everyone && ($c->created_by === $me->id || $me->isAdmin()),
             'last' => $last ? [
-                'text' => $last->deleted_at ? 'Message deleted' : ($last->body ?: ($last->file_name ? '📎 '.$last->file_name : '')),
+                'text' => $last->deleted_at ? 'Message deleted' : ($last->body ?: $last->attachmentLabel()),
                 'by' => $last->user_id === $me->id ? 'You' : ($last->user?->name ? explode(' ', $last->user->name)[0] : null),
                 'at' => $last->created_at?->toIso8601String(),
             ] : null,

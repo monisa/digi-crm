@@ -19,11 +19,13 @@ export interface ChatMessage {
   conversation_id: number;
   user: ChatPerson | null; // null = system note ("Priya created the group")
   body: string | null;
-  file: { name: string; mime: string; size: number; image: boolean } | null;
+  file: { name: string; mime: string; size: number; image: boolean } | null; // older single attachment
+  files: ChatFile[];
   deleted: boolean;
   created_at: string;
 }
 export interface ChatPing { id: number; conversation_id: number; chat: string | null; from: string; text: string }
+export interface ChatFile { id: number; name: string; mime: string | null; size: number; image: boolean }
 export interface MessagePage { data: ChatMessage[]; deleted_ids: number[]; has_more: boolean; read_upto: number }
 
 const PREFS_KEY = 'dfp_chat_prefs';
@@ -158,10 +160,10 @@ export class ChatService {
     if (opts.before_id) params['before_id'] = String(opts.before_id);
     return this.http.get<MessagePage>(`${this.base}/conversations/${id}/messages`, { params });
   }
-  send(id: number, body: string, file?: File | null): Observable<ChatMessage> {
+  send(id: number, body: string, files: File[] = []): Observable<ChatMessage> {
     const fd = new FormData();
     if (body) fd.append('body', body);
-    if (file) fd.append('file', file);
+    files.forEach((f) => fd.append('files[]', f));
     return this.http.post<ChatMessage>(`${this.base}/conversations/${id}/messages`, fd);
   }
   read(id: number, messageId: number): Observable<unknown> {
@@ -169,6 +171,9 @@ export class ChatService {
   }
   remove(messageId: number): Observable<unknown> {
     return this.http.delete(`${this.base}/messages/${messageId}`);
+  }
+  attachmentBlob(fileId: number): Observable<Blob> {
+    return this.http.get(`${this.base}/files/${fileId}`, { responseType: 'blob' });
   }
   fileBlob(messageId: number): Observable<Blob> {
     return this.http.get(`${this.base}/messages/${messageId}/file`, { responseType: 'blob' });

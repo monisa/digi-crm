@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, computed, inject, signal, viewChild }
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-import { ChatMessage, ChatPerson, ChatService, Conversation } from '../../core/chat.service';
+import { ChatFile, ChatMessage, ChatPerson, ChatService, Conversation } from '../../core/chat.service';
 import { readErrors } from '../../core/http-errors';
 import { Dialog } from '../../shared/dialog';
 import { Sheet } from '../../shared/sheet';
@@ -31,10 +31,15 @@ export class Chat implements OnDestroy {
   protected readonly hasMore = signal(false);
   protected readonly readUpto = signal(0);
   protected readonly sending = signal(false);
-  protected readonly images = signal<Record<number, string>>({});
+  protected readonly images = signal<Record<string, string>>({});
   protected readonly search = signal('');
   protected text = '';
-  protected readonly file = signal<File | null>(null);
+  /** Files waiting to be sent with the next message (up to 10). */
+  protected readonly files = signal<File[]>([]);
+  protected readonly previews = signal<Record<string, string>>({});
+  protected readonly dragging = signal(false);
+  private static readonly MAX_FILES = 10;
+  private static readonly MAX_SIZE = 20 * 1024 * 1024;
 
   // New chat / group
   protected readonly picker = signal<'direct' | 'group' | 'edit' | null>(null);
@@ -124,7 +129,7 @@ export class Chat implements OnDestroy {
         if (this.activeId() !== id) return;
         this.readUpto.set(r.read_upto);
         if (r.deleted_ids.length) {
-          this.msgs.update((m) => m.map((x) => (r.deleted_ids.includes(x.id) ? { ...x, deleted: true, body: null, file: null } : x)));
+          this.msgs.update((m) => m.map((x) => (r.deleted_ids.includes(x.id) ? { ...x, deleted: true, body: null, file: null, files: [] } : x)));
         }
         const fresh = r.data.filter((m) => !this.msgs().some((x) => x.id === m.id));
         if (fresh.length) {
@@ -158,6 +163,13 @@ export class Chat implements OnDestroy {
 
   private loadImages(list: ChatMessage[]): void {
     for (const m of list) {
+      for (const f of m.files ?? []) {
+        const key = 'f' + f.id;
+        if (f.image && this.images()[key] === undefined) {
+          this.images.update((x) => ({ ...x, [key]: '' }));
+          this.api.attachmentBlob(f.id).subscribe({ next: (b) => this.images.update((x) => ({ ...x, [key]: URL.createObjectURL(b) })), error: () => {} });
+        }
+      }
       if (m.file?.image && !this.images()[m.id]) {
         this.images.update((x) => ({ ...x, [m.id]: '' })); // loading
         this.api.fileBlob(m.id).subscribe({ next: (b) => this.images.update((x) => ({ ...x, [m.id]: URL.createObjectURL(b) })), error: () => {} });
@@ -173,26 +185,87 @@ export class Chat implements OnDestroy {
   }
 
   pickFile(e: Event): void {
-    const f = (e.target as HTMLInputElement).files?.[0] ?? null;
+    const list = Array.from((e.target as HTMLInputElement).files ?? []);
     (e.target as HTMLInputElement).value = '';
-    if (f && f.size > 20 * 1024 * 1024) return this.toast.show('Files must be under 20 MB.');
-    this.file.set(f);
+    this.addFiles(list);
+  }
+
+  /** Add files from the picker, drag & drop or paste (max 10, 20 MB each). */
+  addFiles(list: File[]): void {
+    const tooBig = list.filter((f) => f.size > Chat.MAX_SIZE);
+    if (tooBig.length) this.toast.show(`${tooBig.map((f) => f.name).join(', ')}: files must be under 20 MB.`);
+    const ok = list.filter((f) => f.size <= Chat.MAX_SIZE);
+    const room = Chat.MAX_FILES - this.files().length;
+    if (ok.length > room) this.toast.show(`You can send up to ${Chat.MAX_FILES} files at a time.`);
+    const added = ok.slice(0, Math.max(0, room));
+    this.files.update((l) => [...l, ...added]);
+    for (const f of added) {
+      if (f.type.startsWith('image/') && f.type !== 'image/svg+xml') this.previews.update((p) => ({ ...p, [this.fkey(f)]: URL.createObjectURL(f) }));
+    }
+    this.box()?.nativeElement.focus();
+  }
+
+  removeFile(i: number): void {
+    const f = this.files()[i];
+    if (f) {
+      const u = this.previews()[this.fkey(f)];
+      if (u) URL.revokeObjectURL(u);
+    }
+    this.files.update((l) => l.filter((_, n) => n !== i));
+  }
+
+  fkey(f: File): string {
+    return `${f.name}|${f.size}|${f.lastModified}`;
+  }
+
+  onDrop(e: DragEvent): void {
+    e.preventDefault();
+    this.dragging.set(false);
+    if (this.activeId()) this.addFiles(Array.from(e.dataTransfer?.files ?? []));
+  }
+
+  onDragOver(e: DragEvent): void {
+    if (e.dataTransfer?.types.includes('Files')) {
+      e.preventDefault();
+      this.dragging.set(true);
+    }
+  }
+
+  /** Paste screenshots straight into the message box. */
+  onPaste(e: ClipboardEvent): void {
+    const pasted = Array.from(e.clipboardData?.files ?? []);
+    if (pasted.length) {
+      e.preventDefault();
+      this.addFiles(pasted.map((f, i) => (f.name === 'image.png' ? new File([f], `screenshot-${Date.now()}-${i + 1}.png`, { type: f.type }) : f)));
+    }
+  }
+
+  downloadFile(f: ChatFile): void {
+    this.api.attachmentBlob(f.id).subscribe((b) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = f.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
   }
 
   send(): void {
     const id = this.activeId();
     const body = this.text.trim();
-    if (!id || (!body && !this.file()) || this.sending()) return;
+    if (!id || (!body && !this.files().length) || this.sending()) return;
     this.sending.set(true);
-    this.api.send(id, body, this.file()).subscribe({
+    this.api.send(id, body, this.files()).subscribe({
       next: (m) => {
         this.sending.set(false);
         this.text = '';
-        this.file.set(null);
+        Object.values(this.previews()).forEach((u) => URL.revokeObjectURL(u));
+        this.previews.set({});
+        this.files.set([]);
         this.msgs.update((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
         this.convs.update((l) => {
           const c = l.find((x) => x.id === id);
-          return c ? [{ ...c, last: { text: m.body || '📎 ' + (m.file?.name ?? ''), by: 'You', at: m.created_at } }, ...l.filter((x) => x.id !== id)] : l;
+          return c ? [{ ...c, last: { text: m.body || (m.files.length > 1 ? `📎 ${m.files.length} files` : '📎 ' + (m.files[0]?.name ?? '')), by: 'You', at: m.created_at } }, ...l.filter((x) => x.id !== id)] : l;
         });
         this.afterNew(true);
         this.box()?.nativeElement.focus();
@@ -207,7 +280,7 @@ export class Chat implements OnDestroy {
 
   async removeMsg(m: ChatMessage): Promise<void> {
     if (!(await this.dialog.confirm({ title: 'Delete this message?', message: 'Everyone in the chat will see “message deleted”.', confirmText: 'Delete', danger: true }))) return;
-    this.api.remove(m.id).subscribe(() => this.msgs.update((l) => l.map((x) => (x.id === m.id ? { ...x, deleted: true, body: null, file: null } : x))));
+    this.api.remove(m.id).subscribe(() => this.msgs.update((l) => l.map((x) => (x.id === m.id ? { ...x, deleted: true, body: null, file: null, files: [] } : x))));
   }
 
   download(m: ChatMessage): void {
@@ -286,6 +359,14 @@ export class Chat implements OnDestroy {
   }
 
   // ---------- display helpers ----------
+
+  imagesOf(m: ChatMessage): ChatFile[] {
+    return (m.files ?? []).filter((f) => f.image);
+  }
+
+  docsOf(m: ChatMessage): ChatFile[] {
+    return (m.files ?? []).filter((f) => !f.image);
+  }
 
   /** Show the date line before the first message of each day. */
   newDay(i: number): string | null {

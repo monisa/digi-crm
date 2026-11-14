@@ -64,6 +64,19 @@
                       <button class="filec" (click)="download(m)"><span class="fi">📄</span><span><b>{{ f.name }}</b><small>{{ size(f.size) }} · Download</small></span></button>
                     }
                   }
+                  @if (m.files.length) {
+                    @let imgs = imagesOf(m);
+                    @if (imgs.length) {
+                      <div class="pics" [class.multi]="imgs.length > 1">
+                        @for (f of imgs; track f.id) {
+                          @if (images()['f' + f.id]) { <img [src]="images()['f' + f.id]" [alt]="f.name" (click)="downloadFile(f)" title="Download {{ f.name }}" /> } @else { <div class="ph"></div> }
+                        }
+                      </div>
+                    }
+                    @for (f of docsOf(m); track f.id) {
+                      <button class="filec" (click)="downloadFile(f)"><span class="fi">📄</span><span><b>{{ f.name }}</b><small>{{ size(f.size) }} · Download</small></span></button>
+                    }
+                  }
                   @if (m.body) { <p>@for (p of parts(m.body); track $index) { @if (p.url) { <a [href]="p.url" target="_blank" rel="noopener">{{ p.t }}</a> } @else { {{ p.t }} } }</p> }
                 }
                 <span class="meta">{{ time(m.created_at) }}@if (m.user.id === me() && c.type === 'direct' && !m.deleted) { <span class="tick" [class.seen]="m.id <= readUpto()">{{ m.id <= readUpto() ? '✓✓' : '✓' }}</span> }</span>
@@ -74,12 +87,24 @@
         } @empty { <div class="emptyc">👋 Say hello to {{ c.type === 'direct' ? c.name : 'the group' }}</div> }
       </div>
 
-      <form class="composer" (ngSubmit)="send()">
-        @if (file(); as f) { <div class="att"><span>📎 {{ f.name }} · {{ size(f.size) }}</span><button type="button" (click)="file.set(null)" aria-label="Remove file">✕</button></div> }
+      <form class="composer" [class.drag]="dragging()" (ngSubmit)="send()" (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
+        @if (dragging()) { <div class="dropzone">Drop files to attach</div> }
+        @if (files().length) {
+          <div class="atts">
+            @for (f of files(); track fkey(f); let i = $index) {
+              <div class="attc" [title]="f.name">
+                @if (previews()[fkey(f)]; as src) { <img [src]="src" alt="" /> } @else { <span class="ai">📄</span> }
+                <span class="an"><b>{{ f.name }}</b><small>{{ size(f.size) }}</small></span>
+                <button type="button" (click)="removeFile(i)" [attr.aria-label]="'Remove ' + f.name">✕</button>
+              </div>
+            }
+            <span class="acount">{{ files().length }}/10</span>
+          </div>
+        }
         <div class="crow">
-          <label class="icon-btn clip" title="Attach a file or photo"><input type="file" hidden (change)="pickFile($event)" />📎</label>
-          <textarea #box name="t" rows="1" [(ngModel)]="text" (keydown)="onKey($event)" placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)" maxlength="5000"></textarea>
-          <button class="btn send" type="submit" [disabled]="sending() || (!text.trim() && !file())" aria-label="Send">➤</button>
+          <label class="icon-btn clip" title="Attach files or photos (up to 10)"><input type="file" hidden multiple (change)="pickFile($event)" />📎</label>
+          <textarea #box name="t" rows="1" [(ngModel)]="text" (keydown)="onKey($event)" (paste)="onPaste($event)" placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)" maxlength="5000"></textarea>
+          <button class="btn send" type="submit" [disabled]="sending() || (!text.trim() && !files().length)" aria-label="Send">➤</button>
         </div>
       </form>
     } @else {
