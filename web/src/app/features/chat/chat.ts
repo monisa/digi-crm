@@ -40,6 +40,7 @@ export class Chat implements OnDestroy {
   protected readonly dragging = signal(false);
   private static readonly MAX_FILES = 10;
   private static readonly MAX_SIZE = 20 * 1024 * 1024;
+  private static readonly BLOCKED = /\.(exe|msi|bat|cmd|com|scr|pif|cpl|dll|sys|vbs|vbe|js|jse|wsf|wsh|ps1|psm1|sh|bash|php|phtml|phar|pl|py|rb|jar|apk|app|dmg|html?|xhtml|svgz|hta|lnk|reg|msp|iso)$/i;
 
   // New chat / group
   protected readonly picker = signal<'direct' | 'group' | 'edit' | null>(null);
@@ -192,6 +193,10 @@ export class Chat implements OnDestroy {
 
   /** Add files from the picker, drag & drop or paste (max 10, 20 MB each). */
   addFiles(list: File[]): void {
+    // Programs and scripts are refused by the server too; say so straight away.
+    const blocked = list.filter((f) => Chat.BLOCKED.test(f.name));
+    if (blocked.length) this.toast.show(`${blocked.map((f) => f.name).join(', ')}: programs and scripts can't be sent. Put them in a ZIP if needed.`);
+    list = list.filter((f) => !Chat.BLOCKED.test(f.name));
     const tooBig = list.filter((f) => f.size > Chat.MAX_SIZE);
     if (tooBig.length) this.toast.show(`${tooBig.map((f) => f.name).join(', ')}: files must be under 20 MB.`);
     const ok = list.filter((f) => f.size <= Chat.MAX_SIZE);

@@ -20,7 +20,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ChatController extends Controller
 {
-    private const FILE_TYPES = 'png,jpg,jpeg,webp,gif,pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,zip,mp4,mov,mp3,m4a';
+    /**
+     * Any normal file may be shared (photos incl. iPhone HEIC, documents, design files, video,
+     * voice notes, archives). Only programs and scripts that could run on someone's computer
+     * or in the browser are refused. Files are stored privately and always downloaded, never opened inline.
+     */
+    private const BLOCKED = ['exe', 'msi', 'bat', 'cmd', 'com', 'scr', 'pif', 'cpl', 'dll', 'sys', 'vbs', 'vbe', 'js', 'jse', 'wsf', 'wsh',
+        'ps1', 'psm1', 'sh', 'bash', 'php', 'phtml', 'phar', 'pl', 'py', 'rb', 'jar', 'apk', 'app', 'dmg', 'html', 'htm', 'xhtml', 'svgz', 'hta', 'lnk', 'reg', 'msp', 'iso'];
 
     /** My chats, newest activity first, with unread counts. */
     public function index(Request $request): JsonResponse
@@ -178,12 +184,11 @@ class ChatController extends Controller
         abort_unless($conversation->hasMember($me), 404);
         $d = $request->validate([
             'body' => ['nullable', 'string', 'max:5000', 'required_without_all:file,files'],
-            'file' => ['nullable', 'file', 'max:20480', 'mimes:'.self::FILE_TYPES],
+            'file' => ['nullable', 'file', 'max:20480', $this->safeFile()],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:20480', 'mimes:'.self::FILE_TYPES],
+            'files.*' => ['file', 'max:20480', $this->safeFile()],
         ], [
             'file.max' => 'Files must be under 20 MB.', 'files.*.max' => 'Each file must be under 20 MB.',
-            'file.mimes' => 'This type of file cannot be sent.', 'files.*.mimes' => 'One of the files is a type that cannot be sent.',
             'files.max' => 'Send up to 10 files at a time.', 'body.required_without_all' => 'Type a message.',
         ]);
         $files = array_values(array_filter([$request->file('file'), ...(array) $request->file('files', [])]));
@@ -227,7 +232,7 @@ class ChatController extends Controller
         abort_unless($message->file_path && $message->conversation->hasMember($request->user()), 404);
 
         return Storage::disk('local')->download($message->file_path, $message->file_name, [
-            'Content-Type' => $message->file_mime ?: 'application/octet-stream',
+            'Content-Type' => $this->safeType($message->file_mime),
         ]);
     }
 
@@ -236,10 +241,38 @@ class ChatController extends Controller
     {
         abort_unless($file->message->conversation->hasMember($request->user()), 404);
 
-        return Storage::disk('local')->download($file->path, $file->name, ['Content-Type' => $file->mime ?: 'application/octet-stream']);
+        return Storage::disk('local')->download($file->path, $file->name, ['Content-Type' => $this->safeType($file->mime)]);
     }
 
     // ---------------------------------------------------------------
+
+    /** Only plain media types are passed on; anything else downloads as a generic file. */
+    private function safeType(?string $mime): string
+    {
+        $mime = strtolower((string) $mime);
+
+        return preg_match('#^(image/(png|jpe?g|gif|webp|heic|heif|bmp)|application/pdf|audio/[a-z0-9.+-]+|video/[a-z0-9.+-]+)$#', $mime) ? $mime : 'application/octet-stream';
+    }
+
+    /** Refuse programs and scripts (by name and by content), naming the file. */
+    private function safeFile(): \Closure
+    {
+        return function (string $attribute, mixed $file, \Closure $fail) {
+            if (! $file instanceof \Illuminate\Http\UploadedFile) {
+                return;
+            }
+            $name = $file->getClientOriginalName();
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $real = strtolower((string) $file->guessExtension());
+            $mime = strtolower((string) $file->getMimeType());
+            $scriptish = in_array($ext, self::BLOCKED, true) || in_array($real, self::BLOCKED, true)
+                || str_contains($mime, 'x-msdownload') || str_contains($mime, 'x-executable') || str_contains($mime, 'x-dosexec')
+                || str_contains($mime, 'x-sh') || str_contains($mime, 'x-php') || $mime === 'text/html';
+            if ($scriptish) {
+                $fail("“{$name}” cannot be sent: programs and scripts are blocked for safety. Put it in a ZIP if a teammate really needs it.");
+            }
+        };
+    }
 
     /** @param list<\Illuminate\Http\UploadedFile> $files */
     private function post(Conversation $c, User $by, ?string $body, array $files = [], bool $system = false): Message

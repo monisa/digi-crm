@@ -153,4 +153,30 @@ class ChatTest extends TestCase
         $this->deleteJson('/v1/chat/messages/'.$r->json('id'))->assertOk();
         $this->assertSame(0, \App\Models\MessageFile::where('message_id', $r->json('id'))->count());
     }
+
+    public function test_everyday_file_types_are_accepted_and_programs_refused(): void
+    {
+        Storage::fake('local');
+        $priya = $this->staff('Priya');
+        $arjun = $this->staff('Arjun');
+        $id = $this->as($priya)->postJson('/v1/chat/direct', ['user_id' => $arjun->id])->json('id');
+        $ok = [
+            UploadedFile::fake()->create('IMG_0042.HEIC', 300, 'image/heic'),
+            UploadedFile::fake()->create('logo.svg', 5, 'image/svg+xml'),
+            UploadedFile::fake()->create('banner.ai', 500, 'application/postscript'),
+            UploadedFile::fake()->create('mockup.psd', 900, 'image/vnd.adobe.photoshop'),
+            UploadedFile::fake()->create('voice-note.ogg', 80, 'audio/ogg'),
+            UploadedFile::fake()->create('reel.webm', 900, 'video/webm'),
+            UploadedFile::fake()->create('assets.rar', 400, 'application/vnd.rar'),
+            UploadedFile::fake()->create('leads.csv', 4, 'text/csv'),
+            UploadedFile::fake()->image('photo.JPG'),
+            UploadedFile::fake()->create('quote.odt', 30, 'application/vnd.oasis.opendocument.text'),
+        ];
+        $this->post("/v1/chat/conversations/$id/messages", ['files' => $ok], ['Accept' => 'application/json'])->assertCreated()->assertJsonCount(10, 'files');
+
+        $r = $this->post("/v1/chat/conversations/$id/messages", ['files' => [UploadedFile::fake()->image('fine.png'), UploadedFile::fake()->create('setup.exe', 10)]], ['Accept' => 'application/json'])
+            ->assertStatus(422);
+        $this->assertStringContainsString('setup.exe', json_encode($r->json('errors')));
+        $this->post("/v1/chat/conversations/$id/messages", ['files' => [UploadedFile::fake()->createWithContent('page.html', '<script>alert(1)</script>')]], ['Accept' => 'application/json'])->assertStatus(422);
+    }
 }
