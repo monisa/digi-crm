@@ -106,6 +106,12 @@ class WorkTest extends TestCase
         $this->getJson('/v1/tasks/team?period=all')->assertJsonPath('overview.done', 2)->assertJsonPath('overview.total', 5);
         $this->getJson('/v1/tasks/team?period=today')->assertJsonPath('overview.total', 3); // today's 2 + the late one
 
+        // Only employees are on the board: the admin's own task is neither a card nor in the totals.
+        Task::create(['title' => 'Admin errand', 'assigned_to' => $this->admin->id, 'status' => 'todo', 'due_date' => today()]);
+        $r = $this->getJson('/v1/tasks/team?period=all')->assertJsonPath('overview.total', 5);
+        $this->assertNull(collect($r->json('data'))->firstWhere('user.name', 'Amit'));
+        Task::where('title', 'Admin errand')->delete();
+
         // The super admin sees everyone's to-do list, and the counts follow the "whose tasks" choice.
         $r = $this->as($this->admin)->getJson('/v1/tasks?view=today')->assertJsonCount(2, 'data')->assertJsonPath('counts.today', 2);
         $this->assertEqualsCanonicalizing(['Reel edit', 'Late one'], collect($r->json('data'))->pluck('title')->all());
