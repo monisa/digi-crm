@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Module;
 use App\Support\Permissions;
 use Illuminate\Http\JsonResponse;
@@ -43,12 +44,19 @@ class PermissionController extends Controller
             $query->whereIn('module_id', Module::where('client_allowed', true)->pluck('id'));
         }
         $ids = $query->pluck('id');
+        $before = DB::table('role_permissions')->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')->where('role', $role)->pluck('key');
+        $after = DB::table('permissions')->whereIn('id', $ids)->pluck('key');
 
         DB::transaction(function () use ($role, $ids) {
             DB::table('role_permissions')->where('role', $role)->delete();
             DB::table('role_permissions')->insert($ids->map(fn ($id) => ['role' => $role, 'permission_id' => $id])->all());
         });
         $permissions->flush();
+        $added = $after->diff($before)->values()->all();
+        $removed = $before->diff($after)->values()->all();
+        if ($added || $removed) {
+            ActivityLog::record('permissions', 'Role: '.ucfirst($role), changes: array_filter(['added' => $added, 'removed' => $removed]), type: 'role');
+        }
 
         return $this->index();
     }

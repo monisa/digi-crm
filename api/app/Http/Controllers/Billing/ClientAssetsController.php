@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientFile;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,7 @@ class ClientAssetsController extends Controller
     {
         abort_unless(Client::visibleTo($request->user())->whereKey($client->id)->exists(), 403);
 
+        ActivityLog::record('viewed_passwords', $client->company_name, $client);
         DB::table('credential_views')->insert([
             'client_id' => $client->id, 'user_id' => $request->user()->id, 'ip' => $request->ip(), 'viewed_at' => now(),
         ]);

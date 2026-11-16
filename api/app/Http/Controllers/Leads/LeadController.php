@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Leads;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Lead;
 use App\Models\User;
@@ -158,6 +159,10 @@ class LeadController extends Controller
         $q->select('id')->chunkById(500, function ($chunk) use (&$deleted) {
             $deleted += Lead::whereIn('id', $chunk->pluck('id'))->delete(); // activities go with them (cascade)
         });
+
+        if ($deleted) {
+            ActivityLog::record('deleted', $deleted.' '.str('lead')->plural($deleted).' (delete all)', type: 'lead');
+        }
 
         return response()->json(['deleted' => $deleted]);
     }

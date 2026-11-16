@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { ActivityLogView } from './activity';
 import { Backups } from './backups';
 import { CompanySettings } from './company';
 import { Integrations } from './integrations';
@@ -8,7 +9,7 @@ import { UsersAccess } from './users-access';
 
 @Component({
   selector: 'app-settings',
-  imports: [RolePermissions, UsersAccess, Integrations, CompanySettings, Backups],
+  imports: [RolePermissions, UsersAccess, Integrations, CompanySettings, Backups, ActivityLogView],
   template: `
     <div class="head">
       <h1>Settings</h1>
@@ -19,7 +20,10 @@ import { UsersAccess } from './users-access';
       <button role="tab" [class.on]="tab() === 'users'" (click)="tab.set('users')">Users &amp; access</button>
       <button role="tab" [class.on]="tab() === 'company'" (click)="tab.set('company')">Company &amp; billing</button>
       <button role="tab" [class.on]="tab() === 'integrations'" (click)="tab.set('integrations')">Integrations</button>
-      @if (isAdmin) { <button role="tab" [class.on]="tab() === 'backups'" (click)="tab.set('backups')">Backups</button> }
+      @if (isAdmin) {
+        <button role="tab" [class.on]="tab() === 'activity'" (click)="tab.set('activity')">Activity log</button>
+        <button role="tab" [class.on]="tab() === 'backups'" (click)="tab.set('backups')">Backups</button>
+      }
     </div>
     @switch (tab()) {
       @case ('roles') { <app-role-permissions /> }
@@ -27,13 +31,14 @@ import { UsersAccess } from './users-access';
       @case ('company') { <app-company /> }
       @case ('integrations') { <app-integrations /> }
       @case ('backups') { <app-backups /> }
+      @case ('activity') { <app-activity /> }
     }
   `,
   styleUrl: './settings.scss',
 })
 export class Settings {
   protected readonly isAdmin = inject(AuthService).user()?.role === 'admin';
-  protected readonly tab = signal<'roles' | 'users' | 'company' | 'integrations' | 'backups'>(
-    (new URLSearchParams(location.search).get('tab') as 'roles' | 'users' | 'company' | 'integrations' | 'backups') || 'roles',
+  protected readonly tab = signal<'roles' | 'users' | 'company' | 'integrations' | 'backups' | 'activity'>(
+    (new URLSearchParams(location.search).get('tab') as 'roles' | 'users' | 'company' | 'integrations' | 'backups' | 'activity') || 'roles',
   );
 }

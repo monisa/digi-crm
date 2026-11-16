@@ -38,6 +38,8 @@ Schedule::call($run('crm:backup', ['--files' => true]))->name('backup-files')->w
 // Housekeeping
 Schedule::call($run('sanctum:prune-expired', ['--hours' => 24]))->name('prune-tokens')->daily();
 Schedule::call($run('auth:clear-resets'))->name('clear-resets')->everyFifteenMinutes();
+// Activity log: keep one year.
+Schedule::call(fn () => DB::table('activity_log')->where('created_at', '<', now()->subDays(365))->delete())->name('prune-activity')->weekly();
 // Keep the bell tidy: drop read notifications after 90 days.
 Schedule::call(fn () => DB::table('notifications')->whereNotNull('read_at')->where('created_at', '<', now()->subDays(90))->delete())
     ->name('prune-notifications')->weekly();

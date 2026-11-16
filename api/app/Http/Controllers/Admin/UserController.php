@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Http\JsonResponse;
@@ -98,6 +99,8 @@ class UserController extends Controller
         $ids = DB::table('permissions')->whereIn('key', array_keys($data['overrides']))->pluck('id', 'key');
         abort_if($ids->count() !== count($data['overrides']), 422, 'Unknown permission.');
 
+        $before = DB::table('user_permissions')->join('permissions', 'permissions.id', '=', 'user_permissions.permission_id')
+            ->where('user_id', $user->id)->pluck('allowed', 'key')->map(fn ($v) => (bool) $v)->all();
         DB::transaction(function () use ($user, $ids, $data) {
             DB::table('user_permissions')->where('user_id', $user->id)->delete();
             DB::table('user_permissions')->insert($ids->map(fn ($id, $key) => [
@@ -105,6 +108,17 @@ class UserController extends Controller
             ])->values()->all());
         });
         $permissions->flush();
+        $changes = [];
+        foreach (array_unique([...array_keys($before), ...array_keys($data['overrides'])]) as $key) {
+            $o = array_key_exists($key, $before) ? ($before[$key] ? 'allowed' : 'blocked') : 'role default';
+            $n = array_key_exists($key, $data['overrides']) ? ($data['overrides'][$key] ? 'allowed' : 'blocked') : 'role default';
+            if ($o !== $n) {
+                $changes[$key] = [$o, $n];
+            }
+        }
+        if ($changes) {
+            ActivityLog::record('permissions', $user->name, $user, $changes);
+        }
 
         return $this->permissions($user);
     }
