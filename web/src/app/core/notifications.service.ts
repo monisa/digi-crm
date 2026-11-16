@@ -94,7 +94,7 @@ export class NotificationsService {
   }
 }
 
-export const CATEGORY_ICON: Record<string, string> = { leads: '🎯', tickets: '💬', leave: '🌴', billing: '₹', clients: '🤝', other: '🔔' };
+export const CATEGORY_ICON: Record<string, string> = { whatsapp: '🟢', leads: '🎯', tickets: '💬', leave: '🌴', billing: '₹', clients: '🤝', other: '🔔' };
 
 export function ago(iso: string): string {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);

@@ -38,26 +38,34 @@ interface TaskForm {
 
     @if (view === 'team') {
       @if (overview(); as o) {
+        @let st = shownStats();
         <div class="card ov">
           <div class="ovh">
-            <div><h2>Status overview</h2><p class="hint">{{ periodText(o) }}</p></div>
-            <div class="seg" role="group" aria-label="Period">
-              @for (p of periods; track p[0]) { <button [class.on]="period() === p[0]" (click)="setPeriod(p[0])">{{ p[1] }}</button> }
+            <div><h2>Status overview@if (person(); as pp) { · {{ pp.user.name }} }</h2><p class="hint">{{ periodText(o) }}</p></div>
+            <div class="ovc">
+              <select class="select-sm" [ngModel]="personId()" (ngModelChange)="personId.set(+$event)" aria-label="Employee">
+                <option [ngValue]="0">All employees</option>
+                @for (p of team(); track p.user.id) { <option [ngValue]="p.user.id">{{ p.user.name }}</option> }
+              </select>
+              <div class="seg" role="group" aria-label="Period">
+                @for (p of periods; track p[0]) { <button [class.on]="period() === p[0]" (click)="setPeriod(p[0])">{{ p[1] }}</button> }
+              </div>
             </div>
           </div>
           <div class="ovb">
-            <app-donut [slices]="slices(o)" [size]="210" caption="Total tasks" />
+            <app-donut [slices]="slices(st)" [size]="210" [caption]="person() ? 'Tasks' : 'Total tasks'" />
             <div class="ovk">
-              <div class="kk" [class.bad]="o.overdue"><b>{{ o.overdue }}</b><span>Overdue</span></div>
-              <div class="kk"><b>{{ hrs(o.minutes) || '0h' }}</b><span>Time logged</span></div>
-              <div class="kk"><b>{{ o.total ? pct(o.done, o.total) : 0 }}%</b><span>Done</span></div>
-              @if (o.unassigned) { <div class="kk"><b>{{ o.unassigned }}</b><span>Unassigned</span></div> }
+              <div class="kk" [class.bad]="st.overdue"><b>{{ st.overdue }}</b><span>Overdue</span></div>
+              <div class="kk"><b>{{ hrs(st.minutes) || '0h' }}</b><span>Time logged</span></div>
+              <div class="kk"><b>{{ st.total ? pct(st.done, st.total) : 0 }}%</b><span>Done</span></div>
+              @if (person(); as pp) { <button class="kk lk" (click)="assigned = '' + pp.user.id; setView('today')"><b>→</b><span>Open {{ pp.user.name.split(' ')[0] }}’s tasks</span></button> }
+              @else if (o.unassigned) { <div class="kk"><b>{{ o.unassigned }}</b><span>Unassigned</span></div> }
             </div>
           </div>
         </div>
       }
       <div class="teamgrid">
-        @for (p of team(); track p.user.id) {
+        @for (p of shownTeam(); track p.user.id) {
           <div class="card pc">
             <div class="ph"><span class="who big">{{ initials(p.user.name) }}</span><div><b>{{ p.user.name }}</b>
               <small>{{ p.in_progress }} in progress · {{ p.todo }} to do@if (p.review) { · {{ p.review }} in review }@if (p.overdue) { · <span class="late">{{ p.overdue }} overdue</span> }</small></div></div>
@@ -196,10 +204,11 @@ interface TaskForm {
     .rvb { display: flex; gap: 6px; flex: none; }
     .ov { margin-bottom: 14px; }
     .ovh { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-    .ovh h2 { font-size: 18px; letter-spacing: -0.01em; } .ovh .seg { margin: 0; } .ovh .seg button { flex: none; padding: 8px 14px; white-space: nowrap; }
+    .ovh h2 { font-size: 18px; letter-spacing: -0.01em; } .ovh .seg { margin: 0; } .ovc { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .ovc select { min-width: 170px; }
+    .kk.lk { border: 0; text-align: left; font: inherit; cursor: pointer; color: var(--brand-deep); } .kk.lk:hover { background: var(--brand-soft); } .kk.lk span { color: var(--brand-deep); font-weight: 600; } .ovh .seg button { flex: none; padding: 8px 14px; white-space: nowrap; }
     .ovb { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
     .ovb app-donut { flex: 1 1 420px; }
-    @media (max-width: 560px) { .ovh .seg { width: 100%; } .ovh .seg button { flex: 1; padding: 8px 4px; } .ovk { flex: 1 1 100%; } }
+    @media (max-width: 560px) { .ovc, .ovc select { width: 100%; } .ovh .seg { width: 100%; } .ovh .seg button { flex: 1; padding: 8px 4px; } .ovk { flex: 1 1 100%; } }
     .ovk { display: grid; grid-template-columns: repeat(2, minmax(110px, 1fr)); gap: 10px; flex: 0 1 280px; }
     .kk { background: var(--bg); border-radius: 12px; padding: 12px 14px; } .kk b { display: block; font-size: 22px; letter-spacing: -0.01em; } .kk span { font-size: 12.5px; color: var(--ink-3); }
     .kk.bad b { color: var(--x-c0262d); }
@@ -255,6 +264,11 @@ export class Tasks {
   ]);
   protected readonly team = signal<TeamRow[]>([]);
   protected readonly overview = signal<TeamOverview | null>(null);
+  /** 0 = all employees; otherwise the chart shows this person. */
+  protected readonly personId = signal(0);
+  protected readonly person = computed(() => this.team().find((p) => p.user.id === this.personId()) ?? null);
+  protected readonly shownStats = computed((): TaskStats => this.person()?.stats ?? this.overview()!);
+  protected readonly shownTeam = computed(() => (this.person() ? [this.person()!] : this.team()));
   protected readonly period = signal<TaskPeriod>('month');
   protected readonly periods: [TaskPeriod, string][] = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All time']];
 

@@ -142,3 +142,4 @@ main { min-width: 0; }
 .menu .tseg button { width: auto; padding: 5px 9px; font-size: 12px; border-radius: 8px; color: var(--ink-2); gap: 0; }
 .menu .tseg button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
 .mi { width: 18px; text-align: center; }
+.nbadge { margin-left: auto; font-style: normal; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #25a35a; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }

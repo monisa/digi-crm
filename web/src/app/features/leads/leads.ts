@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { WhatsAppService } from '../../core/whatsapp.service';
+import { WaChat } from '../../shared/wa-chat';
 import { readErrors } from '../../core/http-errors';
 import { Lead, LeadList, LeadOptions, LeadStatus, LeadsService, waNumber } from '../../core/leads.service';
 import { initials } from '../../shared/format';
@@ -28,7 +30,7 @@ export const DATE_PRESETS: [DatePreset, string][] = [
 
 @Component({
   selector: 'app-leads',
-  imports: [FormsModule, CdkDropListGroup, CdkDropList, CdkDrag, LeadSheet, LeadAdd, LeadImport, LeadOptionsForm],
+  imports: [FormsModule, CdkDropListGroup, CdkDropList, CdkDrag, LeadSheet, LeadAdd, LeadImport, LeadOptionsForm, WaChat],
   templateUrl: './leads.html',
   styleUrl: './leads.scss',
 })
@@ -37,6 +39,9 @@ export class Leads {
   private api = inject(LeadsService);
   private toast = inject(Toast);
   protected readonly auth = inject(AuthService);
+  private waApi = inject(WhatsAppService);
+  protected readonly waReady = computed(() => this.auth.can('whatsapp.view') && this.waApi.connected() === true);
+  protected readonly waLead = signal<Lead | null>(null);
   protected readonly initials = initials;
   protected readonly wa = waNumber;
 

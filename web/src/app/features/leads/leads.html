@@ -137,7 +137,8 @@
           <span class="c-quick" (click)="$event.stopPropagation()">
             @if (l.phone) {
               <a class="qbtn" [href]="'tel:' + l.phone" aria-label="Call">📞</a>
-              <a class="qbtn wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>
+              @if (waReady()) { <button type="button" class="qbtn wa" (click)="waLead.set(l)" aria-label="WhatsApp">💬</button> }
+              @else { <a class="qbtn wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a> }
             }
           </span>
         </div>
@@ -198,3 +199,5 @@
 @if (adding() && options()) { <app-lead-add [options]="options()!" (closed)="adding.set(false)" (saved)="created($event)" /> }
 @if (importing()) { <app-lead-import (closed)="importing.set(false)" (done)="imported()" /> }
 @if (editingOptions() && options()) { <app-lead-options [options]="options()!" (closed)="editingOptions.set(false)" (saved)="optionsSaved($event)" /> }
+
+@if (waLead(); as l) { <app-wa-chat [who]="{ lead_id: l.id }" [firstName]="l.full_name.split(' ')[0]" (closed)="waLead.set(null)" /> }

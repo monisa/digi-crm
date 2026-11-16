@@ -209,7 +209,8 @@ class TaskController extends Controller
         $user = $request->user();
         abort_unless(Task::seesTeam($user), 403, 'Only managers can see the whole team.');
         $today = today();
-        $people = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_EMPLOYEE])->where('status', User::STATUS_ACTIVE)->orderBy('name')->get(['id', 'name']);
+        // Employees only: the super admin / admins assign and check work, they are not on the board.
+        $people = User::where('role', User::ROLE_EMPLOYEE)->where('status', User::STATUS_ACTIVE)->orderBy('name')->get(['id', 'name']);
         $open = Task::whereIn('assigned_to', $people->pluck('id'))->whereIn('status', ['todo', 'in_progress', 'review'])
             ->with('client:id,company_name')->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'review' THEN 1 ELSE 2 END")->orderBy('due_date')->get()->groupBy('assigned_to');
         $doneToday = Task::where('status', 'done')->whereDate('completed_at', $today)->selectRaw('assigned_to, count(*) n, sum(minutes_spent) m')->groupBy('assigned_to')->get()->keyBy('assigned_to');
@@ -242,7 +243,8 @@ class TaskController extends Controller
         return response()->json([
             'overview' => [
                 'period' => $period, 'from' => $from?->toDateString(), 'to' => $to?->toDateString(),
-                ...$stats($byStatus, (int) $late->sum()),
+                // Totals are the employees' tasks; tasks nobody has yet are counted apart.
+                ...$stats($byStatus->whereIn('assigned_to', $people->pluck('id')), (int) $late->only($people->pluck('id')->all())->sum()),
                 'unassigned' => (int) $byStatus->whereNull('assigned_to')->sum('n'),
             ],
             'data' => $people->map(function (User $p) use ($open, $doneToday, $today, $byStatus, $late, $stats) {
