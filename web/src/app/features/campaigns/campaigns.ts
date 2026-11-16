@@ -57,16 +57,16 @@ import { CampaignSheet } from './campaign-sheet';
     .name { font-size: 16px; margin-top: 4px; } .cl { color: var(--ink-3); font-size: 12.5px; }
     .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
     .nums span { display: block; font-size: 11.5px; color: var(--ink-3); } .nums b { font-size: 16px; }
-    .bar { height: 8px; background: #f0f1f5; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+    .bar { height: 8px; background: var(--x-f0f1f5); border-radius: 99px; overflow: hidden; margin-top: 10px; }
     .fill { height: 100%; background: linear-gradient(90deg, var(--s1), var(--brand)); border-radius: 99px; animation: grow 1s var(--ease) both; transform-origin: left; }
     @keyframes grow { from { transform: scaleX(0); } }
     .hint { color: var(--ink-3); font-size: 12px; }
-    .plat { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: #eaf1fd; color: #1f4fb3; }
-    .plat[data-p='meta'] { background: #e7f0ff; color: #1877f2; } .plat[data-p='google'] { background: #fdecec; color: #c5221f; }
-    .plat[data-p='seo'] { background: #e8f7ee; color: #11803b; } .plat[data-p='social'] { background: #fdf1e3; color: #c2620f; }
+    .plat { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: var(--x-eaf1fd); color: var(--x-1f4fb3); }
+    .plat[data-p='meta'] { background: var(--x-e7f0ff); color: var(--x-1877f2); } .plat[data-p='google'] { background: var(--x-fdecec); color: var(--x-c5221f); }
+    .plat[data-p='seo'] { background: var(--x-e8f7ee); color: var(--x-11803b); } .plat[data-p='social'] { background: var(--x-fdf1e3); color: var(--x-c2620f); }
     .st { text-transform: capitalize; }
-    .st[data-s='active'] { background: #e8f7ee; color: #11803b; } .st[data-s='planned'] { background: #eaf1fd; color: #1f4fb3; }
-    .st[data-s='paused'] { background: #fef4e6; color: #b54708; } .st[data-s='completed'] { background: var(--bg); color: var(--ink-3); }
+    .st[data-s='active'] { background: var(--x-e8f7ee); color: var(--x-11803b); } .st[data-s='planned'] { background: var(--x-eaf1fd); color: var(--x-1f4fb3); }
+    .st[data-s='paused'] { background: var(--x-fef4e6); color: var(--x-b54708); } .st[data-s='completed'] { background: var(--bg); color: var(--ink-3); }
   `,
 })
 export class Campaigns {

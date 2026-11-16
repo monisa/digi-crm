@@ -4,7 +4,7 @@
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .sw.rev { background: var(--s1); }
 .sw.exp { background: var(--s2); }
-.toggle { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.toggle { border: 1px solid var(--line); background: var(--x-fff); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
 .toggle:hover { border-color: var(--brand); color: var(--brand-deep); }
 .plot { position: relative; }
 svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -20,7 +20,7 @@ svg { display: block; width: 100%; height: auto; overflow: visible; }
 .hit { fill: transparent; cursor: pointer; }
 .tip {
   position: absolute; transform: translate(-50%, calc(-100% - 8px)); pointer-events: none; z-index: 2;
-  background: var(--ink); color: #fff; font-size: 12.5px; padding: 10px 12px; border-radius: 10px; white-space: nowrap;
+  background: var(--solid); color: var(--on-solid); font-size: 12.5px; padding: 10px 12px; border-radius: 10px; white-space: nowrap;
   display: flex; flex-direction: column; gap: 3px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); animation: fadein 0.15s;
 }
 .tip .net { color: #9aa0ad; }

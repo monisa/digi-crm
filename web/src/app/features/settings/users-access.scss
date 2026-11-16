@@ -14,9 +14,9 @@
   width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; font-weight: 700;
   background: var(--brand-soft); color: var(--brand-deep);
 }
-.status[data-s='active'] { color: #11803b; }
-.status[data-s='inactive'] { color: #b42318; }
-.status[data-s='pending_onboarding'], .status[data-s='pending_approval'] { color: #b54708; }
+.status[data-s='active'] { color: var(--x-11803b); }
+.status[data-s='inactive'] { color: var(--x-b42318); }
+.status[data-s='pending_onboarding'], .status[data-s='pending_approval'] { color: var(--x-b54708); }
 .scrim { position: fixed; inset: 0; background: rgba(10, 12, 16, 0.45); backdrop-filter: blur(2px); z-index: 50; animation: fade 0.25s; }
 .sheet {
   position: fixed; top: 0; right: 0; bottom: 0; width: min(860px, 100%); background: var(--card); z-index: 55;
@@ -24,7 +24,7 @@
 }
 .sheet-h { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .sheet-h h3 { font-size: 18px; }
-.g { color: #11803b; } .r { color: #b42318; }
+.g { color: var(--x-11803b); } .r { color: var(--x-b42318); }
 .sheet-f { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; position: sticky; bottom: -24px; background: var(--card); padding: 14px 0; }
 @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
 @keyframes fade { from { opacity: 0; } }
@@ -36,8 +36,8 @@
   @keyframes up { from { transform: translateY(40px); opacity: 0; } }
 }
 
-.del { color: #c0262d; width: 44px; padding: 0; justify-content: center; }
+.del { color: var(--x-c0262d); width: 44px; padding: 0; justify-content: center; }
 @media (max-width: 860px) { .urow .del { grid-column: auto; width: 100%; } .urow .nodel { display: none; } }
-.del:hover { background: #fdecec; border-color: rgba(192, 38, 45, 0.35); }
+.del:hover { background: var(--x-fdecec); border-color: rgba(192, 38, 45, 0.35); }
 .mail { border: 0; background: none; color: var(--brand-deep); cursor: pointer; font-size: 12px; padding: 0 4px; margin-left: 2px; }
 .mail:hover { text-decoration: underline; }

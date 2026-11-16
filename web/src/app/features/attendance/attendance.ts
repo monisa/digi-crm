@@ -151,10 +151,10 @@ const STATUS: Record<string, [string, string]> = {
     .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-content: start; }
     .kpis h3 { grid-column: 1 / -1; font-size: 15px; }
     .k { background: var(--bg); border-radius: 14px; padding: 12px; } .k b { display: block; font-size: 22px; } .k span { font-size: 12px; color: var(--ink-3); }
-    .k b.warn { color: #b54708; }
+    .k b.warn { color: var(--x-b54708); }
     .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .sumline { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; font-weight: 600; }
-    .sumline .g { color: #11803b; } .sumline .w { color: #b54708; } .sumline .i { color: #2f6fde; } .sumline .c { color: #c0262d; }
+    .sumline .g { color: var(--x-11803b); } .sumline .w { color: var(--x-b54708); } .sumline .i { color: #2f6fde; } .sumline .c { color: var(--x-c0262d); }
     .rrow { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-top: 1px solid var(--line); animation: rise 0.35s var(--ease) both; }
     .ini { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; background: #16181d; color: var(--brand); flex: none; font-size: 13px; }
     .grow { flex: 1; min-width: 0; } .grow b { display: block; } .grow small { color: var(--ink-3); font-size: 12.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -167,7 +167,7 @@ const STATUS: Record<string, [string, string]> = {
     .tr.off { background: var(--bg); color: var(--ink-3); } .tr.today { box-shadow: inset 3px 0 0 var(--brand); }
     .day b { font-size: 16px; } .day small { display: block; font-size: 11.5px; color: var(--ink-3); }
     .span4 { grid-column: span 4; } .offtxt { font-size: 13px; }
-    .late, .where i { font-style: normal; font-size: 11px; font-weight: 700; color: #b54708; background: #fff4e5; border-radius: 99px; padding: 1px 7px; margin-left: 6px; }
+    .late, .where i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--x-b54708); background: var(--x-fff4e5); border-radius: 99px; padding: 1px 7px; margin-left: 6px; }
     .where i { color: var(--ink-3); background: var(--bg); }
     .set h3 { font-size: 15px; margin-bottom: 4px; } .set .hint { margin-bottom: 12px; }
     .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: end; }

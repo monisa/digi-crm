@@ -66,16 +66,16 @@ import { Dialog } from '../../shared/dialog';
       border: 1px solid rgba(237, 143, 33, 0.45); background: linear-gradient(90deg, rgba(237, 143, 33, 0.12), transparent); animation: rise 0.4s var(--ease) both; }
     .wait b { flex: 1; } .wait .go { color: var(--brand-deep); font-weight: 600; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 4px rgba(237, 143, 33, 0.25); }
-    .badge-p { font-size: 11px; font-weight: 700; color: #b54708; background: #fff4e5; padding: 2px 8px; border-radius: 99px; margin-left: 6px; }
+    .badge-p { font-size: 11px; font-weight: 700; color: var(--x-b54708); background: var(--x-fff4e5); padding: 2px 8px; border-radius: 99px; margin-left: 6px; }
     .filters { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; } .grow { flex: 1; min-width: 220px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
     .grid .empty-box { grid-column: 1 / -1; }
-    .cl { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; animation: rise 0.4s var(--ease) both; transition: transform 0.25s var(--ease), box-shadow 0.25s, border-color 0.25s; }
+    .cl { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--x-fff); animation: rise 0.4s var(--ease) both; transition: transform 0.25s var(--ease), box-shadow 0.25s, border-color 0.25s; }
     .cl:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--brand); }
     .ini { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-weight: 700; background: #16181d; color: var(--brand); flex: none; }
     .who { flex: 1; min-width: 0; } .who b { display: block; font-size: 14.5px; }
     .who small { display: block; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .due { text-align: right; } .due b { display: block; color: #b54708; } .due small { color: var(--ink-3); font-size: 11.5px; } .ok { color: #11803b !important; font-weight: 600; }
+    .due { text-align: right; } .due b { display: block; color: var(--x-b54708); } .due small { color: var(--ink-3); font-size: 11.5px; } .ok { color: var(--x-11803b) !important; font-weight: 600; }
   `,
 })
 export class Clients {

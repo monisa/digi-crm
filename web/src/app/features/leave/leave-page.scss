@@ -5,7 +5,7 @@
 .appr, .hlist, .policy { display: flex; flex-direction: column; }
 .arow, .hrow, .prow { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid var(--line); animation: rise 0.4s var(--ease) both; }
 .arow:last-child, .hrow:last-child, .prow:last-child { border-bottom: 0; }
-.ini { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #eaf1fd; color: #1f4fb3; font-weight: 700; font-size: 13px; flex: none; }
+.ini { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--x-eaf1fd); color: var(--x-1f4fb3); font-weight: 700; font-size: 13px; flex: none; }
 .grow { flex: 1; min-width: 0; }
 .grow > b { display: block; font-size: 14px; }
 .grow small { display: block; color: var(--ink-3); font-size: 12.5px; }
@@ -13,14 +13,14 @@
 .reason { font-style: italic; color: var(--ink-2) !important; }
 .acts, .reject { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .reject .input-sm { min-width: 200px; }
-.btn.ok { background: linear-gradient(135deg, #16a34a, #11803b); box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3); }
-.btn-ghost.danger { color: #b42318; border-color: #f5b5b0; }
+.btn.ok { background: linear-gradient(135deg, #16a34a, var(--x-11803b)); box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3); }
+.btn-ghost.danger { color: var(--x-b42318); border-color: var(--x-f5b5b0); }
 .btn-ghost.sm { height: 30px; font-size: 12px; }
 .cap { text-transform: capitalize; }
 .hadd { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
 .hadd .grow { flex: 1; min-width: 180px; }
 .check.sm { margin: 0; font-size: 13px; }
-.cal { width: 50px; border-radius: 12px; overflow: hidden; text-align: center; border: 1px solid var(--line); flex: none; background: #fff; }
+.cal { width: 50px; border-radius: 12px; overflow: hidden; text-align: center; border: 1px solid var(--line); flex: none; background: var(--x-fff); }
 .cal span { display: block; background: var(--brand); color: #fff; font-size: 10.5px; font-weight: 700; text-transform: uppercase; padding: 2px 0; }
 .cal b { display: block; font-size: 18px; padding: 3px 0; }
 .hrow.past { opacity: 0.55; }

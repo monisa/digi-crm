@@ -55,7 +55,7 @@ import { Sheet } from '../../shared/sheet';
     .err-line { color: var(--crit); font-size: 12.5px; margin-top: 6px; }
     .days { margin-top: 18px; padding: 14px; border-radius: 12px; background: var(--brand-soft); color: var(--brand-deep); text-align: center; font-size: 14px; transition: background 0.3s; }
     .days b { font-size: 20px; }
-    .days.zero { background: #fdecec; color: #b42318; }
+    .days.zero { background: var(--x-fdecec); color: var(--x-b42318); }
   `,
 })
 export class LeaveRequestForm {

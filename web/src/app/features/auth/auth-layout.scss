@@ -21,7 +21,7 @@
 .pitch h1 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; }
 .pitch p { margin-top: 14px; font-size: 18px; color: rgba(255, 255, 255, 0.85); }
 .panel {
-  position: relative; align-self: center; background: #fff; color: var(--ink); border-radius: 28px;
+  position: relative; align-self: center; background: var(--x-fff); color: var(--ink); border-radius: 28px;
   padding: clamp(28px, 4vw, 64px) clamp(24px, 4vw, 70px); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
   animation: card-in 0.8s 0.15s var(--ease) both;
 }

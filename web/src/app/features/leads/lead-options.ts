@@ -36,7 +36,7 @@ import { Sheet } from '../../shared/sheet';
     h4 { font-size: 14px; margin: 10px 0 0; }
     .pool { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; transition: opacity 0.2s; }
     .pool.off { opacity: 0.45; }
-    .chip { border: 1px solid var(--line); background: #fff; padding: 7px 12px; border-radius: 99px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .chip { border: 1px solid var(--line); background: var(--x-fff); padding: 7px 12px; border-radius: 99px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
     .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
     .hint { color: var(--ink-3); font-size: 12.5px; }
   `,

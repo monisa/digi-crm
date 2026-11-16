@@ -2,15 +2,15 @@
 .layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
 .row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0 14px; }
 .ex { display: block; color: var(--ink-3); font-size: 11.5px; margin-top: 4px; }
-.billto { margin-top: 10px; font-size: 13px; color: var(--ink-2); } .warn { color: #b54708; }
+.billto { margin-top: 10px; font-size: 13px; color: var(--ink-2); } .warn { color: var(--x-b54708); }
 h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin: 22px 0 8px; }
 .items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .ihead, .irow { display: grid; grid-template-columns: 1fr 90px 70px 110px 110px 32px; gap: 8px; align-items: center; }
 .ihead { font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
 .irow { animation: rise 0.3s var(--ease); }
 .irow .input-sm { width: 100%; min-width: 0; } .num { text-align: right; } .amt { text-align: right; font-size: 13.5px; }
-.x { width: 32px; height: 32px; border: 1px solid var(--line); background: #fff; border-radius: 8px; cursor: pointer; color: var(--ink-3); }
-.x:hover:not(:disabled) { color: #b42318; border-color: #f5b5b0; } .x:disabled { opacity: 0.3; }
+.x { width: 32px; height: 32px; border: 1px solid var(--line); background: var(--x-fff); border-radius: 8px; cursor: pointer; color: var(--ink-3); }
+.x:hover:not(:disabled) { color: var(--x-b42318); border-color: var(--x-f5b5b0); } .x:disabled { opacity: 0.3; }
 .total { position: sticky; top: 90px; }
 .total h4 { margin-top: 0; }
 .line { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; border-bottom: 1px dashed var(--line); }
