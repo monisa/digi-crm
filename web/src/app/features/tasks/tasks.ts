@@ -6,7 +6,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import { BillingService, Client } from '../../core/billing.service';
 import { readErrors } from '../../core/http-errors';
 import { LeadsService } from '../../core/leads.service';
-import { PRIORITY_LABEL, REPEAT_LABEL, Task, TaskList, TaskPriority, TaskRepeat, TaskStatus, TeamRow, WorkService } from '../../core/work.service';
+import { PRIORITY_LABEL, REPEAT_LABEL, Task, TaskList, TaskPeriod, TaskPriority, TaskRepeat, TaskStats, TaskStatus, TeamOverview, TeamRow, WorkService } from '../../core/work.service';
+import { Donut, DonutSlice } from '../../shared/donut';
 import { Dialog } from '../../shared/dialog';
 import { Sheet } from '../../shared/sheet';
 import { Toast } from '../../shared/toast.service';
@@ -19,7 +20,7 @@ interface TaskForm {
 
 @Component({
   selector: 'app-tasks',
-  imports: [FormsModule, RouterLink, Sheet],
+  imports: [FormsModule, RouterLink, Sheet, Donut],
   template: `
     <div class="page-head">
       <div><h1>Tasks</h1><p>{{ greeting() }}</p></div>
@@ -36,11 +37,35 @@ interface TaskForm {
     </div>
 
     @if (view === 'team') {
+      @if (overview(); as o) {
+        <div class="card ov">
+          <div class="ovh">
+            <div><h2>Status overview</h2><p class="hint">{{ periodText(o) }}</p></div>
+            <div class="seg" role="group" aria-label="Period">
+              @for (p of periods; track p[0]) { <button [class.on]="period() === p[0]" (click)="setPeriod(p[0])">{{ p[1] }}</button> }
+            </div>
+          </div>
+          <div class="ovb">
+            <app-donut [slices]="slices(o)" [size]="210" caption="Total tasks" />
+            <div class="ovk">
+              <div class="kk" [class.bad]="o.overdue"><b>{{ o.overdue }}</b><span>Overdue</span></div>
+              <div class="kk"><b>{{ hrs(o.minutes) || '0h' }}</b><span>Time logged</span></div>
+              <div class="kk"><b>{{ o.total ? pct(o.done, o.total) : 0 }}%</b><span>Done</span></div>
+              @if (o.unassigned) { <div class="kk"><b>{{ o.unassigned }}</b><span>Unassigned</span></div> }
+            </div>
+          </div>
+        </div>
+      }
       <div class="teamgrid">
         @for (p of team(); track p.user.id) {
           <div class="card pc">
             <div class="ph"><span class="who big">{{ initials(p.user.name) }}</span><div><b>{{ p.user.name }}</b>
               <small>{{ p.in_progress }} in progress · {{ p.todo }} to do@if (p.review) { · {{ p.review }} in review }@if (p.overdue) { · <span class="late">{{ p.overdue }} overdue</span> }</small></div></div>
+            @if (p.stats.total) {
+              <div class="mini"><app-donut [slices]="slices(p.stats)" [size]="96" caption="tasks" [compact]="true" />
+                @if (p.stats.overdue || p.stats.minutes) { <small class="mfoot">@if (p.stats.overdue) { <span class="late">{{ p.stats.overdue }} overdue</span> }@if (p.stats.overdue && p.stats.minutes) { · }@if (p.stats.minutes) { ⏱ {{ hrs(p.stats.minutes) }} logged }</small> }
+              </div>
+            } @else { <p class="hint">No tasks {{ period() === 'all' ? 'yet' : 'in this period' }}.</p> }
             @for (w of p.working_on; track w.id) {
               <div class="wo"><span class="dot"></span><span class="wt">{{ w.title }}@if (w.client) { <i>· {{ w.client }}</i> }</span>@if (w.minutes) { <small>⏱ {{ hrs(w.minutes) }}</small> }</div>
             } @empty { <p class="hint">Not working on anything right now.</p> }
@@ -169,6 +194,16 @@ interface TaskForm {
     .rvw { color: #7a4dd8; font-weight: 600; } .okk { color: #11803b; font-weight: 600; }
     .tick.rv { border-color: #7a4dd8; color: #7a4dd8; font-size: 12px; }
     .rvb { display: flex; gap: 6px; flex: none; }
+    .ov { margin-bottom: 14px; }
+    .ovh { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .ovh h2 { font-size: 18px; letter-spacing: -0.01em; } .ovh .seg { margin: 0; } .ovh .seg button { flex: none; padding: 8px 14px; white-space: nowrap; }
+    .ovb { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+    .ovb app-donut { flex: 1 1 420px; }
+    @media (max-width: 560px) { .ovh .seg { width: 100%; } .ovh .seg button { flex: 1; padding: 8px 4px; } .ovk { flex: 1 1 100%; } }
+    .ovk { display: grid; grid-template-columns: repeat(2, minmax(110px, 1fr)); gap: 10px; flex: 0 1 280px; }
+    .kk { background: var(--bg); border-radius: 12px; padding: 12px 14px; } .kk b { display: block; font-size: 22px; letter-spacing: -0.01em; } .kk span { font-size: 12.5px; color: var(--ink-3); }
+    .kk.bad b { color: #c0262d; }
+    .mini { display: grid; gap: 4px; padding: 6px 0 2px; } .mfoot { font-size: 12px; color: var(--ink-3); }
     .teamgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
     .pc { display: flex; flex-direction: column; gap: 8px; animation: rise 0.35s var(--ease) both; }
     .ph { display: flex; gap: 12px; align-items: center; } .ph b { display: block; } .ph small { color: var(--ink-3); font-size: 12.5px; }
@@ -219,6 +254,9 @@ export class Tasks {
     ['todo', 'To do'], ['in_progress', 'In progress'], ['review', 'Review'], ...(this.canApprove() ? [['done', 'Done'] as [TaskStatus, string]] : []),
   ]);
   protected readonly team = signal<TeamRow[]>([]);
+  protected readonly overview = signal<TeamOverview | null>(null);
+  protected readonly period = signal<TaskPeriod>('month');
+  protected readonly periods: [TaskPeriod, string][] = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All time']];
 
   protected view: View = 'today';
   protected assigned = 'me';
@@ -261,7 +299,7 @@ export class Tasks {
 
   load(): void {
     this.loading.set(true);
-    if (this.view === 'team') this.api.team().subscribe((r) => this.team.set(r.data));
+    if (this.view === 'team') this.loadTeam();
     this.api.tasks({ view: this.view === 'team' ? 'today' : this.view, assigned: this.assigned, search: this.search }).subscribe({
       next: (r) => {
         this.result.set(r);
@@ -269,6 +307,39 @@ export class Tasks {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  loadTeam(): void {
+    this.api.team(this.period()).subscribe((r) => {
+      this.team.set(r.data);
+      this.overview.set(r.overview);
+    });
+  }
+
+  setPeriod(p: TaskPeriod): void {
+    this.period.set(p);
+    this.loadTeam();
+  }
+
+  /** The four statuses, always in the same order and colour. */
+  slices(s: TaskStats): DonutSlice[] {
+    return [
+      { key: 'todo', label: 'To do', value: s.todo, color: 'var(--st-todo)' },
+      { key: 'in_progress', label: 'In progress', value: s.in_progress, color: 'var(--st-progress)' },
+      { key: 'review', label: 'In review', value: s.review, color: 'var(--st-review)' },
+      { key: 'done', label: 'Done', value: s.done, color: 'var(--st-done)' },
+    ];
+  }
+
+  pct(n: number, of: number): number {
+    return Math.round((n / of) * 100);
+  }
+
+  periodText(o: TeamOverview): string {
+    const f = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    if (o.period === 'all') return 'Every task so far, for the whole team.';
+    const range = o.from === o.to ? f(o.from!) : `${f(o.from!)} – ${f(o.to!)}`;
+    return `Tasks due ${range}, plus older ones still open.`;
   }
 
   setView(v: View): void {
