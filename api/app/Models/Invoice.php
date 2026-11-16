@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    /** Not worth a line in the activity log. */
+    protected array $activityIgnore = ['reminders_sent', 'last_reminder_at', 'emailed_at'];
+
+    public function activityLabel(): string
+    {
+        return ($this->invoice_no ?: 'Draft invoice').' · '.($this->client?->company_name ?? '');
+    }
 
     protected $guarded = ['id'];
 

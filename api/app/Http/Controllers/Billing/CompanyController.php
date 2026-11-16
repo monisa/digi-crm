@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Services\Billing\CompanyProfile;
 use App\Services\Billing\Gst;
 use Illuminate\Http\JsonResponse;
@@ -46,6 +47,8 @@ class CompanyController extends Controller
             'pan.regex' => 'Enter a valid 10-character PAN, e.g. ABCDE1234F.',
             'invoice_prefix.regex' => 'Use up to 8 capital letters or digits, e.g. DFP.',
         ]);
+
+        ActivityLog::record('updated', 'Company & billing details', type: 'settings');
 
         return response()->json(['company' => $company->save(array_map(fn ($v) => $v ?? '', $data)), 'states' => array_values(Gst::STATES)]);
     }

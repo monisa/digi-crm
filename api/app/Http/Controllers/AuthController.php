@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,6 +59,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             RateLimiter::hit($throttleKey, self::LOCKOUT_SECONDS);
+            ActivityLog::record('login_failed', Str::lower($data['email']), $user, by: null, type: 'login');
             throw ValidationException::withMessages(['email' => 'The email or password is incorrect.']);
         }
 
@@ -79,12 +81,14 @@ class AuthController extends Controller
         }
 
         $user->forceFill(['last_login_at' => now()])->save();
+        ActivityLog::record('login', $user->name, $user, by: $user, type: 'login');
 
         return $this->tokenResponse($user, $request, 200, $remember);
     }
 
     public function logout(Request $request): JsonResponse
     {
+        ActivityLog::record('logout', $request->user()->name, $request->user(), type: 'login');
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logged out.']);

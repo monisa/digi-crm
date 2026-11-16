@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lead extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    /** Not worth a line in the activity log. */
+    protected array $activityIgnore = ['raw_payload', 'custom_fields', 'sla_alerted_at', 'meta_leadgen_id', 'meta_form_id'];
 
     protected $guarded = ['id'];
 

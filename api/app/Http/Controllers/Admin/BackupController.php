@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Services\Backup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class BackupController extends Controller
         abort_unless($request->user()->isAdmin(), 403, 'Only admins can download backups.');
         $path = $this->backup->path($name);
         abort_unless($path, 404);
+        ActivityLog::record('downloaded', $name, type: 'backup');
 
         return response()->download($path, $name, ['Content-Type' => str_ends_with($name, '.zip') ? 'application/zip' : 'application/gzip']);
     }

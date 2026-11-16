@@ -2,10 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 
 class SalaryStructure extends Model
 {
+    use LogsActivity;
+
+    /** Salary figures are logged as "changed", never with amounts. */
+    protected array $activityMask = ['*'];
+
+    public function activityLabel(): string
+    {
+        return 'Salary · '.(Employee::whereKey($this->employee_id)->value('name') ?? '');
+    }
+
     protected $guarded = ['id'];
 
     public const EARNINGS = ['basic' => 'Basic', 'hra' => 'House Rent Allowance', 'special_allowance' => 'Special Allowance', 'other_allowance' => 'Other Allowance'];

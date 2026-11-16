@@ -2,13 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LeaveRequest extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function activityLabel(): string
+    {
+        return 'Leave · '.($this->employee?->name ?? '').' · '.$this->from_date?->format('d M').($this->to_date && $this->to_date != $this->from_date ? ' – '.$this->to_date->format('d M') : '');
+    }
 
     protected $guarded = ['id'];
 

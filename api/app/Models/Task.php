@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
+    use LogsActivity;
+
     public const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
     public const STATUSES = ['todo', 'in_progress', 'review', 'done'];

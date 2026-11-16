@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
@@ -145,6 +146,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // Clients → "approve" = may reveal shared passwords (admins always can).
         Route::post('/clients/{client}/credentials', [ClientAssetsController::class, 'credentials'])->middleware('permission:clients.approve');
 
+        Route::get('/settings/activity', [ActivityController::class, 'index']);
         Route::get('/settings/backups', [BackupController::class, 'index']);
         Route::post('/settings/backups', [BackupController::class, 'run'])->middleware('throttle:6,1');
         Route::get('/settings/backups/{name}', [BackupController::class, 'download'])->where('name', '[A-Za-z0-9.\-]+');
