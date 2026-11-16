@@ -34,12 +34,14 @@ class TaskController extends Controller
         $view = $f['view'] ?? 'today';
         $today = today()->toDateString();
 
-        $q = (clone $base)->with(['assignee:id,name', 'creator:id,name', 'client:id,company_name', 'ticket:id,subject', 'series:id,repeat', 'reviewer:id,name'])
-            ->when($f['assigned'] ?? null, fn ($q, $a) => match ($a) {
-                'me' => $q->where('assigned_to', $user->id),
-                'none' => $q->whereNull('assigned_to'),
-                default => $q->where('assigned_to', (int) $a),
-            })
+        // Whose tasks: me | none | a person; empty = everyone this user can see.
+        $who = fn () => (clone $base)->when($f['assigned'] ?? null, fn ($q, $a) => match ($a) {
+            'me' => $q->where('assigned_to', $user->id),
+            'none' => $q->whereNull('assigned_to'),
+            default => $q->where('assigned_to', (int) $a),
+        });
+
+        $q = $who()->with(['assignee:id,name', 'creator:id,name', 'client:id,company_name', 'ticket:id,subject', 'series:id,repeat', 'reviewer:id,name'])
             ->when($f['client_id'] ?? null, fn ($q, $c) => $q->where('client_id', $c))
             ->when($f['search'] ?? null, fn ($q, $s) => $q->where('title', 'like', "%$s%"));
         $this->applyView($q, $view, $today);
@@ -50,18 +52,15 @@ class TaskController extends Controller
             ->when($view === 'review', fn ($q) => $q->reorder()->orderBy('submitted_at'))
             ->limit($view === 'done' || $view === 'all' ? 200 : 500)->get();
 
-        $mine = fn () => (clone $base)->where('assigned_to', $user->id);
-
         return response()->json([
             'data' => $tasks->map->toApiArray(),
             'counts' => [
-                'today' => $this->applyView($mine(), 'today', $today)->count(),
-                'overdue' => $this->applyView($mine(), 'overdue', $today)->count(),
-                'upcoming' => $this->applyView($mine(), 'upcoming', $today)->count(),
-                // Managers: the whole team's finished work; others: their own.
-                'done_today' => (Task::seesTeam($user) ? (clone $base) : $mine())->where('status', 'done')->whereDate('completed_at', $today)->count(),
-                // Managers: everything waiting for a check; others: their own tasks waiting.
-                'review' => (Task::canApprove($user) ? (clone $base) : $mine())->where('status', 'review')->count(),
+                // The counts follow the same "whose tasks" choice as the list.
+                'today' => $this->applyView($who(), 'today', $today)->count(),
+                'overdue' => $this->applyView($who(), 'overdue', $today)->count(),
+                'upcoming' => $this->applyView($who(), 'upcoming', $today)->count(),
+                'done_today' => $who()->where('status', 'done')->whereDate('completed_at', $today)->count(),
+                'review' => $who()->where('status', 'review')->count(),
             ],
             'can_manage' => $user->hasPermission('tasks.edit'),
             'can_approve' => Task::canApprove($user),

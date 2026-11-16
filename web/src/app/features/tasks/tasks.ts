@@ -242,6 +242,8 @@ export class Tasks {
 
   constructor() {
     this.search$.pipe(debounceTime(300)).subscribe(() => this.load());
+    // Managers and the super admin start on the whole team; employees on their own tasks.
+    if (this.auth.can('tasks.edit') || this.auth.can('tasks.approve')) this.assigned = '';
     if (this.auth.can('tasks.edit') || this.auth.can('tasks.approve')) inject(LeadsService).options().subscribe((o) => this.staff.set(o.assignees));
     if (this.auth.can('clients.view')) inject(BillingService).clients({ status: 'active' }).subscribe((r) => this.clients.set(r.data));
     const v = inject(ActivatedRoute).snapshot.queryParamMap.get('view') as View | null;
@@ -252,8 +254,9 @@ export class Tasks {
   greeting(): string {
     const c = this.counts();
     if (this.loading()) return 'Your work for today.';
-    if (!c.today) return 'Nothing left for today. Nice work!';
-    return `${c.today} to do today${c.overdue ? `, ${c.overdue} overdue` : ''}.`;
+    const who = this.assigned === '' ? 'Whole team: ' : this.assigned === 'me' ? '' : (this.staff().find((u) => '' + u.id === this.assigned)?.name ?? 'Unassigned') + ': ';
+    if (!c.today) return who ? `${who}nothing left for today.` : 'Nothing left for today. Nice work!';
+    return `${who}${c.today} to do today${c.overdue ? `, ${c.overdue} overdue` : ''}.`;
   }
 
   load(): void {
@@ -269,8 +272,6 @@ export class Tasks {
   }
 
   setView(v: View): void {
-    // Managers check and look back over the whole team's work.
-    if ((v === 'review' || v === 'done') && this.seesTeam() && this.assigned === 'me' && this.view !== v) this.assigned = '';
     this.view = v;
     this.load();
   }
