@@ -139,6 +139,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/chat/chat').then((m) => m.Chat),
       },
       {
+        path: 'whatsapp',
+        title: T('WhatsApp'),
+        canActivate: [moduleGuard],
+        data: { module: 'whatsapp' },
+        loadComponent: () => import('./features/whatsapp/whatsapp').then((m) => m.WhatsAppInbox),
+      },
+      {
         path: 'leave',
         title: T('Leave'),
         canActivate: [moduleGuard],

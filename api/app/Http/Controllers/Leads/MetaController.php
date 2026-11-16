@@ -37,6 +37,13 @@ class MetaController extends Controller
             return response('Invalid signature', 403);
         }
 
+        // WhatsApp events, if Meta was given this same URL for them.
+        if ($request->input('object') === 'whatsapp_business_account') {
+            app(\App\Http\Controllers\WhatsApp\WhatsAppController::class)->handle($request->input('entry', []));
+
+            return response('EVENT_RECEIVED', 200);
+        }
+
         foreach ($request->input('entry', []) as $entry) {
             foreach ($entry['changes'] ?? [] as $change) {
                 if (($change['field'] ?? null) === 'leadgen' && isset($change['value']['leadgen_id'])) {

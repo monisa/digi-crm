@@ -20,6 +20,7 @@ use App\Http\Controllers\Hr\PayslipController;
 use App\Http\Controllers\Hr\SalaryController;
 use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
+use App\Http\Controllers\WhatsApp\WhatsAppController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OnboardingController;
@@ -49,6 +50,9 @@ Route::post('/payments/razorpay/callback', [OnlinePaymentController::class, 'cal
 // Meta Lead Ads webhook (verified by signature, not by login).
 Route::get('/webhooks/meta', [MetaController::class, 'verify']);
 Route::post('/webhooks/meta', [MetaController::class, 'receive'])->middleware('throttle:600,1');
+// WhatsApp Business webhook: incoming messages and delivery ticks (same Meta app secret).
+Route::get('/webhooks/whatsapp', [WhatsAppController::class, 'verify']);
+Route::post('/webhooks/whatsapp', [WhatsAppController::class, 'receive'])->middleware('throttle:600,1');
 
 // Onboarding form opened from a shared link (no login).
 Route::get('/public/onboarding/{token}', [PublicOnboardingController::class, 'show'])->middleware('throttle:60,1');
@@ -124,6 +128,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/leads/{lead}/convert', [LeadController::class, 'convert'])->middleware('permission:leads.edit');
 
     Route::get('/integrations/meta', [MetaController::class, 'index'])->middleware('permission:settings.view');
+    Route::get('/integrations/whatsapp', [WhatsAppController::class, 'settings'])->middleware('permission:settings.view');
+    Route::post('/integrations/whatsapp', [WhatsAppController::class, 'connect'])->middleware('permission:settings.edit');
+    Route::delete('/integrations/whatsapp', [WhatsAppController::class, 'disconnect'])->middleware('permission:settings.edit');
     Route::post('/integrations/meta/pages', [MetaController::class, 'store'])->middleware('permission:settings.edit');
     Route::delete('/integrations/meta/pages/{metaPage}', [MetaController::class, 'destroy'])->middleware('permission:settings.edit');
     Route::post('/integrations/meta/sync', [MetaController::class, 'sync'])->middleware('permission:settings.edit');
@@ -213,6 +220,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('permission:campaigns.delete');
         Route::post('/campaigns/{campaign}/files', [CampaignController::class, 'upload'])->middleware('permission:campaigns.edit');
         Route::delete('/campaign-files/{file}', [CampaignController::class, 'deleteFile'])->middleware('permission:campaigns.edit');
+    });
+
+    // WhatsApp Business: inbox and conversations with leads / clients.
+    Route::middleware(['staff', 'permission:whatsapp.view'])->prefix('whatsapp')->group(function () {
+        Route::get('/status', [WhatsAppController::class, 'status']);
+        Route::get('/inbox', [WhatsAppController::class, 'inbox']);
+        Route::get('/thread', [WhatsAppController::class, 'thread']);
+        Route::get('/templates', [WhatsAppController::class, 'templates'])->middleware('permission:whatsapp.create');
+        Route::post('/send', [WhatsAppController::class, 'send'])->middleware(['permission:whatsapp.create', 'throttle:60,1']);
     });
 
     // Team chat (staff only; the app polls).

@@ -20,6 +20,7 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_URL" value="http://localhost"/>
+        <env name="META_GRAPH_URL" value="https://graph.facebook.com"/>
         <env name="FRONTEND_URL" value="http://localhost:4200"/>
         <env name="APP_KEY" value="base64:d88nC/9JkJ2M0o/fiylLGlZrdQWmg6j1xEGD4SsA9f4="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>

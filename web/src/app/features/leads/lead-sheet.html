@@ -3,7 +3,11 @@
     <div class="contact">
       @if (l.phone) {
         <a class="cbtn call" [href]="'tel:' + l.phone" (click)="quick('call')">📞 Call</a>
-        <a class="cbtn wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" (click)="quick('whatsapp')">💬 WhatsApp</a>
+        @if (waReady()) {
+          <button type="button" class="cbtn wa" (click)="waOpen.set(true)">💬 WhatsApp</button>
+        } @else {
+          <a class="cbtn wa" [href]="'https://wa.me/' + wa(l.phone)" target="_blank" rel="noopener" (click)="quick('whatsapp')">💬 WhatsApp</a>
+        }
       }
       @if (l.email) { <a class="cbtn" [href]="'mailto:' + l.email">✉️ Email</a> }
       <span class="meta">{{ l.phone }}@if (l.city) { · {{ l.city }} }@if (l.platform) { · {{ l.platform }} }</span>
@@ -106,3 +110,5 @@
     <p class="hint">Loading…</p>
   }
 </app-sheet>
+
+@if (waOpen() && lead(); as l) { <app-wa-chat [who]="{ lead_id: l.id }" [firstName]="l.full_name.split(' ')[0]" (closed)="waClosed()" /> }

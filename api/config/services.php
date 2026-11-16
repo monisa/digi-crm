@@ -48,6 +48,8 @@ return [
         'app_secret' => env('META_APP_SECRET'),
         'verify_token' => env('META_VERIFY_TOKEN'),
         'graph_version' => env('META_GRAPH_VERSION', 'v21.0'),
+        // Only changed for local testing against a stand-in server.
+        'graph_url' => env('META_GRAPH_URL', 'https://graph.facebook.com'),
     ],
 
     // "Sign in with Google": OAuth client ID from Google Cloud Console

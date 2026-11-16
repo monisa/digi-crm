@@ -21,6 +21,10 @@
         <a class="btn-ghost" [routerLink]="['/clients', c.id, 'onboarding']">{{ c.onboarded_at ? 'Edit onboarding form' : 'Fill onboarding form' }}</a>
         @if (!c.onboarded_at) { <button class="btn-ghost" (click)="sendLink()">🔗 Send form link</button> }
       }
+      @if (c.phone) {
+        @if (auth.can('whatsapp.view') && waConnected()) { <button class="btn-ghost" (click)="waOpen.set(true)">💬 WhatsApp</button> }
+        @else { <a class="btn-ghost" [href]="'https://wa.me/' + waDigits(c.phone)" target="_blank" rel="noopener">💬 WhatsApp</a> }
+      }
       @if (auth.can('invoices.create')) { <a class="btn" [routerLink]="['/invoices/new']" [queryParams]="{ client: c.id }">+ New invoice</a> }
     </div>
   </section>
@@ -199,3 +203,5 @@
     } @else { <p class="hint">Loading…</p> }
   </app-sheet>
 }
+
+@if (waOpen() && c(); as c) { <app-wa-chat [who]="{ client_id: c.id }" [firstName]="(c.contact_name || '').split(' ')[0]" (closed)="waOpen.set(false)" /> }

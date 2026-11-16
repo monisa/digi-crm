@@ -28,6 +28,8 @@ return [
         'attendance' => ['Attendance', false],
         // Internal team chat (staff only).
         'chat' => ['Team chat', false],
+        // WhatsApp Business: view = inbox and conversations; create = send messages.
+        'whatsapp' => ['WhatsApp', false],
         'campaigns' => ['Campaigns', true],
         'invoices' => ['Invoices & Payments', true],
         'tickets' => ['Tickets', true],
@@ -70,6 +72,7 @@ return [
         'leave_requested' => ['Leave request to approve', 'leave', 'staff'],
         'leave_decided' => ['My leave was approved or rejected', 'leave', 'staff'],
         'payment_claim' => ['Client says they have paid', 'billing', 'staff'],
+        'whatsapp_in' => ['A WhatsApp message from my lead / client', 'whatsapp', 'staff'],
         'chat_mention' => ['Someone @mentions me in team chat', 'chat', 'staff'],
         'task_assigned' => ['A task is assigned to me', 'tasks', 'staff'],
         'task_review' => ['A task is waiting for my check', 'tasks', 'staff'],
@@ -121,6 +124,7 @@ return [
             'tasks.view', 'tasks.create',
             'attendance.view', 'attendance.create',
             'chat.view', 'chat.create',
+            'whatsapp.view', 'whatsapp.create',
             'notifications.view',
         ],
         'client' => [
