@@ -11,6 +11,7 @@
         @for (item of section.items; track item.path) {
           <a [routerLink]="item.path" routerLinkActive="active" [attr.title]="item.label">
             <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
+            @if (item.module === 'whatsapp' && wa.unread()) { <i class="nbadge">{{ wa.unread() > 99 ? '99+' : wa.unread() }}</i> }
           </a>
         }
       </nav>

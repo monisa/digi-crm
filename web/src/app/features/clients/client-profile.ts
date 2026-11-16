@@ -13,13 +13,15 @@ import { ShareLink, formUrl } from '../../shared/share-link';
 import { Dialog } from '../../shared/dialog';
 import { Campaign, PortalService, TICKET_STATUS, Ticket } from '../../core/portal.service';
 import { CampaignSheet } from '../campaigns/campaign-sheet';
+import { WaChat } from '../../shared/wa-chat';
+import { WhatsAppService } from '../../core/whatsapp.service';
 
 type Tab = 'overview' | 'campaigns' | 'tickets' | 'invoices';
 const TABS: Tab[] = ['overview', 'campaigns', 'tickets', 'invoices'];
 
 @Component({
   selector: 'app-client-profile',
-  imports: [FormsModule, RouterLink, ClientForm, KeyValuePipe, TitleCasePipe, Sheet, ShareLink, CampaignSheet],
+  imports: [FormsModule, RouterLink, ClientForm, KeyValuePipe, TitleCasePipe, Sheet, ShareLink, CampaignSheet, WaChat],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',
 })
@@ -38,6 +40,13 @@ export class ClientProfile {
   protected readonly tab = signal<Tab>('overview');
   protected readonly invoices = signal<InvoiceRow[] | null>(null);
   protected readonly editing = signal(false);
+  protected readonly waOpen = signal(false);
+  protected readonly waConnected = inject(WhatsAppService).connected;
+
+  waDigits(p: string): string {
+    const d = p.replace(/\D/g, '').replace(/^0(?=\d{10}$)/, '');
+    return d.length === 10 ? '91' + d : d;
+  }
   protected readonly inviting = signal(false);
   protected inviteName = '';
   protected inviteEmail = '';

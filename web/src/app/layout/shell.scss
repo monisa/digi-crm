@@ -135,3 +135,5 @@ main { min-width: 0; }
 .px { color: var(--ink-3); font-size: 12px; padding: 4px; }
 @media (max-width: 860px) { .pings { right: 12px; bottom: 96px; } }
 @media (prefers-reduced-motion: reduce) { .ping { animation: none; } }
+
+.nbadge { margin-left: auto; font-style: normal; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #25a35a; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }

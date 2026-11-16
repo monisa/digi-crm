@@ -5,13 +5,15 @@ import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
 import { Lead, LeadOptions, LeadStatus, LeadsService, waNumber } from '../../core/leads.service';
 import { Sheet } from '../../shared/sheet';
+import { WaChat } from '../../shared/wa-chat';
+import { WhatsAppService } from '../../core/whatsapp.service';
 import { Toast } from '../../shared/toast.service';
 import { Dialog } from '../../shared/dialog';
 
 /** Everything about one lead: contact buttons, stage, sheet fields, logging and history. */
 @Component({
   selector: 'app-lead-sheet',
-  imports: [FormsModule, Sheet],
+  imports: [FormsModule, Sheet, WaChat],
   templateUrl: './lead-sheet.html',
   styleUrl: './lead-sheet.scss',
 })
@@ -26,6 +28,10 @@ export class LeadSheet {
   private toast = inject(Toast);
   private router = inject(Router);
   protected readonly auth = inject(AuthService);
+  private waApi = inject(WhatsAppService);
+  /** WhatsApp Business connected: messages go from the CRM (else the WhatsApp app opens). */
+  protected readonly waReady = computed(() => this.auth.can('whatsapp.view') && this.waApi.connected() === true);
+  protected readonly waOpen = signal(false);
 
   protected readonly lead = signal<Lead | null>(null);
   protected f: Record<string, string | number | null> = {};
@@ -46,6 +52,15 @@ export class LeadSheet {
 
   ngOnInit(): void {
     this.api.get(this.leadId()).subscribe((l) => this.set(l));
+  }
+
+  /** After WhatsApp: reload, so the sent messages show in the activity list. */
+  waClosed(): void {
+    this.waOpen.set(false);
+    this.api.get(this.leadId()).subscribe((l) => {
+      this.set(l);
+      this.changed.emit(l);
+    });
   }
 
   private set(l: Lead): void {

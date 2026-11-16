@@ -6,6 +6,7 @@ import { NAV_ITEMS, NavItem } from '../core/navigation';
 import { Toast } from '../shared/toast.service';
 import { Bell } from './bell';
 import { ChatService } from '../core/chat.service';
+import { WhatsAppService } from '../core/whatsapp.service';
 import { Icon } from './icon';
 import { AccountSheet, AccountTab } from './account-sheet';
 
@@ -19,6 +20,7 @@ export class Shell {
   protected readonly auth = inject(AuthService);
   protected readonly toast = inject(Toast);
   protected readonly chat = inject(ChatService);
+  protected readonly wa = inject(WhatsAppService);
 
   /** Menu items this user may see, grouped by section. */
   protected readonly sections = computed(() => {
@@ -60,6 +62,10 @@ export class Shell {
     const pollChat = () => this.auth.canView('chat') && this.chat.refreshUnread();
     setTimeout(pollChat, 1500);
     setInterval(pollChat, 10000);
+    // WhatsApp: is a number connected (for the buttons) and unread replies (menu badge).
+    const pollWa = () => this.auth.canView('whatsapp') && !document.hidden && this.wa.status().subscribe({ error: () => {} });
+    setTimeout(pollWa, 2000);
+    setInterval(pollWa, 30000);
     // "(3) DigiFox Pro CRM" in the browser tab when chats are unread.
     effect(() => this.applyTitle(this.chat.unread()));
 
