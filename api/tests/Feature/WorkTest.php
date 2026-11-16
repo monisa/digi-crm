@@ -93,6 +93,10 @@ class WorkTest extends TestCase
         $this->assertSame(1, $row['done_today']);
         $this->assertSame(90, $row['minutes_done_today']);
         $this->getJson('/v1/tasks?view=done')->assertJsonCount(1, 'data')->assertJsonPath('can_approve', true);
+        // The super admin sees everyone's to-do list, and the counts follow the "whose tasks" choice.
+        $this->as($this->admin)->getJson('/v1/tasks?view=today')->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Reel edit')->assertJsonPath('counts.today', 1);
+        $this->getJson('/v1/tasks?view=today&assigned=me')->assertJsonCount(0, 'data')->assertJsonPath('counts.today', 0);
     }
 
     public function test_employees_only_add_tasks_for_themselves_and_see_their_own(): void
