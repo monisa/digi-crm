@@ -179,4 +179,29 @@ class ChatTest extends TestCase
         $this->assertStringContainsString('setup.exe', json_encode($r->json('errors')));
         $this->post("/v1/chat/conversations/$id/messages", ['files' => [UploadedFile::fake()->createWithContent('page.html', '<script>alert(1)</script>')]], ['Accept' => 'application/json'])->assertStatus(422);
     }
+
+    public function test_mentions_notify_only_real_members_named_in_the_text(): void
+    {
+        $priya = $this->staff('Priya Raj');
+        $arjun = $this->staff('Arjun Menon');
+        $neha = $this->staff('Neha');
+        $outsider = $this->staff('Outsider');
+        $g = $this->as($priya)->postJson('/v1/chat/groups', ['name' => 'Spice Route team', 'member_ids' => [$arjun->id, $neha->id]])->json('id');
+
+        // Arjun is named; Neha was picked but her name was deleted from the text; the outsider isn't in the group.
+        $m = $this->postJson("/v1/chat/conversations/$g/messages", ['body' => '@Arjun Menon can you check the reel?', 'mention_ids' => [$arjun->id, $neha->id, $outsider->id, $priya->id]])
+            ->assertCreated()->assertJsonPath('mentions', [$arjun->id]);
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $arjun->id, 'data->type' => 'chat_mention']);
+        $this->assertDatabaseMissing('notifications', ['notifiable_id' => $neha->id, 'data->type' => 'chat_mention']);
+        $this->assertDatabaseMissing('notifications', ['notifiable_id' => $outsider->id]);
+
+        // The pop-up for Arjun says he was mentioned.
+        $this->as($arjun)->getJson('/v1/chat/unread?since_id='.($m['id'] - 1))->assertJsonPath('latest.0.mention', true);
+        $this->getJson("/v1/chat/conversations/$g/messages")->assertJsonPath('data.1.mentions', [$arjun->id]);
+
+        // @everyone reaches the whole group except the sender.
+        $this->as($neha)->postJson("/v1/chat/conversations/$g/messages", ['body' => 'Hi @everyone, call at 4', 'mention_everyone' => true])
+            ->assertJsonCount(2, 'mentions');
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $priya->id, 'data->type' => 'chat_mention']);
+    }
 }

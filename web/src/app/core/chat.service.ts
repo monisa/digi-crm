@@ -19,12 +19,14 @@ export interface ChatMessage {
   conversation_id: number;
   user: ChatPerson | null; // null = system note ("Priya created the group")
   body: string | null;
+  /** User ids @mentioned in the text. */
+  mentions?: number[];
   file: { name: string; mime: string; size: number; image: boolean } | null; // older single attachment
   files: ChatFile[];
   deleted: boolean;
   created_at: string;
 }
-export interface ChatPing { id: number; conversation_id: number; chat: string | null; from: string; text: string }
+export interface ChatPing { id: number; conversation_id: number; chat: string | null; from: string; text: string; mention?: boolean }
 export interface ChatFile { id: number; name: string; mime: string | null; size: number; image: boolean }
 export interface MessagePage { data: ChatMessage[]; deleted_ids: number[]; has_more: boolean; read_upto: number }
 
@@ -63,7 +65,7 @@ export class ChatService {
   private notify(m: ChatPing): void {
     const looking = this.viewing() === m.conversation_id && !document.hidden;
     if (looking) return;
-    const title = m.chat ? `${m.from} · ${m.chat}` : m.from;
+    const title = (m.mention ? '@ ' : '') + (m.chat ? `${m.from} · ${m.chat}` : m.from) + (m.mention ? ' mentioned you' : '');
     if (!document.hidden) {
       this.pings.update((l) => [...l.filter((x) => x.conversation_id !== m.conversation_id), m].slice(-3));
       setTimeout(() => this.dismiss(m.id), 7000);
@@ -160,9 +162,11 @@ export class ChatService {
     if (opts.before_id) params['before_id'] = String(opts.before_id);
     return this.http.get<MessagePage>(`${this.base}/conversations/${id}/messages`, { params });
   }
-  send(id: number, body: string, files: File[] = []): Observable<ChatMessage> {
+  send(id: number, body: string, files: File[] = [], mentionIds: number[] = [], everyone = false): Observable<ChatMessage> {
     const fd = new FormData();
     if (body) fd.append('body', body);
+    mentionIds.forEach((m) => fd.append('mention_ids[]', String(m)));
+    if (everyone) fd.append('mention_everyone', '1');
     files.forEach((f) => fd.append('files[]', f));
     return this.http.post<ChatMessage>(`${this.base}/conversations/${id}/messages`, fd);
   }

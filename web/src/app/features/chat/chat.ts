@@ -42,6 +42,22 @@ export class Chat implements OnDestroy {
   private static readonly MAX_SIZE = 20 * 1024 * 1024;
   private static readonly BLOCKED = /\.(exe|msi|bat|cmd|com|scr|pif|cpl|dll|sys|vbs|vbe|js|jse|wsf|wsh|ps1|psm1|sh|bash|php|phtml|phar|pl|py|rb|jar|apk|app|dmg|html?|xhtml|svgz|hta|lnk|reg|msp|iso)$/i;
 
+  // @mentions: the word being typed after "@", the highlighted choice, and the people picked so far.
+  protected readonly mentionQ = signal<string | null>(null);
+  protected readonly mentionIdx = signal(0);
+  private mentionAt = 0;
+  private picks = new Map<number, string>();
+  protected readonly mentionList = computed((): ChatPerson[] => {
+    const q = this.mentionQ();
+    const c = this.active();
+    if (q === null || !c) return [];
+    const s = q.toLowerCase();
+    const hit = (name: string) => !s || name.toLowerCase().startsWith(s) || name.toLowerCase().split(/\s+/).some((w) => w.startsWith(s));
+    const people = c.members.filter((p) => p.id !== this.me() && hit(p.name));
+    const all = c.type === 'group' && 'everyone'.startsWith(s) ? [{ id: 0, name: 'everyone' }] : [];
+    return [...people.slice(0, 7), ...all];
+  });
+
   // New chat / group
   protected readonly picker = signal<'direct' | 'group' | 'edit' | null>(null);
   protected readonly people = signal<ChatPerson[]>([]);
@@ -87,6 +103,8 @@ export class Chat implements OnDestroy {
     this.activeId.set(id);
     this.api.viewing.set(id);
     this.msgs.set([]);
+    this.picks.clear();
+    this.mentionQ.set(null);
     this.text = ''; // a half-typed message stays with the chat it was meant for only while it is open
     this.router.navigate([], { queryParams: { c: id }, replaceUrl: true });
     this.api.messages(id).subscribe((r) => {
@@ -179,9 +197,58 @@ export class Chat implements OnDestroy {
   }
 
   onKey(e: KeyboardEvent): void {
+    const list = this.mentionList();
+    if (list.length) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.mentionIdx.update((i) => (i + (e.key === 'ArrowDown' ? 1 : list.length - 1)) % list.length);
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey) {
+        e.preventDefault();
+        this.pickMention(list[Math.min(this.mentionIdx(), list.length - 1)]!);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.mentionQ.set(null);
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !(e as KeyboardEvent & { isComposing?: boolean }).isComposing) {
       e.preventDefault();
       this.send();
+    }
+  }
+
+  /** Open the people list when the word at the cursor starts with "@" (up to two words, e.g. "@Priya R"). */
+  checkMention(): void {
+    const el = this.box()?.nativeElement;
+    if (!el) return;
+    const before = el.value.slice(0, el.selectionStart ?? el.value.length);
+    const m = before.match(/(?:^|\s)@([^\s@]{0,30}(?: [^\s@]{0,30})?)$/u);
+    const q = m ? m[1]! : null;
+    if (q !== this.mentionQ()) this.mentionIdx.set(0);
+    this.mentionAt = m ? before.length - q!.length - 1 : 0;
+    this.mentionQ.set(q);
+    // "@Priya hello" with no match after the space: stop suggesting.
+    if (q?.includes(' ') && !this.mentionList().length) this.mentionQ.set(null);
+  }
+
+  pickMention(p: ChatPerson): void {
+    const el = this.box()?.nativeElement;
+    const end = el?.selectionStart ?? this.text.length;
+    const name = p.id === 0 ? 'everyone' : p.name;
+    if (p.id) this.picks.set(p.id, p.name);
+    this.text = this.text.slice(0, this.mentionAt) + '@' + name + ' ' + this.text.slice(end);
+    this.mentionQ.set(null);
+    // Put the cursor right after the name straight away (so typing carries on there).
+    const caret = this.mentionAt + name.length + 2;
+    if (el) {
+      el.value = this.text;
+      el.focus();
+      el.setSelectionRange(caret, caret);
     }
   }
 
@@ -260,10 +327,14 @@ export class Chat implements OnDestroy {
     const body = this.text.trim();
     if (!id || (!body && !this.files().length) || this.sending()) return;
     this.sending.set(true);
-    this.api.send(id, body, this.files()).subscribe({
+    const mentionIds = [...this.picks].filter(([, name]) => body.includes('@' + name)).map(([pid]) => pid);
+    const everyone = this.active()?.type === 'group' && /(^|\s)@everyone\b/i.test(body);
+    this.mentionQ.set(null);
+    this.api.send(id, body, this.files(), mentionIds, everyone).subscribe({
       next: (m) => {
         this.sending.set(false);
         this.text = '';
+        this.picks.clear();
         Object.values(this.previews()).forEach((u) => URL.revokeObjectURL(u));
         this.previews.set({});
         this.files.set([]);
@@ -408,8 +479,30 @@ export class Chat implements OnDestroy {
     return n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`;
   }
 
-  /** Turn links into clickable ones (text only, no HTML). */
-  parts(body: string): { t: string; url?: string }[] {
-    return body.split(/(https?:\/\/[^\s]+)/g).filter(Boolean).map((t) => (/^https?:\/\//.test(t) ? { t, url: t } : { t }));
+  mentionsMe(m: ChatMessage): boolean {
+    return !!m.mentions?.includes(this.me());
+  }
+
+  /** Links become clickable and @mentions are highlighted (text only, no HTML). */
+  parts(m: ChatMessage): { t: string; url?: string; at?: 'me' | 'other' }[] {
+    const body = m.body ?? '';
+    const ids = m.mentions ?? [];
+    const members = this.active()?.members ?? [];
+    const names = members.filter((p) => ids.includes(p.id)).map((p) => ({ name: p.name, me: p.id === this.me() }));
+    if (ids.length && /@everyone\b/i.test(body)) names.push({ name: 'everyone', me: ids.includes(this.me()) });
+    names.sort((a, b) => b.name.length - a.name.length);
+    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const at = names.length ? new RegExp(`(@(?:${names.map((n) => esc(n.name)).join('|')}))`, 'gi') : null;
+    const out: { t: string; url?: string; at?: 'me' | 'other' }[] = [];
+    for (const t of body.split(/(https?:\/\/[^\s]+)/g).filter(Boolean)) {
+      if (/^https?:\/\//.test(t)) out.push({ t, url: t });
+      else if (!at) out.push({ t });
+      else
+        for (const x of t.split(at).filter(Boolean)) {
+          const hit = x.startsWith('@') ? names.find((n) => '@' + n.name.toLowerCase() === x.toLowerCase()) : undefined;
+          out.push(hit ? { t: x, at: hit.me ? 'me' : 'other' } : { t: x });
+        }
+    }
+    return out;
   }
 }

@@ -68,7 +68,7 @@
         @for (m of chat.pings(); track m.id) {
           <button class="ping" (click)="chat.dismiss(m.id); chat.openChat(m.conversation_id)">
             <span class="pav">{{ initials(m.from) }}</span>
-            <span class="pt"><b>{{ m.from }}@if (m.chat) { <i>· {{ m.chat }}</i> }</b><small>{{ m.text }}</small></span>
+            <span class="pt">@if (m.mention) { <em class="pmen">@ mentioned you</em> }<b>{{ m.from }}@if (m.chat) { <i>· {{ m.chat }}</i> }</b><small>{{ m.text }}</small></span>
             <span class="px" (click)="$event.stopPropagation(); chat.dismiss(m.id)" aria-label="Close">✕</span>
           </button>
         }

@@ -11,7 +11,7 @@ class Message extends Model
 
     protected function casts(): array
     {
-        return ['deleted_at' => 'datetime'];
+        return ['deleted_at' => 'datetime', 'mentions' => 'array'];
     }
 
     public function user(): BelongsTo
@@ -47,6 +47,8 @@ class Message extends Model
             'conversation_id' => $this->conversation_id,
             'user' => $this->user ? ['id' => $this->user->id, 'name' => $this->user->name] : null,
             'body' => $gone ? null : $this->body,
+            // User ids @mentioned in the text.
+            'mentions' => $gone ? [] : array_values(array_map('intval', $this->mentions ?? [])),
             'file' => ! $gone && $this->file_path ? [
                 'name' => $this->file_name, 'mime' => $this->file_mime, 'size' => $this->file_size,
                 'image' => str_starts_with((string) $this->file_mime, 'image/'),

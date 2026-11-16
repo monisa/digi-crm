@@ -131,6 +131,7 @@ main { min-width: 0; }
 .pav { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700; font-size: 13px; color: #fff; background: linear-gradient(135deg, #2f6fde, #5b8def); }
 .pt { flex: 1; min-width: 0; } .pt b { display: block; font-size: 14px; } .pt i { font-style: normal; font-weight: 500; color: var(--ink-3); }
 .pt small { display: block; color: var(--ink-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmen { display: block; font-style: normal; font-size: 11px; font-weight: 700; color: var(--brand-deep); text-transform: uppercase; letter-spacing: 0.04em; }
 .px { color: var(--ink-3); font-size: 12px; padding: 4px; }
 @media (max-width: 860px) { .pings { right: 12px; bottom: 96px; } }
 @media (prefers-reduced-motion: reduce) { .ping { animation: none; } }

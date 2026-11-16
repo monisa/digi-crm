@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Notify;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ChatController extends Controller
 {
+    public function __construct(private Notify $notify) {}
+
     /**
      * Any normal file may be shared (photos incl. iPhone HEIC, documents, design files, video,
      * voice notes, archives). Only programs and scripts that could run on someone's computer
@@ -73,6 +76,7 @@ class ChatController extends Controller
                     'chat' => $m->conversation->type === 'direct' ? null : $m->conversation->name,
                     'from' => $m->user?->name,
                     'text' => $m->body ? mb_strimwidth($m->body, 0, 140, '…') : $m->attachmentLabel(),
+                    'mention' => in_array($me->id, array_map('intval', $m->mentions ?? []), true),
                 ])->reverse()->values();
         }
 
@@ -187,6 +191,9 @@ class ChatController extends Controller
             'file' => ['nullable', 'file', 'max:20480', $this->safeFile()],
             'files' => ['nullable', 'array', 'max:10'],
             'files.*' => ['file', 'max:20480', $this->safeFile()],
+            'mention_ids' => ['nullable', 'array', 'max:100'],
+            'mention_ids.*' => ['integer'],
+            'mention_everyone' => ['nullable', 'boolean'],
         ], [
             'file.max' => 'Files must be under 20 MB.', 'files.*.max' => 'Each file must be under 20 MB.',
             'files.max' => 'Send up to 10 files at a time.', 'body.required_without_all' => 'Type a message.',
@@ -195,7 +202,14 @@ class ChatController extends Controller
         $total = array_sum(array_map(fn ($f) => $f->getSize(), $files));
         abort_if($total > 60 * 1024 * 1024, 422, 'Files together must be under 60 MB.');
 
-        $msg = $this->post($conversation, $me, trim((string) ($d['body'] ?? '')) ?: null, files: $files);
+        $body = trim((string) ($d['body'] ?? '')) ?: null;
+        $mentioned = $this->mentioned($conversation, $me, $body, $d['mention_ids'] ?? [], (bool) ($d['mention_everyone'] ?? false));
+        $msg = $this->post($conversation, $me, $body, files: $files, mentions: $mentioned->pluck('id')->all());
+
+        if ($mentioned->isNotEmpty()) {
+            $where = $conversation->type === 'direct' ? 'in a direct message' : 'in '.$conversation->name;
+            $this->notify->send($mentioned, 'chat_mention', $me->name.' mentioned you '.$where, mb_strimwidth((string) $body, 0, 160, '…'), '/chat?c='.$conversation->id, actor: $me);
+        }
 
         return response()->json($msg->load(['user:id,name', 'files'])->toApiArray(), 201);
     }
@@ -275,11 +289,12 @@ class ChatController extends Controller
     }
 
     /** @param list<\Illuminate\Http\UploadedFile> $files */
-    private function post(Conversation $c, User $by, ?string $body, array $files = [], bool $system = false): Message
+    private function post(Conversation $c, User $by, ?string $body, array $files = [], bool $system = false, array $mentions = []): Message
     {
         $msg = $c->messages()->create([
             'user_id' => $system ? null : $by->id,
             'body' => $body,
+            'mentions' => $mentions ?: null,
         ]);
         foreach ($files as $file) {
             $msg->files()->create([
@@ -294,6 +309,24 @@ class ChatController extends Controller
         DB::table('conversation_members')->where('conversation_id', $c->id)->where('user_id', $by->id)->update(['last_read_id' => $msg->id]);
 
         return $msg;
+    }
+
+    /**
+     * The members really @mentioned: picked from the list and still written as "@Name" in the text
+     * (or "@everyone" in a group). Never the sender, never someone outside the chat.
+     */
+    private function mentioned(Conversation $c, User $me, ?string $body, array $ids, bool $everyone): \Illuminate\Support\Collection
+    {
+        if (! $body || ! str_contains($body, '@')) {
+            return collect();
+        }
+        $members = $c->members()->where('users.id', '!=', $me->id)->where('status', User::STATUS_ACTIVE)->get();
+        if ($everyone && $c->type === 'group' && mb_stripos($body, '@everyone') !== false) {
+            return $members->values();
+        }
+        $ids = array_map('intval', $ids);
+
+        return $members->filter(fn (User $u) => in_array($u->id, $ids, true) && mb_stripos($body, '@'.$u->name) !== false)->values();
     }
 
     private function summary(Conversation $c, User $me, ?Message $last, int $unread): array
@@ -320,7 +353,9 @@ class ChatController extends Controller
     private function joinEveryone(User $me): void
     {
         $c = Conversation::firstOrCreate(['is_everyone' => true, 'type' => 'group'], ['name' => 'Everyone · DigiFox team']);
-        $c->members()->syncWithoutDetaching([$me->id]);
+        // All active staff belong to it, so anyone can be @mentioned there before they first open chat.
+        $staff = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_EMPLOYEE])->where('status', User::STATUS_ACTIVE)->pluck('id');
+        $c->members()->syncWithoutDetaching($staff->push($me->id)->unique()->all());
     }
 
     private function staff(int $id): User
