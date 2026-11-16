@@ -282,4 +282,58 @@ class HrTest extends TestCase
         $this->patchJson("/v1/employees/{$pe->id}/salary/{$id}", ['effective_from' => '2026-10-01'])->assertOk();
         $this->postJson('/v1/payslips/generate', ['year' => 2026, 'month' => 10])->assertJsonPath('generated', 1);
     }
+
+    public function test_new_joiners_get_a_part_year_share(): void
+    {
+        [, $joinedJul10] = $this->staff('Asha');
+        $joinedJul10->update(['doj' => '2026-07-10']); // July counts: 6 months of 12
+        [, $joinedJul20] = $this->staff('Ben');
+        $joinedJul20->update(['doj' => '2026-07-20']); // from August: 5 months
+        $leave = app(\App\Services\LeaveService::class);
+
+        $cl = collect($leave->balances($joinedJul10->fresh(), 2026))->firstWhere('type.code', 'CL'); // 4 a year
+        $this->assertSame(2.0, $cl['allotted']);
+        $this->assertSame('Joined 10 Jul 2026: 2 of 4 days this year', $cl['prorated']);
+        $sl = collect($leave->balances($joinedJul20->fresh(), 2026))->firstWhere('type.code', 'SL'); // 6 a year → 2.5
+        $this->assertSame(2.5, $sl['allotted']);
+        // Next year: the full quota.
+        $this->assertSame(4.0, collect($leave->balances($joinedJul10->fresh(), 2027))->firstWhere('type.code', 'CL')['allotted']);
+
+        // Switched off: everyone gets the full quota.
+        $this->type('CL')->update(['prorate_joiners' => false]);
+        $this->assertSame(4.0, collect($leave->balances($joinedJul10->fresh(), 2026))->firstWhere('type.code', 'CL')['allotted']);
+    }
+
+    public function test_unused_leave_carries_forward_up_to_the_maximum(): void
+    {
+        [$user, $priya] = $this->staff();
+        $cl = $this->type('CL');
+        // Switched on in 2026 (the admin's save), at most 3 days carried.
+        $this->as($this->admin)->putJson("/v1/leave/types/{$cl->id}", ['carry_forward' => true, 'carry_max' => 3])->assertOk()
+            ->assertJsonPath('carry_forward', true)->assertJsonPath('carry_from_year', 2026);
+        $leave = app(\App\Services\LeaveService::class);
+
+        // 2026: 1 day taken of 4 → 3 left → 3 carried into 2027 (cap 3).
+        $priya->leaveRequests()->create(['leave_type_id' => $cl->id, 'from_date' => '2026-11-03', 'to_date' => '2026-11-03', 'days' => 1, 'status' => 'approved']);
+        $b = collect($leave->balances($priya->fresh(), 2026))->firstWhere('type.code', 'CL');
+        $this->assertSame(0.0, $b['carried']);
+        $this->assertSame(3.0, $b['remaining']);
+        $b27 = collect($leave->balances($priya->fresh(), 2027))->firstWhere('type.code', 'CL');
+        $this->assertSame(3.0, $b27['carried']);
+        $this->assertSame(7.0, $b27['allotted']);
+
+        // 2027: nothing taken → 7 left, but only 3 carry into 2028.
+        $this->assertSame(3.0, collect($leave->balances($priya->fresh(), 2028))->firstWhere('type.code', 'CL')['carried']);
+
+        // Years before it was switched on never carry (no pile-up from 2025).
+        $this->assertSame(0.0, collect($leave->balances($priya->fresh(), 2026))->firstWhere('type.code', 'CL')['carried']);
+
+        // Sick leave doesn't carry unless switched on.
+        $this->assertSame(0.0, collect($leave->balances($priya->fresh(), 2027))->firstWhere('type.code', 'SL')['carried']);
+
+        // The carried days can be booked next year (request validation uses the same balance).
+        Date::setTestNow('2027-01-04 10:00:00');
+        $this->as($user)->postJson('/v1/leave/requests', ['leave_type_id' => $cl->id, 'from_date' => '2027-01-11', 'to_date' => '2027-01-16', 'reason' => 'Trip'])
+            ->assertCreated()->assertJsonPath('days', 6); // 6 of the 7
+    }
 }
