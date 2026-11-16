@@ -79,7 +79,25 @@
                   }
                   @if (m.body) { <p>@for (p of parts(m); track $index) {@if (p.url) {<a [href]="p.url" target="_blank" rel="noopener">{{ p.t }}</a>} @else if (p.at) {<span class="at" [class.me]="p.at === 'me'">{{ p.t }}</span>} @else {{{ p.t }}}}</p> }
                 }
-                <span class="meta">{{ time(m.created_at) }}@if (m.user.id === me() && c.type === 'direct' && !m.deleted) { <span class="tick" [class.seen]="m.id <= readUpto()">{{ m.id <= readUpto() ? '✓✓' : '✓' }}</span> }</span>
+                <span class="meta">{{ time(m.created_at) }}@if (m.user.id === me() && !m.deleted) {@let st = tickState(m);
+                  <button type="button" class="tick" [class.two]="st !== 'sent'" [class.seen]="st === 'read'" [title]="tickTitle(m)" [attr.aria-label]="tickTitle(m) + '. Show who has read it'" (click)="toggleInfo(m, $event)">{{ st === 'sent' ? '✓' : '✓✓' }}</button>
+                }</span>
+                @if (infoFor() === m.id) {
+                  @let ri = readInfo(m);
+                  <div class="rinfo" (click)="$event.stopPropagation()">
+                    <div class="rh2"><b>Message info</b><button type="button" (click)="infoFor.set(null)" aria-label="Close">✕</button></div>
+                    <div class="rg"><span class="rt2 seen">✓✓ Read</span>
+                      @for (x of ri.read; track x.user_id) { <div class="rp"><span>{{ x.name }}</span><small>{{ seenAt(x.read_at, m) }}</small></div> } @empty { <small class="none">No one yet</small> }</div>
+                    @if (ri.delivered.length) {
+                      <div class="rg"><span class="rt2">✓✓ Delivered</span>
+                        @for (x of ri.delivered; track x.user_id) { <div class="rp"><span>{{ x.name }}</span><small>{{ seenAt(x.delivered_at, m) }}</small></div> }</div>
+                    }
+                    @if (ri.waiting.length) {
+                      <div class="rg"><span class="rt2">✓ Not received yet</span>
+                        @for (x of ri.waiting; track x.user_id) { <div class="rp"><span>{{ x.name }}</span></div> }</div>
+                    }
+                  </div>
+                }
                 @if (m.user.id === me() && !m.deleted) { <button class="del" (click)="removeMsg(m)" title="Delete" aria-label="Delete message">✕</button> }
               </div>
             </div>

@@ -28,7 +28,8 @@ export interface ChatMessage {
 }
 export interface ChatPing { id: number; conversation_id: number; chat: string | null; from: string; text: string; mention?: boolean }
 export interface ChatFile { id: number; name: string; mime: string | null; size: number; image: boolean }
-export interface MessagePage { data: ChatMessage[]; deleted_ids: number[]; has_more: boolean; read_upto: number }
+export interface Receipt { user_id: number; name: string; read_id: number; read_at: string | null; delivered_id: number; delivered_at: string | null }
+export interface MessagePage { data: ChatMessage[]; deleted_ids: number[]; has_more: boolean; read_upto: number; receipts?: Receipt[] }
 
 const PREFS_KEY = 'dfp_chat_prefs';
 
