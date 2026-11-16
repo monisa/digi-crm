@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from './api.config';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type TaskRepeat = 'none' | 'daily' | 'weekly' | 'monthly';
 
@@ -20,6 +20,10 @@ export interface Task {
   status: TaskStatus;
   overdue: boolean;
   completed_at: string | null;
+  submitted_at?: string | null;
+  reviewed_by?: { id: number; name: string } | null;
+  reviewed_at?: string | null;
+  review_note?: string | null;
   minutes_spent: number;
   repeat: TaskRepeat;
   series_id: number | null;
@@ -27,8 +31,16 @@ export interface Task {
 
 export interface TaskList {
   data: Task[];
-  counts: { today: number; overdue: number; upcoming: number; done_today: number };
+  counts: { today: number; overdue: number; upcoming: number; done_today: number; review: number };
   can_manage: boolean;
+  can_approve: boolean;
+  sees_team: boolean;
+}
+
+export interface TeamRow {
+  user: { id: number; name: string };
+  working_on: { id: number; title: string; client: string | null; minutes: number }[];
+  in_progress: number; todo: number; review: number; overdue: number; done_today: number; minutes_done_today: number;
 }
 
 export type AttendanceMode = 'office' | 'field' | 'wfh';
@@ -71,6 +83,9 @@ export class WorkService {
     const p: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') p[k] = String(v);
     return this.http.get<TaskList>(`${API_BASE}/tasks`, { params: p });
+  }
+  team(): Observable<{ data: TeamRow[] }> {
+    return this.http.get<{ data: TeamRow[] }>(`${API_BASE}/tasks/team`);
   }
   createTask(data: Partial<Record<string, unknown>>): Observable<Task> {
     return this.http.post<Task>(`${API_BASE}/tasks`, data);

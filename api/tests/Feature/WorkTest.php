@@ -56,11 +56,43 @@ class WorkTest extends TestCase
         $this->assertDatabaseHas('notifications', ['notifiable_id' => $priya->id]);
 
         $this->as($priya)->getJson('/v1/tasks')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('counts.today', 1)->assertJsonPath('can_manage', false);
-        $this->patchJson("/v1/tasks/$id", ['status' => 'done', 'add_minutes' => 45])->assertOk()->assertJsonPath('status', 'done')->assertJsonPath('minutes_spent', 45);
+        // Employees cannot mark done; they send it for review, with the time spent.
+        $this->patchJson("/v1/tasks/$id", ['status' => 'done', 'add_minutes' => 45])->assertForbidden();
+        $this->patchJson("/v1/tasks/$id", ['status' => 'review'])->assertStatus(422)->assertJsonValidationErrors('add_minutes');
+        $this->patchJson("/v1/tasks/$id", ['status' => 'review', 'add_minutes' => 45])->assertOk()->assertJsonPath('status', 'review')->assertJsonPath('minutes_spent', 45);
         // The assignee cannot rewrite or delete a task given to them.
         $this->patchJson("/v1/tasks/$id", ['title' => 'Something else'])->assertOk()->assertJsonPath('title', 'Post 3 Instagram stories');
         $this->deleteJson("/v1/tasks/$id")->assertForbidden();
-        $this->assertDatabaseHas('notifications', ['notifiable_id' => $this->admin->id]);
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $this->admin->id, 'data->type' => 'task_review']);
+
+        // The manager sends it back with a note, the employee resubmits, the manager approves.
+        $this->as($this->admin)->getJson('/v1/tasks?view=review')->assertJsonCount(1, 'data')->assertJsonPath('counts.review', 1);
+        $this->patchJson("/v1/tasks/$id", ['status' => 'in_progress', 'note' => 'Use the new logo'])->assertOk()->assertJsonPath('review_note', 'Use the new logo');
+        $this->as($priya)->patchJson("/v1/tasks/$id", ['status' => 'review', 'add_minutes' => 15])->assertOk()->assertJsonPath('minutes_spent', 60)->assertJsonPath('review_note', null);
+        $this->as($this->admin)->patchJson("/v1/tasks/$id", ['status' => 'done'])->assertOk()->assertJsonPath('status', 'done')->assertJsonPath('reviewed_by.id', $this->admin->id);
+        $this->as($priya)->patchJson("/v1/tasks/$id", ['status' => 'in_progress'])->assertForbidden(); // cannot reopen
+        $this->getJson('/v1/tasks?view=done')->assertJsonCount(1, 'data');
+    }
+
+    public function test_managers_see_the_whole_team(): void
+    {
+        $priya = $this->staff();
+        $lead = $this->staff('Team Lead');
+        Task::create(['title' => 'Reel edit', 'assigned_to' => $priya->id, 'status' => 'in_progress', 'due_date' => today()]);
+        Task::create(['title' => 'Old one', 'assigned_to' => $priya->id, 'status' => 'done', 'completed_at' => now(), 'minutes_spent' => 90]);
+
+        $this->as($lead)->getJson('/v1/tasks/team')->assertForbidden();
+        $this->getJson('/v1/tasks?view=all')->assertJsonCount(0, 'data');
+
+        // Give the lead the manager permissions.
+        $this->as($this->admin)->putJson("/v1/admin/users/{$lead->id}/permissions", ['overrides' => ['tasks.approve' => true]])->assertOk();
+        $r = $this->as($lead->fresh())->getJson('/v1/tasks/team')->assertOk();
+        $row = collect($r->json('data'))->firstWhere('user.name', 'Priya');
+        $this->assertSame(1, $row['in_progress']);
+        $this->assertSame('Reel edit', $row['working_on'][0]['title']);
+        $this->assertSame(1, $row['done_today']);
+        $this->assertSame(90, $row['minutes_done_today']);
+        $this->getJson('/v1/tasks?view=done')->assertJsonCount(1, 'data')->assertJsonPath('can_approve', true);
     }
 
     public function test_employees_only_add_tasks_for_themselves_and_see_their_own(): void

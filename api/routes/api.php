@@ -233,6 +233,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Tasks and attendance (staff only).
     Route::middleware('staff')->group(function () {
         Route::get('/tasks', [TaskController::class, 'index'])->middleware('permission:tasks.view');
+        Route::get('/tasks/team', [TaskController::class, 'team'])->middleware('permission:tasks.view');
         Route::post('/tasks', [TaskController::class, 'store'])->middleware('permission:tasks.create');
         Route::patch('/tasks/{task}', [TaskController::class, 'update'])->middleware('permission:tasks.view');
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->middleware('permission:tasks.view');
