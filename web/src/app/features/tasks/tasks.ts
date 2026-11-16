@@ -6,12 +6,12 @@ import { AuthService } from '../../core/auth/auth.service';
 import { BillingService, Client } from '../../core/billing.service';
 import { readErrors } from '../../core/http-errors';
 import { LeadsService } from '../../core/leads.service';
-import { PRIORITY_LABEL, REPEAT_LABEL, Task, TaskList, TaskPriority, TaskRepeat, TaskStatus, WorkService } from '../../core/work.service';
+import { PRIORITY_LABEL, REPEAT_LABEL, Task, TaskList, TaskPriority, TaskRepeat, TaskStatus, TeamRow, WorkService } from '../../core/work.service';
 import { Dialog } from '../../shared/dialog';
 import { Sheet } from '../../shared/sheet';
 import { Toast } from '../../shared/toast.service';
 
-type View = 'today' | 'upcoming' | 'overdue' | 'done';
+type View = 'today' | 'upcoming' | 'overdue' | 'review' | 'done' | 'team';
 interface TaskForm {
   id?: number; title: string; description: string; assigned_to: number | null; due_date: string | null;
   priority: TaskPriority; repeat: TaskRepeat; client_id: number | null; series_id?: number | null;
@@ -26,17 +26,34 @@ interface TaskForm {
       <div class="actions"><button class="btn" (click)="startNew()">+ New task</button></div>
     </div>
 
-    <div class="kchips">
+    <div class="kchips" [class.six]="seesTeam()">
       <button class="kc" [class.on]="view === 'today'" (click)="setView('today')"><b>{{ counts().today }}</b><span>To do today</span></button>
       <button class="kc warn" [class.on]="view === 'overdue'" (click)="setView('overdue')"><b>{{ counts().overdue }}</b><span>Overdue</span></button>
       <button class="kc" [class.on]="view === 'upcoming'" (click)="setView('upcoming')"><b>{{ counts().upcoming }}</b><span>Upcoming</span></button>
+      <button class="kc rev" [class.on]="view === 'review'" (click)="setView('review')"><b>{{ counts().review }}</b><span>{{ canApprove() ? 'To check' : 'In review' }}</span></button>
       <button class="kc ok" [class.on]="view === 'done'" (click)="setView('done')"><b>{{ counts().done_today }}</b><span>Done today</span></button>
+      @if (seesTeam()) { <button class="kc team" [class.on]="view === 'team'" (click)="setView('team')"><b>👥</b><span>Team</span></button> }
     </div>
 
+    @if (view === 'team') {
+      <div class="teamgrid">
+        @for (p of team(); track p.user.id) {
+          <div class="card pc">
+            <div class="ph"><span class="who big">{{ initials(p.user.name) }}</span><div><b>{{ p.user.name }}</b>
+              <small>{{ p.in_progress }} in progress · {{ p.todo }} to do@if (p.review) { · {{ p.review }} in review }@if (p.overdue) { · <span class="late">{{ p.overdue }} overdue</span> }</small></div></div>
+            @for (w of p.working_on; track w.id) {
+              <div class="wo"><span class="dot"></span><span class="wt">{{ w.title }}@if (w.client) { <i>· {{ w.client }}</i> }</span>@if (w.minutes) { <small>⏱ {{ hrs(w.minutes) }}</small> }</div>
+            } @empty { <p class="hint">Not working on anything right now.</p> }
+            <div class="pf"><span>✓ {{ p.done_today }} done today@if (p.minutes_done_today) { · {{ hrs(p.minutes_done_today) }} }</span>
+              <button class="linkish" (click)="assigned = '' + p.user.id; setView('today')">See tasks →</button></div>
+          </div>
+        } @empty { <div class="card empty-box">Loading…</div> }
+      </div>
+    } @else {
     <div class="card">
       <div class="toolbar">
         <input class="input-sm grow" type="search" placeholder="Search tasks" [(ngModel)]="search" (ngModelChange)="search$.next()" />
-        @if (canManage()) {
+        @if (seesTeam()) {
           <select class="select-sm" [(ngModel)]="assigned" (ngModelChange)="load()" aria-label="Whose tasks">
             <option value="me">My tasks</option><option value="">Whole team</option><option value="none">Unassigned</option>
             @for (u of staff(); track u.id) { <option [value]="u.id">{{ u.name }}</option> }
@@ -51,12 +68,16 @@ interface TaskForm {
 
       @for (t of list(); track t.id; let i = $index) {
         <div class="trow" [class.done]="t.status === 'done'" [style.animation-delay.s]="i * 0.015" (click)="openTask(t)">
-          <button class="tick" [class.on]="t.status === 'done'" (click)="toggleDone(t, $event)" [attr.aria-label]="t.status === 'done' ? 'Mark not done' : 'Mark done'">✓</button>
+          <button class="tick" [class.on]="t.status === 'done'" [class.rv]="t.status === 'review'" (click)="toggleDone(t, $event)"
+            [attr.aria-label]="t.status === 'done' ? 'Approved' : canApprove() ? 'Approve' : 'Send for review'" [title]="t.status === 'done' ? 'Approved' + (t.reviewed_by ? ' by ' + t.reviewed_by.name : '') : t.status === 'review' ? (canApprove() ? 'Approve' : 'Waiting for review') : canApprove() ? 'Mark done' : 'Send for review'">{{ t.status === 'review' ? '⏳' : '✓' }}</button>
           <div class="main">
             <b>{{ t.title }}</b>
             <div class="meta">
               @if (t.priority === 'urgent' || t.priority === 'high') { <span class="pri" [class.u]="t.priority === 'urgent'">{{ prio[t.priority] }}</span> }
               @if (t.status === 'in_progress') { <span class="ip">In progress</span> }
+              @if (t.status === 'review') { <span class="rvw">Waiting for review</span> }
+              @if (t.review_note && t.status !== 'review' && t.status !== 'done') { <span class="late">↩ Sent back: {{ t.review_note }}</span> }
+              @if (t.status === 'done' && t.reviewed_by) { <span class="okk">✓ Checked by {{ t.reviewed_by.name }}</span> }
               @if (t.client) { <span class="cl">{{ t.client.company_name }}</span> }
               @if (t.ticket) { <span class="tk">🎫 Ticket</span> }
               @if (t.repeat !== 'none') { <span class="rp">↻ {{ t.repeat }}</span> }
@@ -64,12 +85,19 @@ interface TaskForm {
               @if (t.minutes_spent) { <span>⏱ {{ hrs(t.minutes_spent) }}</span> }
             </div>
           </div>
+          @if (t.status === 'review' && canApprove() && t.assigned_to?.id !== me()) {
+            <span class="rvb" (click)="$event.stopPropagation()">
+              <button class="btn sm" (click)="approve(t)">Approve</button>
+              <button class="btn-ghost sm" (click)="sendBack(t)">Send back</button>
+            </span>
+          }
           @if (assigned !== 'me' && t.assigned_to) { <span class="who" [title]="t.assigned_to.name">{{ initials(t.assigned_to.name) }}</span> }
         </div>
       } @empty {
-        <div class="empty-box">@if (loading()) { Loading… } @else if (view === 'done') { <b>Nothing finished yet</b> } @else { <b>All clear 🎉</b>No tasks here. Add one above. }</div>
+        <div class="empty-box">@if (loading()) { Loading… } @else if (view === 'done') { <b>Nothing finished yet</b> } @else if (view === 'review') { <b>Nothing waiting for review</b> } @else { <b>All clear 🎉</b>No tasks here. Add one above. }</div>
       }
     </div>
+    }
 
     <!-- New / edit -->
     @if (form(); as f) {
@@ -102,9 +130,14 @@ interface TaskForm {
     <!-- Detail -->
     @if (detail(); as t) {
       <app-sheet [title]="t.title" [subtitle]="(t.assigned_to ? 'For ' + t.assigned_to.name : 'Unassigned') + (t.created_by ? ' · from ' + t.created_by.name : '')" (closed)="detail.set(null)">
+        @if (t.review_note && t.status !== 'done' && t.status !== 'review') { <div class="alert error" style="margin-top:12px">↩ Sent back{{ t.reviewed_by ? ' by ' + t.reviewed_by.name : '' }}: {{ t.review_note }}</div> }
         <div class="seg" role="group" aria-label="Status">
-          @for (s of statuses; track s[0]) { <button [class.on]="t.status === s[0]" (click)="setStatus(t, s[0])">{{ s[1] }}</button> }
+          @for (s of statuses(); track s[0]) { <button [class.on]="t.status === s[0]" (click)="setStatus(t, s[0])" [disabled]="t.status === 'done' && !canApprove()">{{ s[1] }}</button> }
         </div>
+        @if (t.status === 'review' && canApprove() && t.assigned_to?.id !== me()) {
+          <div class="form-actions" style="margin-top:0"><button class="btn-ghost" (click)="sendBack(t)">↩ Send back</button><button class="btn" (click)="approve(t)">✓ Approve</button></div>
+        }
+        @if (t.status === 'done') { <p class="hint">✓ Approved@if (t.reviewed_by) { by {{ t.reviewed_by.name }} }@if (t.reviewed_at) { on {{ when(t.reviewed_at) }} }.</p> }
         @if (t.description) { <p class="desc">{{ t.description }}</p> }
         <dl class="dl">
           <div><dt>Due</dt><dd [class.late]="t.overdue">{{ t.due_date ? due(t.due_date) : 'No date' }}</dd></div>
@@ -127,11 +160,26 @@ interface TaskForm {
     }
   `,
   styles: `
-    .kchips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .kchips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
     .kc { text-align: left; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); cursor: pointer; font: inherit; transition: transform 0.2s var(--ease), border-color 0.2s; }
     .kc:hover { transform: translateY(-2px); } .kc.on { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(237, 143, 33, 0.15); }
     .kc b { display: block; font-size: 24px; } .kc span { font-size: 12.5px; color: var(--ink-3); }
-    .kc.warn b { color: #c0262d; } .kc.ok b { color: #11803b; }
+    .kc.warn b { color: #c0262d; } .kc.ok b { color: #11803b; } .kc.rev b { color: #7a4dd8; }
+    .kchips.six { grid-template-columns: repeat(6, 1fr); }
+    .rvw { color: #7a4dd8; font-weight: 600; } .okk { color: #11803b; font-weight: 600; }
+    .tick.rv { border-color: #7a4dd8; color: #7a4dd8; font-size: 12px; }
+    .rvb { display: flex; gap: 6px; flex: none; }
+    .teamgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .pc { display: flex; flex-direction: column; gap: 8px; animation: rise 0.35s var(--ease) both; }
+    .ph { display: flex; gap: 12px; align-items: center; } .ph b { display: block; } .ph small { color: var(--ink-3); font-size: 12.5px; }
+    .who.big { width: 40px; height: 40px; border-radius: 12px; font-size: 13px; }
+    .wo { display: flex; align-items: center; gap: 8px; font-size: 13.5px; background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+    .wo .dot { width: 8px; height: 8px; border-radius: 50%; background: #2f6fde; box-shadow: 0 0 0 3px rgba(47, 111, 222, 0.18); flex: none; animation: pulse 1.6s infinite; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(47, 111, 222, 0.05); } }
+    .wt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .wt i { font-style: normal; color: var(--ink-3); }
+    .wo small { color: var(--ink-3); flex: none; }
+    .pf { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #11803b; margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--line); }
+    .linkish { background: none; border: 0; color: var(--brand-deep); font: inherit; font-weight: 600; cursor: pointer; }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .grow { flex: 1; min-width: 200px; }
     .quick { display: flex; gap: 8px; margin-bottom: 6px; } .quick .input-sm { flex: 1; border-style: dashed; }
     .trow { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-top: 1px solid var(--line); cursor: pointer; animation: rise 0.35s var(--ease) both; transition: background 0.2s; border-radius: 10px; }
@@ -153,7 +201,8 @@ interface TaskForm {
     .logt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 16px 0; font-size: 13px; color: var(--ink-3); }
     .sm { padding: 6px 10px; font-size: 12.5px; }
     .danger { color: #c0262d; }
-    @media (max-width: 860px) { .kchips { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 1100px) { .kchips, .kchips.six { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 860px) { .kchips, .kchips.six { grid-template-columns: repeat(2, 1fr); } .rvb { flex-direction: column; } }
   `,
 })
 export class Tasks {
@@ -165,7 +214,11 @@ export class Tasks {
   protected readonly rep = REPEAT_LABEL;
   protected readonly prios = Object.entries(PRIORITY_LABEL) as [TaskPriority, string][];
   protected readonly repeats = Object.entries(REPEAT_LABEL) as [TaskRepeat, string][];
-  protected readonly statuses: [TaskStatus, string][] = [['todo', 'To do'], ['in_progress', 'In progress'], ['done', 'Done']];
+  /** Employees go up to Review; only managers see (and set) Done. */
+  protected readonly statuses = computed((): [TaskStatus, string][] => [
+    ['todo', 'To do'], ['in_progress', 'In progress'], ['review', 'Review'], ...(this.canApprove() ? [['done', 'Done'] as [TaskStatus, string]] : []),
+  ]);
+  protected readonly team = signal<TeamRow[]>([]);
 
   protected view: View = 'today';
   protected assigned = 'me';
@@ -174,8 +227,10 @@ export class Tasks {
   protected readonly search$ = new Subject<void>();
   protected readonly result = signal<TaskList | null>(null);
   protected readonly list = computed(() => this.result()?.data ?? []);
-  protected readonly counts = computed(() => this.result()?.counts ?? { today: 0, overdue: 0, upcoming: 0, done_today: 0 });
+  protected readonly counts = computed(() => this.result()?.counts ?? { today: 0, overdue: 0, upcoming: 0, done_today: 0, review: 0 });
   protected readonly canManage = computed(() => this.result()?.can_manage ?? this.auth.can('tasks.edit'));
+  protected readonly canApprove = computed(() => this.result()?.can_approve ?? this.auth.can('tasks.approve'));
+  protected readonly seesTeam = computed(() => this.result()?.sees_team ?? (this.auth.can('tasks.edit') || this.auth.can('tasks.approve')));
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly staff = signal<{ id: number; name: string }[]>([]);
@@ -187,7 +242,7 @@ export class Tasks {
 
   constructor() {
     this.search$.pipe(debounceTime(300)).subscribe(() => this.load());
-    if (this.auth.can('tasks.edit')) inject(LeadsService).options().subscribe((o) => this.staff.set(o.assignees));
+    if (this.auth.can('tasks.edit') || this.auth.can('tasks.approve')) inject(LeadsService).options().subscribe((o) => this.staff.set(o.assignees));
     if (this.auth.can('clients.view')) inject(BillingService).clients({ status: 'active' }).subscribe((r) => this.clients.set(r.data));
     const v = inject(ActivatedRoute).snapshot.queryParamMap.get('view') as View | null;
     if (v) this.view = v;
@@ -203,7 +258,8 @@ export class Tasks {
 
   load(): void {
     this.loading.set(true);
-    this.api.tasks({ view: this.view, assigned: this.assigned, search: this.search }).subscribe({
+    if (this.view === 'team') this.api.team().subscribe((r) => this.team.set(r.data));
+    this.api.tasks({ view: this.view === 'team' ? 'today' : this.view, assigned: this.assigned, search: this.search }).subscribe({
       next: (r) => {
         this.result.set(r);
         this.loading.set(false);
@@ -213,6 +269,8 @@ export class Tasks {
   }
 
   setView(v: View): void {
+    // Managers check and look back over the whole team's work.
+    if ((v === 'review' || v === 'done') && this.seesTeam() && this.assigned === 'me' && this.view !== v) this.assigned = '';
     this.view = v;
     this.load();
   }
@@ -268,13 +326,73 @@ export class Tasks {
     this.detail.set(t);
   }
 
+  /** The round button: employees send for review; managers approve (or finish their own). */
   toggleDone(t: Task, ev: Event): void {
     ev.stopPropagation();
-    this.setStatus(t, t.status === 'done' ? 'todo' : 'done');
+    if (t.status === 'done') return;
+    if (t.status === 'review') {
+      if (this.canApprove() && t.assigned_to?.id !== this.me()) this.approve(t);
+      else this.toast.show('Waiting for a manager to check it.');
+      return;
+    }
+    this.setStatus(t, this.canApprove() && t.assigned_to?.id === this.me() ? 'done' : 'review');
   }
 
-  setStatus(t: Task, status: TaskStatus): void {
-    this.patch(t, { status }, status === 'done' ? 'Done ✓' : '');
+  async setStatus(t: Task, status: TaskStatus): Promise<void> {
+    if (status === t.status) return;
+    const body: Record<string, unknown> = { status };
+    if (status === 'review' || (status === 'done' && t.status !== 'review')) {
+      // Time spent is required before a task is checked.
+      const mins = await this.askTime(t, status);
+      if (mins === null) return;
+      if (mins > 0) body['add_minutes'] = mins;
+    }
+    this.patch(t, body, status === 'review' ? 'Sent for review.' : status === 'done' ? 'Done ✓' : '');
+  }
+
+  approve(t: Task): void {
+    this.patch(t, { status: 'done' }, `Approved ✓ ${t.assigned_to?.name ?? ''} will be told.`);
+  }
+
+  async sendBack(t: Task): Promise<void> {
+    const note = await this.dialog.prompt({
+      title: 'Send back for changes', label: 'What needs to change?', confirmText: 'Send back', required: true,
+      message: `${t.assigned_to?.name ?? 'They'} will see your note and can send it again when done.`,
+    });
+    if (!note) return;
+    this.patch(t, { status: 'in_progress', note }, 'Sent back.');
+  }
+
+  /** Ask how long the task took. Returns minutes to add, 0 if enough is already logged, or null if cancelled. */
+  private async askTime(t: Task, status: TaskStatus): Promise<number | null> {
+    const have = t.minutes_spent;
+    const v = await this.dialog.prompt({
+      title: 'How long did this take?',
+      message: have ? `Already logged: ${this.hrs(have)}. Add more if you spent extra time, or leave it empty.` : 'Time spent is needed before the task is checked. E.g. 45m, 1h 30m or 2h.',
+      label: 'Time spent', suggestions: ['15m', '30m', '45m', '1h', '1h 30m', '2h', '3h', '4h'],
+      confirmText: status === 'done' ? 'Mark done' : 'Send for review', required: !have,
+    });
+    if (v === null) return null;
+    if (!v.trim()) return 0;
+    const m = this.parseTime(v);
+    if (!m) {
+      this.toast.show('Write the time like 45m, 1h 30m or 2h.');
+      return null;
+    }
+    return m;
+  }
+
+  private parseTime(v: string): number {
+    const s = v.toLowerCase().replace(/\s+/g, '');
+    const h = s.match(/([\d.]+)h/);
+    const mm = s.match(/(\d+)m/);
+    if (h || mm) return Math.round((h ? parseFloat(h[1]!) * 60 : 0) + (mm ? parseInt(mm[1]!, 10) : 0));
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n <= 12 ? Math.round(n * 60) : Math.round(n); // "2" = 2 hours, "90" = 90 minutes
+  }
+
+  when(iso: string): string {
+    return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
   logTime(t: Task, minutes: number): void {

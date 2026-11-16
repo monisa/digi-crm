@@ -10,7 +10,7 @@ class Task extends Model
 {
     public const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
-    public const STATUSES = ['todo', 'in_progress', 'done'];
+    public const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 
     public const REPEATS = ['none', 'daily', 'weekly', 'monthly'];
 
@@ -18,7 +18,7 @@ class Task extends Model
 
     protected function casts(): array
     {
-        return ['due_date' => 'date', 'completed_at' => 'datetime', 'minutes_spent' => 'integer'];
+        return ['due_date' => 'date', 'completed_at' => 'datetime', 'minutes_spent' => 'integer', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
     }
 
     public function assignee(): BelongsTo
@@ -44,8 +44,25 @@ class Task extends Model
     /** Team managers (tasks.edit) see every task; others the ones assigned to or made by them. */
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        return $user->hasPermission('tasks.edit') ? $q
+        return self::seesTeam($user) ? $q
             : $q->where(fn ($q) => $q->where('assigned_to', $user->id)->orWhere('created_by', $user->id));
+    }
+
+    /** Managers (tasks.edit or tasks.approve) and admins see every task. */
+    public static function seesTeam(User $user): bool
+    {
+        return $user->hasPermission('tasks.edit') || $user->hasPermission('tasks.approve');
+    }
+
+    /** Only managers / admins may verify a task and mark it done. */
+    public static function canApprove(User $user): bool
+    {
+        return $user->hasPermission('tasks.approve');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function isOverdue(): bool
@@ -68,6 +85,10 @@ class Task extends Model
             'status' => $this->status,
             'overdue' => $this->isOverdue(),
             'completed_at' => $this->completed_at?->toIso8601String(),
+            'submitted_at' => $this->submitted_at?->toIso8601String(),
+            'reviewed_by' => $this->reviewed_by && $this->reviewer ? ['id' => $this->reviewer->id, 'name' => $this->reviewer->name] : null,
+            'reviewed_at' => $this->reviewed_at?->toIso8601String(),
+            'review_note' => $this->review_note,
             'minutes_spent' => $this->minutes_spent,
             'repeat' => $this->series_id ? ($this->series?->repeat ?? 'none') : $this->repeat,
             'series_id' => $this->series_id,
