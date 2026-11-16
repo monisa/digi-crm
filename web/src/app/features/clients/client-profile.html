@@ -48,7 +48,15 @@
 
   <div class="tabs2" role="tablist">
     <button role="tab" [class.on]="tab() === 'overview'" (click)="open('overview')">Overview</button>
-    <button role="tab" [class.on]="tab() === 'invoices'" (click)="open('invoices')">Invoices &amp; payments</button>
+    @if (auth.can('campaigns.view')) {
+      <button role="tab" [class.on]="tab() === 'campaigns'" (click)="open('campaigns')">Campaigns@if (campaigns(); as l) { <i class="n">{{ l.length }}</i> }</button>
+    }
+    @if (auth.can('tickets.view')) {
+      <button role="tab" [class.on]="tab() === 'tickets'" (click)="open('tickets')">Tickets@if (openTickets()) { <i class="n hot">{{ openTickets() }}</i> }</button>
+    }
+    @if (auth.can('invoices.view')) {
+      <button role="tab" [class.on]="tab() === 'invoices'" (click)="open('invoices')">Invoices &amp; payments</button>
+    }
   </div>
 
   @switch (tab()) {
@@ -111,6 +119,60 @@
           </div>
         </section>
       }
+    }
+    @case ('campaigns') {
+      <div class="tabhead">
+        @if (campaigns(); as l) {
+          <div class="mini">
+            <span><b>{{ campStats().active }}</b> active</span>
+            <span><b>{{ campStats().leads }}</b> leads</span>
+            <span><b>{{ money(campStats().spend) }}</b> spent</span>
+            @if (campStats().cpl !== null) { <span><b>{{ money(campStats().cpl!) }}</b> per lead</span> }
+          </div>
+        }
+        @if (auth.can('campaigns.create')) { <button class="btn" (click)="campaignOpen.set(0)">+ New campaign</button> }
+      </div>
+      <div class="cgrid">
+        @for (k of campaigns() ?? []; track k.id; let i = $index) {
+          <button class="card camp" (click)="campaignOpen.set(k.id)" [style.animation-delay.s]="i * 0.03">
+            <div class="ctop"><span class="plat" [attr.data-p]="k.platform">{{ platforms()[k.platform] || k.platform }}</span><span class="badge cst" [attr.data-s]="k.status">{{ k.status }}</span></div>
+            <b class="cname">{{ k.name }}</b>
+            <small class="hint">@if (k.start_date) { {{ date(k.start_date) }}@if (k.end_date) { – {{ date(k.end_date) }} } } @else { No dates yet }@if (k.owner) { · {{ k.owner.name }} }</small>
+            <div class="nums">
+              <div><span>Leads</span><b>{{ k.results.leads ?? '—' }}</b></div>
+              <div><span>Spend</span><b>{{ k.results.spend !== null ? money(k.results.spend) : '—' }}</b></div>
+              <div><span>Per lead</span><b>{{ k.results.cost_per_lead !== null ? money(k.results.cost_per_lead) : '—' }}</b></div>
+            </div>
+            @if (k.budget && k.results.spend !== null) {
+              <div class="bar"><div class="fill" [style.width.%]="Math.min(100, (k.results.spend / k.budget) * 100)"></div></div>
+              <small class="hint">{{ money(k.results.spend) }} of {{ money(k.budget) }} budget</small>
+            }
+          </button>
+        } @empty { <div class="card empty-box">@if (campaigns()) { <b>No campaigns yet</b>@if (auth.can('campaigns.create')) { Press “New campaign” to add one. } } @else { Loading… }</div> }
+      </div>
+      @if (campaignOpen() !== null) {
+        <app-campaign-sheet [campaignId]="campaignOpen() || null" [clientId]="c.id" [platforms]="platforms()" (closed)="campaignOpen.set(null)" (changed)="loadCampaigns()" />
+      }
+    }
+    @case ('tickets') {
+      <div class="tabhead">
+        <div class="seg2">
+          <button [class.on]="ticketFilter() === 'open'" (click)="ticketFilter.set('open')">Open ({{ openTickets() }})</button>
+          <button [class.on]="ticketFilter() === 'all'" (click)="ticketFilter.set('all')">All ({{ tickets()?.length ?? 0 }})</button>
+        </div>
+        @if (auth.can('tickets.create')) { <a class="btn" routerLink="/tickets" [queryParams]="{ new: 1, client: c.id }">+ New ticket</a> }
+      </div>
+      <section class="card tlist">
+        @for (t of shownTickets(); track t.id; let i = $index) {
+          <a class="trow" [routerLink]="['/tickets', t.id]" [queryParams]="{ from: 'client' }" [class.unread]="t.awaiting_staff" [style.animation-delay.s]="i * 0.02">
+            <span class="pri" [attr.data-p]="t.priority" [title]="t.priority + ' priority'"></span>
+            <div class="grow"><b>{{ t.subject }}</b><small>{{ t.number }}@if (t.category) { · {{ t.category }} }@if (t.raised_by) { · by {{ t.raised_by }} }</small></div>
+            <span class="as">{{ t.assigned_to?.name || 'Unassigned' }}</span>
+            <span class="badge tst" [attr.data-s]="t.status">{{ ticketLabel[t.status] }}</span>
+            <small class="when">{{ ago(t.last_reply_at) }}</small>
+          </a>
+        } @empty { <div class="empty-box">@if (tickets()) { <b>{{ ticketFilter() === 'open' ? 'No open tickets' : 'No tickets yet' }}</b> } @else { Loading… }</div> }
+      </section>
     }
     @case ('invoices') {
       <section class="card">

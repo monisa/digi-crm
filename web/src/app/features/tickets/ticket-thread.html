@@ -1,7 +1,11 @@
 @if (error()) {
   <div class="card empty-box"><b>{{ error() }}</b></div>
 } @else if (t(); as t) {
-  <a class="crumb" routerLink="/tickets">← {{ isClient() ? 'All requests' : 'Tickets' }}</a>
+  @if (fromClient && t.client && !isClient()) {
+    <a class="crumb" [routerLink]="['/clients', t.client.id]" [queryParams]="{ tab: 'tickets' }">← {{ t.client.company_name }}</a>
+  } @else {
+    <a class="crumb" routerLink="/tickets">← {{ isClient() ? 'All requests' : 'Tickets' }}</a>
+  }
   <div class="page-head">
     <div>
       <h1>{{ t.subject }}</h1>
