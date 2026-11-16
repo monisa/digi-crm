@@ -1,7 +1,7 @@
 <div class="app" [class.collapsed]="collapsed()" [class.open]="drawerOpen()">
   <aside class="side" aria-label="Main navigation">
     <a class="logo" routerLink="/dashboard">
-      <img [src]="collapsed() ? 'logo-icon.png' : 'logo.png'" alt="DigiFox Pro Solutions" />
+      <app-brand [size]="40" [iconOnly]="collapsed()" />
     </a>
 
     <div class="side-scroll">

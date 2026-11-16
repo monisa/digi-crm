@@ -1,3 +1,4 @@
+import { Brand } from '../shared/brand';
 import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -14,7 +15,7 @@ import { AccountSheet, AccountTab } from './account-sheet';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, Bell, AccountSheet],
+  imports: [Brand, RouterOutlet, RouterLink, RouterLinkActive, Icon, Bell, AccountSheet],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })

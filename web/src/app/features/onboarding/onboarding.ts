@@ -1,3 +1,4 @@
+import { Brand } from '../../shared/brand';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -38,7 +39,7 @@ export type OnboardingMode = 'self' | 'public' | 'staff';
 
 @Component({
   selector: 'app-onboarding',
-  imports: [FormsModule],
+  imports: [Brand, FormsModule],
   templateUrl: './onboarding.html',
   styleUrl: './onboarding.scss',
 })
