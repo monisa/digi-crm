@@ -135,8 +135,12 @@ export class LeavePage {
   }
 
   saveType(t: LeaveType): void {
-    this.hr.updateLeaveType(t.id, { yearly_quota: t.yearly_quota, active: t.active }).subscribe({
-      next: () => this.toast.show(`${t.name} updated.`),
+    const max = t.carry_max === null || (t.carry_max as unknown) === '' ? null : +t.carry_max;
+    this.hr.updateLeaveType(t.id, { yearly_quota: t.yearly_quota, active: t.active, prorate_joiners: t.prorate_joiners, carry_forward: t.carry_forward, carry_max: max }).subscribe({
+      next: (u) => {
+        this.types.update((l) => l.map((x) => (x.id === u.id ? u : x)));
+        this.toast.show(`${t.name} updated.`);
+      },
       error: (e) => this.toast.show(readErrors(e).message || 'Could not save.'),
     });
   }

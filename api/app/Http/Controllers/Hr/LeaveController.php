@@ -139,7 +139,7 @@ class LeaveController extends Controller
 
     public function types(): JsonResponse
     {
-        return response()->json(['data' => LeaveType::orderBy('id')->get(['id', 'code', 'name', 'yearly_quota', 'paid', 'active'])]);
+        return response()->json(['data' => LeaveType::orderBy('id')->get()->map->toApiArray()]);
     }
 
     public function updateType(Request $request, LeaveType $leaveType): JsonResponse
@@ -148,12 +148,19 @@ class LeaveController extends Controller
             'name' => ['sometimes', 'string', 'max:60'],
             'yearly_quota' => ['sometimes', 'numeric', 'min:0', 'max:365'],
             'active' => ['sometimes', 'boolean'],
+            'carry_forward' => ['sometimes', 'boolean'],
+            'carry_max' => ['sometimes', 'nullable', 'numeric', 'min:0.5', 'max:365'],
+            'prorate_joiners' => ['sometimes', 'boolean'],
         ]);
         if (! $leaveType->paid) {
-            unset($data['yearly_quota']); // loss of pay has no quota
+            unset($data['yearly_quota'], $data['carry_forward'], $data['carry_max'], $data['prorate_joiners']); // loss of pay has no quota
+        }
+        // Carry-forward counts from the year it is switched on, so old years don't pile up.
+        if (($data['carry_forward'] ?? false) && ! $leaveType->carry_forward) {
+            $data['carry_from_year'] = now()->year;
         }
         $leaveType->update($data);
 
-        return response()->json($leaveType->only(['id', 'code', 'name', 'yearly_quota', 'paid', 'active']));
+        return response()->json($leaveType->fresh()->toApiArray());
     }
 }

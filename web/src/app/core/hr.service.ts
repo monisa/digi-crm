@@ -59,11 +59,19 @@ export interface Payslip {
   published_at: string | null;
 }
 
-export interface LeaveType { id: number; code: string; name: string; yearly_quota: number; paid: boolean; active: boolean }
+export interface LeaveType {
+  id: number; code: string; name: string; yearly_quota: number; paid: boolean; active: boolean;
+  carry_forward: boolean; carry_max: number | null; carry_from_year: number | null; prorate_joiners: boolean;
+}
 
 export interface Balance {
   type: { id: number; code: string; name: string; paid: boolean };
+  /** Everything available this year: this year's share + carried. */
   allotted: number | null;
+  /** This year's share (less than the quota for someone who joined during the year). */
+  yearly?: number | null;
+  carried?: number;
+  prorated?: string | null;
   used: number;
   pending: number;
   remaining: number | null;

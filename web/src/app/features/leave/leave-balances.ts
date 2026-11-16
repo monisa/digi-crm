@@ -19,6 +19,8 @@ import { LeaveRequest, LeaveSummary } from '../../core/hr.service';
               <b>{{ b.remaining }} <small>of {{ b.allotted }} left</small></b>
               <span>{{ b.type.name }}</span>
               <small class="muted">{{ b.used }} used@if (b.pending) { · {{ b.pending }} pending }</small>
+              @if (b.carried) { <small class="extra">+{{ b.carried }} carried from {{ summary().year - 1 }}</small> }
+              @if (b.prorated) { <small class="extra" [title]="b.prorated">{{ b.prorated }}</small> }
             </div>
           } @else {
             <div class="lop">₹</div>

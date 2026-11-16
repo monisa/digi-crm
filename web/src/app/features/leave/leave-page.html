@@ -111,7 +111,8 @@
 
   @case ('policy') {
     <div class="card">
-      <p class="hint">Days per year for each leave type. Leave years run January–December. Loss of pay has no limit and reduces that month’s salary.</p>
+      <p class="hint">Days per year for each leave type. Leave years run January–December. Loss of pay has no limit and reduces that month’s salary.
+        People who join during the year get a share for the months left (joining by the 15th counts that month).</p>
       <div class="policy">
         @for (t of types(); track t.id) {
           <div class="prow">
@@ -122,6 +123,16 @@
             } @else { <span class="hint">No limit</span> }
             <label class="check sm"><input type="checkbox" [(ngModel)]="t.active" /> In use</label>
             <button class="btn-ghost" (click)="saveType(t)">Save</button>
+            @if (t.paid) {
+              <div class="pmore">
+                <label class="check sm"><input type="checkbox" [(ngModel)]="t.prorate_joiners" /> Part-year share for new joiners</label>
+                <label class="check sm"><input type="checkbox" [(ngModel)]="t.carry_forward" /> Carry unused days to next year</label>
+                @if (t.carry_forward) {
+                  <label class="cmax">up to <input class="input-sm num" type="number" min="0.5" max="365" step="0.5" [(ngModel)]="t.carry_max" placeholder="all" [attr.aria-label]="t.name + ' most days carried'" /> days</label>
+                  <small class="hint">{{ t.carry_from_year ? 'Counting from ' + t.carry_from_year + '’s leftover.' : 'Starts with this year’s leftover once saved.' }}</small>
+                }
+              </div>
+            }
           </div>
         }
       </div>

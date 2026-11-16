@@ -15,6 +15,10 @@ use Illuminate\Validation\ValidationException;
  * - Days are counted Monday–Saturday (weekly offs from config) and skip public holidays.
  * - Paid leave (CL, SL) is limited by the yearly quota; Loss of Pay has no limit.
  * - Leave years run January–December.
+ * - Someone who joins during the year gets a share of the quota for the months left
+ *   (joining on or before the 15th counts that month), rounded to half days.
+ * - If a type carries forward, the unused days of a year (up to its maximum) are added to the
+ *   next year, starting with the year carry-forward was switched on.
  */
 class LeaveService
 {
@@ -48,28 +52,75 @@ class LeaveService
         return $this->workingDays($from, $to, $r->half_day);
     }
 
-    /** @return list<array{type: array, allotted: float|null, used: float, pending: float, remaining: float|null}> */
+    /**
+     * allotted = everything available this year (this year's share + carried); yearly = this year's share.
+     *
+     * @return list<array{type: array, allotted: float|null, yearly: float|null, carried: float, prorated: string|null, used: float, pending: float, remaining: float|null}>
+     */
     public function balances(Employee $employee, int $year): array
     {
         $requests = $employee->leaveRequests()
             ->whereIn('status', ['pending', 'approved'])
-            ->whereYear('from_date', $year)
-            ->get();
+            ->whereYear('from_date', '>=', $year - 10)->whereYear('from_date', '<=', $year)
+            ->get(['id', 'leave_type_id', 'from_date', 'status', 'days']);
 
-        return LeaveType::where('active', true)->orderBy('id')->get()->map(function (LeaveType $t) use ($requests) {
-            $mine = $requests->where('leave_type_id', $t->id);
+        return LeaveType::where('active', true)->orderBy('id')->get()->map(function (LeaveType $t) use ($requests, $employee, $year) {
+            $inYear = fn (int $y) => $requests->where('leave_type_id', $t->id)->filter(fn ($r) => $r->from_date->year === $y);
+            $mine = $inYear($year);
             $used = (float) $mine->where('status', 'approved')->sum('days');
             $pending = (float) $mine->where('status', 'pending')->sum('days');
-            $allotted = $t->paid ? $t->yearly_quota : null;
+            $yearly = $t->paid ? $this->yearlyShare($t, $employee, $year) : null;
+            $carried = $t->paid ? $this->carriedInto($t, $employee, $year, $inYear) : 0.0;
+            $allotted = $yearly === null ? null : $yearly + $carried;
 
             return [
                 'type' => ['id' => $t->id, 'code' => $t->code, 'name' => $t->name, 'paid' => $t->paid],
                 'allotted' => $allotted,
+                'yearly' => $yearly,
+                'carried' => $carried,
+                'prorated' => $t->paid && $yearly < $t->yearly_quota ? 'Joined '.$employee->doj?->format('j M Y').': '.self::num($yearly).' of '.self::num($t->yearly_quota).' days this year' : null,
                 'used' => $used,
                 'pending' => $pending,
                 'remaining' => $allotted === null ? null : max(0, $allotted - $used - $pending),
             ];
         })->values()->all();
+    }
+
+    /** This year's quota, reduced for someone who joined during the year (0 before they joined). */
+    public function yearlyShare(LeaveType $t, Employee $employee, int $year): float
+    {
+        $doj = $employee->doj;
+        if (! $t->prorate_joiners || ! $doj || $doj->year < $year) {
+            return (float) $t->yearly_quota;
+        }
+        if ($doj->year > $year) {
+            return 0.0;
+        }
+        $months = 12 - $doj->month + ($doj->day <= 15 ? 1 : 0); // the joining month counts if they join by the 15th
+
+        return round($t->yearly_quota * $months / 12 * 2) / 2; // nearest half day
+    }
+
+    /** Unused days brought into $year (0 if this type doesn't carry forward). */
+    private function carriedInto(LeaveType $t, Employee $employee, int $year, \Closure $inYear): float
+    {
+        if (! $t->carry_forward || ! $t->carry_from_year || $year <= $t->carry_from_year) {
+            return 0.0;
+        }
+        $start = max($t->carry_from_year, $employee->doj?->year ?? $t->carry_from_year, $year - 10);
+        $carry = 0.0;
+        for ($y = $start; $y < $year; $y++) {
+            $taken = (float) $inYear($y)->sum('days'); // approved + still pending
+            $left = max(0, $this->yearlyShare($t, $employee, $y) + $carry - $taken);
+            $carry = $t->carry_max === null ? $left : min($left, (float) $t->carry_max);
+        }
+
+        return $carry;
+    }
+
+    private static function num(float $n): string
+    {
+        return rtrim(rtrim(number_format($n, 1, '.', ''), '0'), '.');
     }
 
     public function request(Employee $employee, array $data): LeaveRequest

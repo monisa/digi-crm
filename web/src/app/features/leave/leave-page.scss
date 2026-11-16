@@ -35,3 +35,7 @@
   .prow { flex-wrap: wrap; }
   .prow .grow { flex-basis: 100%; }
 }
+.prow { flex-wrap: wrap; }
+.pmore { flex-basis: 100%; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; padding: 2px 0 2px 2px; }
+.cmax { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.pmore .hint { white-space: normal; }
