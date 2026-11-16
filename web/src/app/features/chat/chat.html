@@ -53,7 +53,7 @@
             <div class="sys">{{ m.body }}</div>
           } @else {
             <div class="row" [class.mine]="m.user.id === me()">
-              <div class="bubble" [class.gone]="m.deleted">
+              <div class="bubble" [class.gone]="m.deleted" [class.atme]="!m.deleted && m.user.id !== me() && mentionsMe(m)">
                 @if (showName(i)) { <span class="who">{{ m.user.name }}</span> }
                 @if (m.deleted) { <i>🚫 Message deleted</i> }
                 @else {
@@ -77,7 +77,7 @@
                       <button class="filec" (click)="downloadFile(f)"><span class="fi">📄</span><span><b>{{ f.name }}</b><small>{{ size(f.size) }} · Download</small></span></button>
                     }
                   }
-                  @if (m.body) { <p>@for (p of parts(m.body); track $index) { @if (p.url) { <a [href]="p.url" target="_blank" rel="noopener">{{ p.t }}</a> } @else { {{ p.t }} } }</p> }
+                  @if (m.body) { <p>@for (p of parts(m); track $index) {@if (p.url) {<a [href]="p.url" target="_blank" rel="noopener">{{ p.t }}</a>} @else if (p.at) {<span class="at" [class.me]="p.at === 'me'">{{ p.t }}</span>} @else {{{ p.t }}}}</p> }
                 }
                 <span class="meta">{{ time(m.created_at) }}@if (m.user.id === me() && c.type === 'direct' && !m.deleted) { <span class="tick" [class.seen]="m.id <= readUpto()">{{ m.id <= readUpto() ? '✓✓' : '✓' }}</span> }</span>
                 @if (m.user.id === me() && !m.deleted) { <button class="del" (click)="removeMsg(m)" title="Delete" aria-label="Delete message">✕</button> }
@@ -89,6 +89,17 @@
 
       <form class="composer" [class.drag]="dragging()" (ngSubmit)="send()" (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
         @if (dragging()) { <div class="dropzone">Drop files to attach</div> }
+        @if (mentionList().length) {
+          <div class="mlist" role="listbox" aria-label="Mention someone">
+            @for (p of mentionList(); track p.id; let i = $index) {
+              <button type="button" class="mi" role="option" [class.on]="i === mentionIdx()" [attr.aria-selected]="i === mentionIdx()"
+                (mousedown)="$event.preventDefault(); pickMention(p)" (mouseenter)="mentionIdx.set(i)">
+                <span class="av" [class.all]="p.id === 0">{{ p.id === 0 ? '@' : initials(p.name) }}</span>
+                <b>{{ p.id === 0 ? 'everyone' : p.name }}</b>@if (p.id === 0) { <small>Notify everyone in this group</small> }
+              </button>
+            }
+          </div>
+        }
         @if (files().length) {
           <div class="atts">
             @for (f of files(); track fkey(f); let i = $index) {
@@ -103,7 +114,7 @@
         }
         <div class="crow">
           <label class="icon-btn clip" title="Attach files or photos (up to 10)"><input type="file" hidden multiple (change)="pickFile($event)" />📎</label>
-          <textarea #box name="t" rows="1" [(ngModel)]="text" (keydown)="onKey($event)" (paste)="onPaste($event)" placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)" maxlength="5000"></textarea>
+          <textarea #box name="t" rows="1" [(ngModel)]="text" (keydown)="onKey($event)" (input)="checkMention()" (click)="checkMention()" (blur)="mentionQ.set(null)" (paste)="onPaste($event)" placeholder="Write a message…  (@ to mention, Enter to send, Shift+Enter for a new line)" maxlength="5000"></textarea>
           <button class="btn send" type="submit" [disabled]="sending() || (!text.trim() && !files().length)" aria-label="Send">➤</button>
         </div>
       </form>

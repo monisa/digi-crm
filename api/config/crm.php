@@ -70,6 +70,7 @@ return [
         'leave_requested' => ['Leave request to approve', 'leave', 'staff'],
         'leave_decided' => ['My leave was approved or rejected', 'leave', 'staff'],
         'payment_claim' => ['Client says they have paid', 'billing', 'staff'],
+        'chat_mention' => ['Someone @mentions me in team chat', 'chat', 'staff'],
         'task_assigned' => ['A task is assigned to me', 'tasks', 'staff'],
         'task_review' => ['A task is waiting for my check', 'tasks', 'staff'],
         'task_done' => ['My task was approved', 'tasks', 'staff'],
