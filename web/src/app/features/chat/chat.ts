@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, computed, inject, signal, viewChild }
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-import { ChatFile, ChatMessage, ChatPerson, ChatService, Conversation } from '../../core/chat.service';
+import { ChatFile, ChatMessage, ChatPerson, ChatService, Conversation, Receipt } from '../../core/chat.service';
 import { readErrors } from '../../core/http-errors';
 import { Dialog } from '../../shared/dialog';
 import { Sheet } from '../../shared/sheet';
@@ -30,6 +30,10 @@ export class Chat implements OnDestroy {
   protected readonly msgs = signal<ChatMessage[]>([]);
   protected readonly hasMore = signal(false);
   protected readonly readUpto = signal(0);
+  /** How far each other member has received / read this chat (for the ticks). */
+  protected readonly receipts = signal<Receipt[]>([]);
+  /** The message whose "Read by" list is open. */
+  protected readonly infoFor = signal<number | null>(null);
   protected readonly sending = signal(false);
   protected readonly images = signal<Record<string, string>>({});
   protected readonly search = signal('');
@@ -103,6 +107,8 @@ export class Chat implements OnDestroy {
     this.activeId.set(id);
     this.api.viewing.set(id);
     this.msgs.set([]);
+    this.receipts.set([]);
+    this.infoFor.set(null);
     this.picks.clear();
     this.mentionQ.set(null);
     this.text = ''; // a half-typed message stays with the chat it was meant for only while it is open
@@ -112,6 +118,7 @@ export class Chat implements OnDestroy {
       this.msgs.set(r.data);
       this.hasMore.set(r.has_more);
       this.readUpto.set(r.read_upto);
+      this.receipts.set(r.receipts ?? []);
       this.afterNew(true);
     });
     setTimeout(() => this.box()?.nativeElement.focus(), 50);
@@ -147,6 +154,7 @@ export class Chat implements OnDestroy {
         this.polling = false;
         if (this.activeId() !== id) return;
         this.readUpto.set(r.read_upto);
+        if (r.receipts) this.receipts.set(r.receipts);
         if (r.deleted_ids.length) {
           this.msgs.update((m) => m.map((x) => (r.deleted_ids.includes(x.id) ? { ...x, deleted: true, body: null, file: null, files: [] } : x)));
         }
@@ -477,6 +485,45 @@ export class Chat implements OnDestroy {
 
   size(n: number): string {
     return n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`;
+  }
+
+  /** sent ✓ · delivered ✓✓ (grey) · read ✓✓ (blue) — in groups, once everyone has. */
+  tickState(m: ChatMessage): 'sent' | 'delivered' | 'read' {
+    const r = this.receipts();
+    if (!r.length) return 'sent';
+    if (r.every((x) => x.read_id >= m.id)) return 'read';
+    if (r.every((x) => x.delivered_id >= m.id)) return 'delivered';
+    return 'sent';
+  }
+
+  tickTitle(m: ChatMessage): string {
+    const s = this.tickState(m);
+    const grp = this.active()?.type === 'group';
+    if (s === 'read') return grp ? 'Read by everyone' : 'Read';
+    if (s === 'delivered') return grp ? 'Delivered to everyone' : 'Delivered';
+    const n = this.receipts().filter((x) => x.read_id >= m.id).length;
+    return grp && n ? `Sent · read by ${n} of ${this.receipts().length}` : 'Sent';
+  }
+
+  /** Who has read / received / not yet received one of my messages. */
+  readInfo(m: ChatMessage): { read: Receipt[]; delivered: Receipt[]; waiting: Receipt[] } {
+    const r = this.receipts();
+    return {
+      read: r.filter((x) => x.read_id >= m.id),
+      delivered: r.filter((x) => x.read_id < m.id && x.delivered_id >= m.id),
+      waiting: r.filter((x) => x.delivered_id < m.id),
+    };
+  }
+
+  toggleInfo(m: ChatMessage, e: Event): void {
+    e.stopPropagation();
+    this.infoFor.update((id) => (id === m.id ? null : m.id));
+  }
+
+  /** "10:32 am" today, "15 Nov, 10:32 am" before. Only shown when it is after the message was sent. */
+  seenAt(iso: string | null, m: ChatMessage): string {
+    if (!iso || new Date(iso) < new Date(m.created_at)) return '';
+    return new Date(iso).toDateString() === new Date().toDateString() ? this.time(iso) : `${this.when(iso)}, ${this.time(iso)}`;
   }
 
   mentionsMe(m: ChatMessage): boolean {

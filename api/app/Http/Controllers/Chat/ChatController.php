@@ -80,6 +80,8 @@ class ChatController extends Controller
                 ])->reverse()->values();
         }
 
+        $this->markDelivered($me);
+
         return response()->json(['unread' => $n, 'max_id' => (int) (clone $base)->max('messages.id'), 'latest' => $latest]);
     }
 
@@ -170,6 +172,7 @@ class ChatController extends Controller
         } else {
             $list = $q->when($d['before_id'] ?? null, fn ($q, $b) => $q->where('id', '<', $b))->orderByDesc('id')->limit(50)->get()->reverse()->values();
         }
+        $this->markDelivered($me, $conversation->id);
         // Deleted since the last poll: send their ids so the app can grey them out.
         $deleted = isset($d['after_id']) ? $conversation->messages()->whereNotNull('deleted_at')->where('deleted_at', '>=', now()->subMinutes(2))->pluck('id') : [];
 
@@ -177,7 +180,17 @@ class ChatController extends Controller
             'data' => $list->map->toApiArray(),
             'deleted_ids' => $deleted,
             'has_more' => ! isset($d['after_id']) && $list->count() === 50,
-            // When the others last read, for "Seen" ticks in direct chats.
+            // Ticks: how far every other member has received and read this chat.
+            'receipts' => DB::table('conversation_members as cm')->join('users', 'users.id', '=', 'cm.user_id')
+                ->where('cm.conversation_id', $conversation->id)->where('cm.user_id', '!=', $me->id)
+                ->orderBy('users.name')->get(['cm.user_id', 'users.name', 'cm.last_read_id', 'cm.read_at', 'cm.delivered_id', 'cm.delivered_at'])
+                ->map(fn ($r) => [
+                    'user_id' => (int) $r->user_id, 'name' => $r->name,
+                    'read_id' => (int) $r->last_read_id, 'read_at' => $r->read_at ? \Illuminate\Support\Carbon::parse($r->read_at)->toIso8601String() : null,
+                    'delivered_id' => max((int) $r->delivered_id, (int) $r->last_read_id),
+                    'delivered_at' => $r->delivered_at ? \Illuminate\Support\Carbon::parse($r->delivered_at)->toIso8601String() : null,
+                ]),
+            // Older app versions: the furthest any other member has read.
             'read_upto' => DB::table('conversation_members')->where('conversation_id', $conversation->id)->where('user_id', '!=', $me->id)->max('last_read_id') ?? 0,
         ]);
     }
@@ -220,7 +233,7 @@ class ChatController extends Controller
         $me = $request->user();
         $id = (int) $request->validate(['message_id' => ['required', 'integer']])['message_id'];
         DB::table('conversation_members')->where('conversation_id', $conversation->id)->where('user_id', $me->id)
-            ->where('last_read_id', '<', $id)->update(['last_read_id' => $id, 'updated_at' => now()]);
+            ->where('last_read_id', '<', $id)->update(['last_read_id' => $id, 'read_at' => now(), 'updated_at' => now()]);
 
         return response()->json(['ok' => true]);
     }
@@ -327,6 +340,19 @@ class ChatController extends Controller
         $ids = array_map('intval', $ids);
 
         return $members->filter(fn (User $u) => in_array($u->id, $ids, true) && mb_stripos($body, '@'.$u->name) !== false)->values();
+    }
+
+    /**
+     * The app has fetched new messages: mark them received ("delivered", grey double tick)
+     * for this person, in all their chats or one. One UPDATE; rows already up to date are skipped.
+     */
+    private function markDelivered(User $me, ?int $conversationId = null): void
+    {
+        $max = '(SELECT COALESCE(MAX(id), 0) FROM messages WHERE messages.conversation_id = conversation_members.conversation_id)';
+        DB::update(
+            "UPDATE conversation_members SET delivered_id = $max, delivered_at = ? WHERE user_id = ? AND delivered_id < $max".($conversationId ? ' AND conversation_id = ?' : ''),
+            array_values(array_filter([now()->toDateTimeString(), $me->id, $conversationId])),
+        );
     }
 
     private function summary(Conversation $c, User $me, ?Message $last, int $unread): array

@@ -204,4 +204,34 @@ class ChatTest extends TestCase
             ->assertJsonCount(2, 'mentions');
         $this->assertDatabaseHas('notifications', ['notifiable_id' => $priya->id, 'data->type' => 'chat_mention']);
     }
+
+    public function test_read_ticks_sent_delivered_read_in_a_group(): void
+    {
+        $priya = $this->staff('Priya');
+        $arjun = $this->staff('Arjun');
+        $neha = $this->staff('Neha');
+        $g = $this->as($priya)->postJson('/v1/chat/groups', ['name' => 'Reels', 'member_ids' => [$arjun->id, $neha->id]])->json('id');
+        $m = $this->postJson("/v1/chat/conversations/$g/messages", ['body' => 'Reel is ready'])->json('id');
+        $tick = fn () => collect($this->as($priya)->getJson("/v1/chat/conversations/$g/messages")->json('receipts'))->keyBy('name');
+
+        // Sent only: nobody's app has fetched it yet.
+        $this->assertTrue($tick()->every(fn ($r) => $r['delivered_id'] < $m && $r['read_id'] < $m));
+
+        // Arjun's app polls (in the background): delivered to him, not read.
+        $this->as($arjun)->getJson('/v1/chat/unread')->assertOk();
+        $r = $tick();
+        $this->assertSame($m, $r['Arjun']['delivered_id']);
+        $this->assertNotNull($r['Arjun']['delivered_at']);
+        $this->assertLessThan($m, $r['Arjun']['read_id']);
+        $this->assertLessThan($m, $r['Neha']['delivered_id']);
+
+        // Arjun opens the chat and reads it; Neha opens it too.
+        $this->as($arjun)->postJson("/v1/chat/conversations/$g/read", ['message_id' => $m])->assertOk();
+        $this->as($neha)->getJson("/v1/chat/conversations/$g/messages")->assertOk(); // delivered on open
+        $r = $tick();
+        $this->assertSame($m, $r['Arjun']['read_id']);
+        $this->assertNotNull($r['Arjun']['read_at']);
+        $this->assertSame($m, $r['Neha']['delivered_id']);
+        $this->assertCount(2, $r); // never the sender
+    }
 }
