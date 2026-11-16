@@ -93,9 +93,22 @@ class WorkTest extends TestCase
         $this->assertSame(1, $row['done_today']);
         $this->assertSame(90, $row['minutes_done_today']);
         $this->getJson('/v1/tasks?view=done')->assertJsonCount(1, 'data')->assertJsonPath('can_approve', true);
+        // Status overview for this month: old unfinished work carries over, old finished work doesn't.
+        Task::create(['title' => 'Late one', 'assigned_to' => $priya->id, 'status' => 'todo', 'due_date' => '2026-10-20']);
+        Task::create(['title' => 'Done in October', 'assigned_to' => $priya->id, 'status' => 'done', 'due_date' => '2026-10-10', 'completed_at' => '2026-10-10']);
+        Task::create(['title' => 'Check me', 'assigned_to' => $priya->id, 'status' => 'review', 'due_date' => '2026-11-12', 'minutes_spent' => 30]);
+        $r = $this->getJson('/v1/tasks/team?period=month')->assertOk()
+            ->assertJsonPath('overview.todo', 1)->assertJsonPath('overview.in_progress', 1)->assertJsonPath('overview.review', 1)
+            ->assertJsonPath('overview.done', 1)->assertJsonPath('overview.total', 4)->assertJsonPath('overview.overdue', 1)
+            ->assertJsonPath('overview.from', '2026-11-01');
+        $stats = collect($r->json('data'))->firstWhere('user.name', 'Priya')['stats'];
+        $this->assertSame(['todo' => 1, 'in_progress' => 1, 'review' => 1, 'done' => 1, 'total' => 4, 'overdue' => 1, 'minutes' => 120], $stats);
+        $this->getJson('/v1/tasks/team?period=all')->assertJsonPath('overview.done', 2)->assertJsonPath('overview.total', 5);
+        $this->getJson('/v1/tasks/team?period=today')->assertJsonPath('overview.total', 3); // today's 2 + the late one
+
         // The super admin sees everyone's to-do list, and the counts follow the "whose tasks" choice.
-        $this->as($this->admin)->getJson('/v1/tasks?view=today')->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.title', 'Reel edit')->assertJsonPath('counts.today', 1);
+        $r = $this->as($this->admin)->getJson('/v1/tasks?view=today')->assertJsonCount(2, 'data')->assertJsonPath('counts.today', 2);
+        $this->assertEqualsCanonicalizing(['Reel edit', 'Late one'], collect($r->json('data'))->pluck('title')->all());
         $this->getJson('/v1/tasks?view=today&assigned=me')->assertJsonCount(0, 'data')->assertJsonPath('counts.today', 0);
     }
 

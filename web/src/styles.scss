@@ -16,6 +16,11 @@
   --s1: #d9761c;
   --s2: #2f6fde;
   --s3: #16a394;
+  /* task status (validated as a set: CVD ΔE ≥ 10, contrast ≥ 3:1 on --card) */
+  --st-todo: #d9761c;
+  --st-progress: #2f6fde;
+  --st-review: #b03fa6;
+  --st-done: #16a394;
   --good: #16a34a;
   --warn: #d97706;
   --crit: #dc2626;

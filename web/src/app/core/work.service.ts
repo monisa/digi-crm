@@ -37,10 +37,15 @@ export interface TaskList {
   sees_team: boolean;
 }
 
+export interface TaskStats { todo: number; in_progress: number; review: number; done: number; total: number; overdue: number; minutes: number }
+export type TaskPeriod = 'today' | 'week' | 'month' | 'all';
+export interface TeamOverview extends TaskStats { period: TaskPeriod; from: string | null; to: string | null; unassigned: number }
+
 export interface TeamRow {
   user: { id: number; name: string };
   working_on: { id: number; title: string; client: string | null; minutes: number }[];
   in_progress: number; todo: number; review: number; overdue: number; done_today: number; minutes_done_today: number;
+  stats: TaskStats;
 }
 
 export type AttendanceMode = 'office' | 'field' | 'wfh';
@@ -84,8 +89,8 @@ export class WorkService {
     for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') p[k] = String(v);
     return this.http.get<TaskList>(`${API_BASE}/tasks`, { params: p });
   }
-  team(): Observable<{ data: TeamRow[] }> {
-    return this.http.get<{ data: TeamRow[] }>(`${API_BASE}/tasks/team`);
+  team(period: TaskPeriod = 'month'): Observable<{ data: TeamRow[]; overview: TeamOverview }> {
+    return this.http.get<{ data: TeamRow[]; overview: TeamOverview }>(`${API_BASE}/tasks/team`, { params: { period } });
   }
   createTask(data: Partial<Record<string, unknown>>): Observable<Task> {
     return this.http.post<Task>(`${API_BASE}/tasks`, data);

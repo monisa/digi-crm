@@ -214,7 +214,38 @@ class TaskController extends Controller
             ->with('client:id,company_name')->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'review' THEN 1 ELSE 2 END")->orderBy('due_date')->get()->groupBy('assigned_to');
         $doneToday = Task::where('status', 'done')->whereDate('completed_at', $today)->selectRaw('assigned_to, count(*) n, sum(minutes_spent) m')->groupBy('assigned_to')->get()->keyBy('assigned_to');
 
-        return response()->json(['data' => $people->map(function (User $p) use ($open, $doneToday, $today) {
+        // Status overview for a period: tasks due in it (or made in it, if undated),
+        // plus older ones that are still not finished.
+        $period = $request->validate(['period' => ['nullable', Rule::in(['today', 'week', 'month', 'all'])]])['period'] ?? 'month';
+        [$from, $to] = match ($period) {
+            'today' => [$today->copy(), $today->copy()],
+            'week' => [$today->copy()->startOfWeek(), $today->copy()->endOfWeek()],
+            'month' => [$today->copy()->startOfMonth(), $today->copy()->endOfMonth()],
+            'all' => [null, null],
+        };
+        $date = 'COALESCE(DATE(due_date), DATE(created_at))';
+        $inPeriod = fn () => Task::query()->when($from, fn ($q) => $q->where(fn ($w) => $w
+            ->whereRaw("$date BETWEEN ? AND ?", [$from->toDateString(), $to->toDateString()])
+            ->orWhere(fn ($o) => $o->where('status', '!=', 'done')->whereRaw("$date < ?", [$from->toDateString()]))));
+        $byStatus = $inPeriod()->selectRaw('assigned_to, status, count(*) n, sum(minutes_spent) m')->groupBy('assigned_to', 'status')->get();
+        $late = $inPeriod()->whereIn('status', ['todo', 'in_progress'])->whereDate('due_date', '<', $today)
+            ->selectRaw('assigned_to, count(*) n')->groupBy('assigned_to')->pluck('n', 'assigned_to');
+        $stats = function ($rows, int $overdue) {
+            $out = ['todo' => 0, 'in_progress' => 0, 'review' => 0, 'done' => 0];
+            foreach ($rows as $r) {
+                $out[$r->status] = ($out[$r->status] ?? 0) + (int) $r->n;
+            }
+
+            return [...$out, 'total' => array_sum($out), 'overdue' => $overdue, 'minutes' => (int) $rows->sum('m')];
+        };
+
+        return response()->json([
+            'overview' => [
+                'period' => $period, 'from' => $from?->toDateString(), 'to' => $to?->toDateString(),
+                ...$stats($byStatus, (int) $late->sum()),
+                'unassigned' => (int) $byStatus->whereNull('assigned_to')->sum('n'),
+            ],
+            'data' => $people->map(function (User $p) use ($open, $doneToday, $today, $byStatus, $late, $stats) {
             $mine = $open->get($p->id, collect());
 
             return [
@@ -226,8 +257,10 @@ class TaskController extends Controller
                 'overdue' => $mine->filter(fn (Task $t) => $t->status !== 'review' && $t->due_date && $t->due_date->lt($today))->count(),
                 'done_today' => (int) ($doneToday[$p->id]->n ?? 0),
                 'minutes_done_today' => (int) ($doneToday[$p->id]->m ?? 0),
+                'stats' => $stats($byStatus->where('assigned_to', $p->id), (int) ($late[$p->id] ?? 0)),
             ];
-        })->values()]);
+        })->values(),
+        ]);
     }
 
     public function destroy(Request $request, Task $task): JsonResponse
