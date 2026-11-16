@@ -40,16 +40,16 @@ import { Toast } from '../../shared/toast.service';
     .layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
     .cats { margin-bottom: 10px; flex-wrap: wrap; }
     .item { width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 14px 10px; border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: inherit; cursor: pointer; border-radius: 10px; animation: rise 0.3s var(--ease) both; transition: background 0.15s; }
-    .item:hover { background: var(--bg); } .item.unread { background: #fffaf3; } .item.unread b::before { content: '● '; color: var(--brand); }
+    .item:hover { background: var(--bg); } .item.unread { background: var(--x-fffaf3); } .item.unread b::before { content: '● '; color: var(--brand); }
     .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--bg); flex: none; font-weight: 700; }
-    .ic[data-c='leads'] { background: #fdecec; } .ic[data-c='tickets'] { background: #eaf1fd; } .ic[data-c='leave'] { background: #e8f7ee; } .ic[data-c='billing'] { background: #fdf1e3; color: var(--brand-deep); }
+    .ic[data-c='leads'] { background: var(--x-fdecec); } .ic[data-c='tickets'] { background: var(--x-eaf1fd); } .ic[data-c='leave'] { background: var(--x-e8f7ee); } .ic[data-c='billing'] { background: var(--x-fdf1e3); color: var(--brand-deep); }
     .txt { flex: 1; min-width: 0; } .txt b { display: block; font-size: 14px; } .txt small { color: var(--ink-2); font-size: 13px; }
     em { font-style: normal; color: var(--ink-3); font-size: 12px; white-space: nowrap; }
     h3 { font-size: 15px; margin-bottom: 6px; }
     .tog { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; cursor: pointer; position: relative; }
     .tog input { position: absolute; opacity: 0; width: 0; height: 0; }
     .tog i { width: 40px; height: 24px; border-radius: 99px; background: #d5d8e0; position: relative; flex: none; transition: background 0.25s; }
-    .tog i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform 0.25s var(--ease); }
+    .tog i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--x-fff); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform 0.25s var(--ease); }
     .tog input:checked + i { background: var(--brand); } .tog input:checked + i::after { transform: translateX(16px); }
     .tog input:focus-visible + i { outline: 2px solid var(--brand); outline-offset: 2px; }
     .hint { color: var(--ink-3); font-size: 12.5px; margin-top: 10px; }

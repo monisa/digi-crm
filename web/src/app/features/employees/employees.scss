@@ -3,7 +3,7 @@
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .grid .empty-box { grid-column: 1 / -1; }
 .person {
-  display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff;
+  display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--x-fff);
   animation: rise 0.45s var(--ease) both; transition: transform 0.25s var(--ease), box-shadow 0.25s, border-color 0.25s;
 }
 .person:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--brand); }

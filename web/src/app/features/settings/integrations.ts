@@ -162,13 +162,13 @@ import { WaSettings, WhatsAppService } from '../../core/whatsapp.service';
     .logo.wal { background: #25d366 !important; font-size: 22px; }
     .page small + small { margin-top: 2px; }
     .checks { display: flex; gap: 18px; flex-wrap: wrap; margin: 6px 0 4px; font-size: 14px; color: var(--ink-3); }
-    .checks .ok { color: #11803b; font-weight: 600; }
-    .good { color: #11803b; font-weight: 600; margin-top: 4px; }
+    .checks .ok { color: var(--x-11803b); font-weight: 600; }
+    .good { color: var(--x-11803b); font-weight: 600; margin-top: 4px; }
     .page { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; flex-wrap: wrap; }
     .page .grow { flex: 1; min-width: 200px; }
     .page b { display: block; }
     .page small { display: block; color: var(--ink-3); font-size: 12.5px; }
-    .bad { color: #b42318 !important; }
+    .bad { color: var(--x-b42318) !important; }
     .connect { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 4px; }
     .form-actions.plain { position: static; padding: 0; margin-top: 14px; }
     .btn-ghost.sm { height: 30px; font-size: 12px; }
@@ -176,7 +176,7 @@ import { WaSettings, WhatsAppService } from '../../core/whatsapp.service';
     .help summary { cursor: pointer; font-weight: 600; color: var(--brand-deep); }
     .help ol { margin: 10px 0 8px 18px; }
     .copy { margin: 4px 0; }
-    code { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 12.5px; word-break: break-all; }
+    code { background: var(--x-fff); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 12.5px; word-break: break-all; }
   `,
 })
 export class Integrations {

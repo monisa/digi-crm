@@ -26,10 +26,10 @@ h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 .slip .grow { flex: 1; min-width: 0; }
 .slip b { display: block; font-size: 14px; }
 .slip small { color: var(--ink-3); font-size: 12.5px; }
-.skel { min-height: 200px; background: linear-gradient(90deg, #f3f4f7 25%, #e9ebf0 50%, #f3f4f7 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+.skel { min-height: 200px; background: linear-gradient(90deg, var(--x-f3f4f7) 25%, var(--x-e9ebf0) 50%, var(--x-f3f4f7) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @media (max-width: 960px) { .sal-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .split { grid-template-columns: 1fr; } .ini { width: 56px; height: 56px; font-size: 19px; border-radius: 18px; } .slip { flex-wrap: wrap; } .slip .grow { flex-basis: 100%; } }
 
-.btn-ghost.danger { color: #c0262d; }
-.btn-ghost.danger:hover { background: #fdecec; border-color: rgba(192, 38, 45, 0.35); }
+.btn-ghost.danger { color: var(--x-c0262d); }
+.btn-ghost.danger:hover { background: var(--x-fdecec); border-color: rgba(192, 38, 45, 0.35); }

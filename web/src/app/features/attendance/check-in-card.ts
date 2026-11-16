@@ -74,7 +74,7 @@ import { Toast } from '../../shared/toast.service';
     .away p { font-size: 13.5px; color: var(--ink-2); }
     .modes { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip { border: 1px solid var(--line); background: var(--card); padding: 9px 14px; border-radius: 99px; cursor: pointer; font-size: 14px; }
-    .chip.on { border-color: var(--brand); color: var(--brand-deep); background: #fff; font-weight: 600; }
+    .chip.on { border-color: var(--brand); color: var(--brand-deep); background: var(--x-fff); font-weight: 600; }
     .away .input-sm { width: 100%; }
   `,
 })

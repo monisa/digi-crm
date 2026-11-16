@@ -65,7 +65,7 @@ import { money } from '../../shared/format';
     .tile span { color: var(--ink-3); font-size: 13px; } .tile b { font-size: 30px; letter-spacing: -0.02em; } .tile small { color: var(--ink-3); font-size: 12.5px; }
     .tile.pay.due { background: linear-gradient(135deg, #16181d, #2a2d35); color: #fff; border-color: #16181d; }
     .tile.pay.due span, .tile.pay.due small { color: #c9cdd6; } .tile.pay.due b { color: var(--brand); }
-    .od { color: #ff8a80 !important; font-weight: 600; } .ok { color: #11803b !important; font-weight: 600; } .new { color: var(--brand-deep) !important; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .od { color: #ff8a80 !important; font-weight: 600; } .ok { color: var(--x-11803b) !important; font-weight: 600; } .new { color: var(--brand-deep) !important; font-weight: 600; display: flex; align-items: center; gap: 6px; }
     .cta { position: absolute; right: 16px; bottom: 16px; color: var(--brand) !important; font-weight: 700; }
     .two { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; margin-top: 20px; align-items: start; }
     h3 { font-size: 16px; } .ch { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } .ch a { color: var(--brand-deep); font-size: 13px; font-weight: 600; }
@@ -79,7 +79,7 @@ import { money } from '../../shared/format';
     .tk { display: flex; justify-content: space-between; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: 13.5px; color: inherit; }
     .tk small { color: var(--ink-3); white-space: nowrap; }
     .hint { color: var(--ink-3); font-size: 13px; }
-    .skel { min-height: 130px; background: linear-gradient(90deg, #f3f4f7 25%, #e9ebf0 50%, #f3f4f7 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+    .skel { min-height: 130px; background: linear-gradient(90deg, var(--x-f3f4f7) 25%, var(--x-e9ebf0) 50%, var(--x-f3f4f7) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
     @keyframes shimmer { to { background-position: -200% 0; } }
     @media (max-width: 960px) { .two { grid-template-columns: 1fr; } }
     @media (max-width: 700px) { .tiles { grid-template-columns: 1fr; } .tile b { font-size: 26px; } }

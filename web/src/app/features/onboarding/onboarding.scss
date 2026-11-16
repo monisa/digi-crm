@@ -5,21 +5,21 @@
 .out { background: none; border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; padding: 8px 14px; border-radius: 10px; cursor: pointer; }
 .out:hover { background: rgba(255, 255, 255, 0.12); }
 .wrap { max-width: 860px; margin: -100px auto 0; padding: clamp(22px, 4vw, 48px); border-radius: 24px; }
-.prog { height: 6px; background: #f0f1f5; border-radius: 99px; margin-top: 22px; overflow: hidden; }
+.prog { height: 6px; background: var(--x-f0f1f5); border-radius: 99px; margin-top: 22px; overflow: hidden; }
 .prog .fill { height: 100%; background: linear-gradient(90deg, var(--brand-deep), var(--brand)); border-radius: 99px; transition: width 0.5s var(--ease); }
 .steps { list-style: none; display: flex; justify-content: space-between; gap: 6px; margin: 12px 0 6px; overflow-x: auto; }
 .steps li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; font-weight: 600; }
-.steps li span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #f0f1f5; font-size: 11px; transition: all 0.3s; }
+.steps li span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--x-f0f1f5); font-size: 11px; transition: all 0.3s; }
 .steps li.cur { color: var(--ink); } .steps li.cur span { background: var(--brand); color: #fff; }
 .steps li.done span { background: #16a34a; color: #fff; }
 .pane { animation: slidein 0.4s var(--ease); }
 @keyframes slidein { from { opacity: 0; transform: translateX(16px); } }
 .q { font-size: 14.5px; font-weight: 600; margin-top: 22px; } .q.bad { color: var(--crit); }
 .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-.chip { border: 1px solid var(--line); background: #fff; padding: 10px 16px; border-radius: 99px; cursor: pointer; font-size: 14px; color: var(--ink-2); transition: all 0.2s var(--ease); }
+.chip { border: 1px solid var(--line); background: var(--x-fff); padding: 10px 16px; border-radius: 99px; cursor: pointer; font-size: 14px; color: var(--ink-2); transition: all 0.2s var(--ease); }
 .chip:hover { border-color: var(--brand); transform: translateY(-1px); }
 .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 6px 16px rgba(237, 143, 33, 0.3); }
-.safe { margin-top: 18px; background: #eef6ff; border: 1px solid #cfe2ff; color: #1f4fb3; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.55; }
+.safe { margin-top: 18px; background: var(--x-eaf1fd); border: 1px solid var(--x-cfe2ff); color: var(--x-1f4fb3); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.55; }
 .plat { margin-top: 18px; padding: 4px 16px 16px; border: 1px solid var(--line); border-radius: 16px; animation: rise 0.35s var(--ease); }
 h4 { font-size: 14px; margin-top: 14px; } .mt { margin-top: 28px; }
 .hint { color: var(--ink-3); font-size: 13px; margin-top: 4px; }
@@ -30,9 +30,9 @@ h4 { font-size: 14px; margin-top: 14px; } .mt { margin-top: 28px; }
 .yn.invalid > span { color: var(--crit); }
 .yn .err { width: 100%; color: var(--crit); font-size: 12.5px; }
 .seg3 { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; align-self: flex-start; }
-.seg3 button { border: 0; background: #fff; padding: 9px 22px; font-weight: 600; font-size: 13.5px; cursor: pointer; color: var(--ink-2); transition: all 0.2s; }
+.seg3 button { border: 0; background: var(--x-fff); padding: 9px 22px; font-weight: 600; font-size: 13.5px; cursor: pointer; color: var(--ink-2); transition: all 0.2s; }
 .seg3 button + button { border-left: 1px solid var(--line); }
-.seg3 button.on { background: var(--ink); color: #fff; }
+.seg3 button.on { background: var(--solid); color: var(--on-solid); }
 .billing { margin-top: 20px; border: 1px dashed var(--line); border-radius: 14px; padding: 12px 16px; }
 .billing summary { cursor: pointer; font-weight: 600; font-size: 14px; } .billing small { color: var(--ink-3); font-weight: 500; }
 .upper { text-transform: uppercase; }

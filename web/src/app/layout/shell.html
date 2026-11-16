@@ -55,6 +55,18 @@
             <button role="menuitem" (click)="openAccount('profile')"><app-icon name="employees" /> My profile</button>
             <button role="menuitem" (click)="openAccount('password')"><app-icon name="settings" /> Change password</button>
             <div class="menu-sep"></div>
+            <div class="theme" role="group" aria-label="Colour theme">
+              <span>Theme</span>
+              <div class="tseg">
+                @for (t of themes; track t[0]) {
+                  <button type="button" [class.on]="shell.theme() === t[0]" (click)="shell.setTheme(t[0])" [attr.aria-pressed]="shell.theme() === t[0]" [title]="t[2]">{{ t[1] }}</button>
+                }
+              </div>
+            </div>
+            @if (!shell.installed() && (shell.canInstall() || shell.isIos)) {
+              <button role="menuitem" (click)="installApp()"><span class="mi">📲</span> Install app</button>
+            }
+            <div class="menu-sep"></div>
             <button role="menuitem" class="out" (click)="auth.logout()"><app-icon name="logout" /> Log out</button>
           </div>
         }

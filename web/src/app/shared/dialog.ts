@@ -107,7 +107,7 @@ export class Dialog {
       width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center;
       font-size: 26px; font-weight: 800; color: var(--brand-deep); background: var(--brand-soft);
     }
-    .danger .icon { color: #c0262d; background: #fdecec; box-shadow: 0 0 0 8px rgba(192, 38, 45, 0.06); }
+    .danger .icon { color: var(--x-c0262d); background: var(--x-fdecec); box-shadow: 0 0 0 8px rgba(192, 38, 45, 0.06); }
     h2 { font-size: 19px; letter-spacing: -0.01em; }
     .msg { color: var(--ink-2); font-size: 14px; line-height: 1.55; margin-top: 8px; white-space: pre-line; }
     form { margin-top: 16px; text-align: left; }
@@ -123,7 +123,7 @@ export class Dialog {
     .btns { display: flex; gap: 10px; margin-top: 20px; }
     .btns button { flex: 1; justify-content: center; }
     .btn.red { background: #d92d20; box-shadow: 0 8px 20px rgba(217, 45, 32, 0.25); }
-    .btn.red:hover:not(:disabled) { background: #b42318; }
+    .btn.red:hover:not(:disabled) { background: var(--x-b42318); }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
     @keyframes fade { from { opacity: 0; } }
     @keyframes pop { from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); } }

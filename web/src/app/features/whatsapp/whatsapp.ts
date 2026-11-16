@@ -45,7 +45,7 @@ import { WaChat } from '../../shared/wa-chat';
     @if (who(); as w) { <app-wa-chat [who]="w" (closed)="close()" /> }
   `,
   styles: `
-    .setup { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; border: 1px dashed #25a35a; background: #f1fbf4; }
+    .setup { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; border: 1px dashed #25a35a; background: var(--x-f1fbf4); }
     .setup .wl { font-size: 28px; } .setup p { color: var(--ink-2); font-size: 13.5px; margin-top: 2px; } .setup a { color: var(--brand-deep); font-weight: 600; }
     .list { padding: 12px; } .wide { width: 100%; margin-bottom: 6px; }
     .chat { display: flex; gap: 12px; width: 100%; align-items: center; border: 0; background: none; padding: 12px 8px; border-radius: 12px; cursor: pointer; text-align: left; font: inherit; color: inherit; border-bottom: 1px solid var(--line); animation: rise 0.3s var(--ease) both; }
@@ -57,7 +57,7 @@ import { WaChat } from '../../shared/wa-chat';
     .sub { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-3); }
     .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .unread .txt { color: var(--ink); font-weight: 600; }
-    .tk { font-style: normal; font-weight: 700; margin-right: 4px; letter-spacing: -2px; } .tk.read { color: #1f6fe5; } .tk.bad { color: #b42318; }
+    .tk { font-style: normal; font-weight: 700; margin-right: 4px; letter-spacing: -2px; } .tk.read { color: #1f6fe5; } .tk.bad { color: var(--x-b42318); }
     .tag { font-size: 11.5px; color: var(--ink-3); }
     .badge-n { font-style: normal; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #25a35a; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex: none; }
     @media (prefers-reduced-motion: reduce) { .chat { animation: none; } }

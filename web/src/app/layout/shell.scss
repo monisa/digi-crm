@@ -28,7 +28,7 @@
 main { min-width: 0; }
 .top {
   position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 14px; padding: 14px 28px;
-  background: rgba(244, 245, 248, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid transparent;
+  background: var(--top-bg); backdrop-filter: blur(12px); border-bottom: 1px solid transparent;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .top.scrolled { border-color: var(--line); box-shadow: 0 4px 18px rgba(16, 24, 40, 0.05); }
@@ -136,4 +136,10 @@ main { min-width: 0; }
 @media (max-width: 860px) { .pings { right: 12px; bottom: 96px; } }
 @media (prefers-reduced-motion: reduce) { .ping { animation: none; } }
 
+/* Theme switch and Install in the account menu */
+.theme { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; font-size: 13.5px; color: var(--ink-2); }
+.tseg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px; }
+.menu .tseg button { width: auto; padding: 5px 9px; font-size: 12px; border-radius: 8px; color: var(--ink-2); gap: 0; }
+.menu .tseg button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+.mi { width: 18px; text-align: center; }
 .nbadge { margin-left: auto; font-style: normal; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #25a35a; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }

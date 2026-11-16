@@ -22,7 +22,7 @@ import { Component, HostListener, input, output } from '@angular/core';
     header { display: flex; justify-content: space-between; gap: 12px; padding: 20px 24px 12px; border-bottom: 1px solid var(--line); }
     h3 { font-size: 18px; }
     header p { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
-    .x { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; flex: none; }
+    .x { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--x-fff); cursor: pointer; flex: none; }
     .x:hover { border-color: var(--brand); color: var(--brand-deep); }
     .body { padding: 8px 24px 24px; overflow-y: auto; flex: 1; }
     @keyframes slide { from { transform: translateX(40px); opacity: 0; } }

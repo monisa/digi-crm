@@ -4,6 +4,8 @@ import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { NAV_ITEMS, NavItem } from '../core/navigation';
 import { Toast } from '../shared/toast.service';
+import { AppShellService, Theme } from '../core/app-shell.service';
+import { Dialog } from '../shared/dialog';
 import { Bell } from './bell';
 import { ChatService } from '../core/chat.service';
 import { WhatsAppService } from '../core/whatsapp.service';
@@ -20,6 +22,23 @@ export class Shell {
   protected readonly auth = inject(AuthService);
   protected readonly toast = inject(Toast);
   protected readonly chat = inject(ChatService);
+  protected readonly shell = inject(AppShellService);
+  private dialog = inject(Dialog);
+  protected readonly themes: [Theme, string, string][] = [['light', '☀︎ Light', 'Light'], ['dark', '☾ Dark', 'Dark'], ['system', 'Auto', 'Same as this device']];
+
+  /** Install the CRM as an app (Chrome / Edge / Android), or show the iPhone steps. */
+  async installApp(): Promise<void> {
+    this.menuOpen.set(false);
+    if (this.shell.canInstall()) {
+      if (await this.shell.install()) this.toast.show('Installed. Open DigiFox CRM from your home screen or apps.');
+      return;
+    }
+    await this.dialog.confirm({
+      title: 'Add to your Home Screen',
+      message: 'In Safari, tap the Share button (the square with an arrow ↑) at the bottom, then “Add to Home Screen”, then “Add”.\n\nThe CRM then opens like an app, full screen, from its own icon.',
+      confirmText: 'Got it', cancelText: 'Close',
+    });
+  }
   protected readonly wa = inject(WhatsAppService);
 
   /** Menu items this user may see, grouped by section. */

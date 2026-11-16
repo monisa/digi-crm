@@ -46,8 +46,8 @@ interface BackupFile { name: string; size: number; at: string; kind: 'database' 
     .hint { color: var(--ink-3); font-size: 13px; line-height: 1.5; }
     .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); animation: rise 0.3s var(--ease) both; }
-    .k { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: #eaf1fd; color: #1f4fb3; flex: none; }
-    .k.f { background: #e8f7ee; color: #11803b; }
+    .k { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--x-eaf1fd); color: var(--x-1f4fb3); flex: none; }
+    .k.f { background: var(--x-e8f7ee); color: var(--x-11803b); }
     .grow { flex: 1; min-width: 0; } .grow b { display: block; font-size: 14px; } .grow small { color: var(--ink-3); font-size: 12.5px; }
     .sm { padding: 6px 12px; font-size: 13px; }
     .pad { padding: 12px 4px; }

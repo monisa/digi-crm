@@ -197,10 +197,10 @@ interface TaskForm {
     .kc { text-align: left; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); cursor: pointer; font: inherit; transition: transform 0.2s var(--ease), border-color 0.2s; }
     .kc:hover { transform: translateY(-2px); } .kc.on { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(237, 143, 33, 0.15); }
     .kc b { display: block; font-size: 24px; } .kc span { font-size: 12.5px; color: var(--ink-3); }
-    .kc.warn b { color: #c0262d; } .kc.ok b { color: #11803b; } .kc.rev b { color: #7a4dd8; }
+    .kc.warn b { color: var(--x-c0262d); } .kc.ok b { color: var(--x-11803b); } .kc.rev b { color: var(--x-7a4dd8); }
     .kchips.six { grid-template-columns: repeat(6, 1fr); }
-    .rvw { color: #7a4dd8; font-weight: 600; } .okk { color: #11803b; font-weight: 600; }
-    .tick.rv { border-color: #7a4dd8; color: #7a4dd8; font-size: 12px; }
+    .rvw { color: var(--x-7a4dd8); font-weight: 600; } .okk { color: var(--x-11803b); font-weight: 600; }
+    .tick.rv { border-color: var(--x-7a4dd8); color: var(--x-7a4dd8); font-size: 12px; }
     .rvb { display: flex; gap: 6px; flex: none; }
     .ov { margin-bottom: 14px; }
     .ovh { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -211,7 +211,7 @@ interface TaskForm {
     @media (max-width: 560px) { .ovc, .ovc select { width: 100%; } .ovh .seg { width: 100%; } .ovh .seg button { flex: 1; padding: 8px 4px; } .ovk { flex: 1 1 100%; } }
     .ovk { display: grid; grid-template-columns: repeat(2, minmax(110px, 1fr)); gap: 10px; flex: 0 1 280px; }
     .kk { background: var(--bg); border-radius: 12px; padding: 12px 14px; } .kk b { display: block; font-size: 22px; letter-spacing: -0.01em; } .kk span { font-size: 12.5px; color: var(--ink-3); }
-    .kk.bad b { color: #c0262d; }
+    .kk.bad b { color: var(--x-c0262d); }
     .mini { display: grid; gap: 4px; padding: 6px 0 2px; } .mfoot { font-size: 12px; color: var(--ink-3); }
     .teamgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
     .pc { display: flex; flex-direction: column; gap: 8px; animation: rise 0.35s var(--ease) both; }
@@ -222,7 +222,7 @@ interface TaskForm {
     @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(47, 111, 222, 0.05); } }
     .wt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .wt i { font-style: normal; color: var(--ink-3); }
     .wo small { color: var(--ink-3); flex: none; }
-    .pf { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #11803b; margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--line); }
+    .pf { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--x-11803b); margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--line); }
     .linkish { background: none; border: 0; color: var(--brand-deep); font: inherit; font-weight: 600; cursor: pointer; }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .grow { flex: 1; min-width: 200px; }
     .quick { display: flex; gap: 8px; margin-bottom: 6px; } .quick .input-sm { flex: 1; border-style: dashed; }
@@ -234,8 +234,8 @@ interface TaskForm {
     .main { flex: 1; min-width: 0; } .main b { display: block; font-weight: 600; }
     .done .main b { text-decoration: line-through; color: var(--ink-3); }
     .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); }
-    .meta .late, .late { color: #c0262d; font-weight: 600; }
-    .pri { color: #b54708; font-weight: 700; } .pri.u { color: #c0262d; }
+    .meta .late, .late { color: var(--x-c0262d); font-weight: 600; }
+    .pri { color: var(--x-b54708); font-weight: 700; } .pri.u { color: var(--x-c0262d); }
     .ip { color: #2f6fde; font-weight: 600; } .cl { color: var(--ink-2); font-weight: 600; } .rp { color: #16a394; }
     .who { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #16181d; color: var(--brand); font-size: 11.5px; font-weight: 700; flex: none; }
     .seg { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 12px; margin: 12px 0 16px; }
@@ -244,7 +244,7 @@ interface TaskForm {
     .desc { white-space: pre-line; color: var(--ink-2); line-height: 1.6; margin-bottom: 14px; }
     .logt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 16px 0; font-size: 13px; color: var(--ink-3); }
     .sm { padding: 6px 10px; font-size: 12.5px; }
-    .danger { color: #c0262d; }
+    .danger { color: var(--x-c0262d); }
     @media (max-width: 1100px) { .kchips, .kchips.six { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 860px) { .kchips, .kchips.six { grid-template-columns: repeat(2, 1fr); } .rvb { flex-direction: column; } }
   `,

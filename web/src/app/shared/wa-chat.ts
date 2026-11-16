@@ -70,19 +70,19 @@ import { Toast } from './toast.service';
     </app-sheet>
   `,
   styles: `
-    .note { background: #fef4e6; color: #8a4b08; border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin: 10px 0; }
+    .note { background: var(--x-fef4e6); color: var(--x-8a4b08); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin: 10px 0; }
     .thread { margin: 12px -4px 0; padding: 12px 8px; max-height: 46vh; overflow-y: auto; border-radius: 14px;
       background: radial-gradient(circle at 90% 0%, rgba(37, 211, 102, 0.06), transparent 40%), var(--bg); }
     .day { text-align: center; margin: 10px 0 8px; } .day span { font-size: 11.5px; font-weight: 600; color: var(--ink-3); background: var(--card); padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); }
     .row { display: flex; margin: 4px 0; } .row.out { justify-content: flex-end; }
     .bub { max-width: 82%; background: var(--card); border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; padding: 7px 11px 5px; }
-    .out .bub { background: #dcf8c6; border-color: #c4ecaa; border-radius: 14px 14px 4px 14px; }
-    .bub.fail { border-color: #f3b4b4; background: #fff1f1; }
+    .out .bub { background: var(--x-dcf8c6); border-color: var(--x-c4ecaa); border-radius: 14px 14px 4px 14px; }
+    .bub.fail { border-color: var(--x-f3b4b4); background: var(--x-fff1f1); }
     .bub p { white-space: pre-wrap; word-wrap: break-word; font-size: 14px; line-height: 1.45; }
-    .tpl { display: block; font-size: 10.5px; font-weight: 700; color: #11803b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .tpl { display: block; font-size: 10.5px; font-weight: 700; color: var(--x-11803b); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
     .meta { display: block; text-align: right; font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
     .tk { margin-left: 3px; font-weight: 700; letter-spacing: -2px; } .tk.read { color: #1f6fe5; }
-    .err { color: #b42318; font-size: 12.5px; display: block; margin-top: 4px; }
+    .err { color: var(--x-b42318); font-size: 12.5px; display: block; margin-top: 4px; }
     .empty { color: var(--ink-3); text-align: center; padding: 30px 0; font-size: 14px; }
     .composer { margin-top: 12px; }
     .win { font-size: 12.5px; color: var(--ink-2); margin-bottom: 8px; line-height: 1.5; }
@@ -92,7 +92,7 @@ import { Toast } from './toast.service';
     .crow textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(237, 143, 33, 0.12); }
     .tplrow { display: flex; gap: 8px; } .tplrow select { flex: 1; }
     .sm { padding: 6px 12px; }
-    .preview { margin-top: 12px; background: #dcf8c6; border: 1px solid #c4ecaa; border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+    .preview { margin-top: 12px; background: var(--x-dcf8c6); border: 1px solid var(--x-c4ecaa); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
     .preview p { white-space: pre-wrap; } .preview small { display: block; color: var(--ink-3); margin-top: 6px; }
     .form-actions.plain { position: static; padding: 0; margin-top: 12px; }
   `,

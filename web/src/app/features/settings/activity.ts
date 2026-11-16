@@ -105,9 +105,9 @@ const FIELD: Record<string, string> = {
     .day { position: sticky; top: 0; z-index: 1; background: var(--card); font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; padding: 14px 4px 6px; }
     .ev { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; border-top: 1px solid var(--line); animation: rise 0.25s var(--ease) both; }
     .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--brand-deep), var(--brand)); }
-    .av.sys { background: #eef0f4; color: var(--ink-3); font-size: 15px; }
-    .av.lock { background: #eaf1fd; color: #1f4fb3; font-size: 15px; }
-    .bad .av { background: #fdecec; color: #c0262d; }
+    .av.sys { background: var(--bg); color: var(--ink-3); font-size: 15px; }
+    .av.lock { background: var(--x-eaf1fd); color: var(--x-1f4fb3); font-size: 15px; }
+    .bad .av { background: var(--x-fdecec); color: var(--x-c0262d); }
     .body { flex: 1; min-width: 0; } .body p { font-size: 14px; line-height: 1.45; color: var(--ink-2); } .body p b { color: var(--ink); }
     .lbl { word-break: break-word; }
     .chs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }

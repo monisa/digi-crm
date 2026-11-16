@@ -63,7 +63,7 @@ import { Dialog } from '../../shared/dialog';
     .amt { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0 12px; }
     .amt #ex-a { font-size: 22px; font-weight: 700; }
     .quick { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--ink-3); }
-    .quick button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+    .quick button { border: 1px solid var(--line); background: var(--x-fff); border-radius: 99px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
     .quick button:hover { border-color: var(--brand); color: var(--brand-deep); }
     .wide { grid-column: 1 / -1; }
     .drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 16px; padding: 18px; border: 2px dashed var(--line); border-radius: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
@@ -71,7 +71,7 @@ import { Dialog } from '../../shared/dialog';
     .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
     .drop .big { font-size: 26px; } .drop small { color: var(--ink-3); font-size: 12px; }
     .err { color: var(--crit); font-size: 12.5px; margin-top: 6px; }
-    .sp { flex: 1; } .btn-ghost.danger { color: #b42318; border-color: #f5b5b0; }
+    .sp { flex: 1; } .btn-ghost.danger { color: var(--x-b42318); border-color: var(--x-f5b5b0); }
   `,
 })
 export class ExpenseForm {
