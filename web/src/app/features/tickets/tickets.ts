@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { BillingService, Client } from '../../core/billing.service';
 import { readErrors } from '../../core/http-errors';
@@ -38,6 +38,12 @@ export class Tickets {
 
   constructor() {
     this.load();
+    // "+ New ticket" on a client's profile opens the form with that client chosen.
+    const q = inject(ActivatedRoute).snapshot.queryParamMap;
+    if (q.get('new') && this.auth.can('tickets.create')) {
+      this.startNew(q.get('client') ? +q.get('client')! : null);
+      this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    }
   }
 
   load(): void {
@@ -50,8 +56,8 @@ export class Tickets {
     });
   }
 
-  startNew(): void {
-    this.nt = { client_id: null, subject: '', category: '', priority: 'medium', body: '' };
+  startNew(clientId: number | null = null): void {
+    this.nt = { client_id: clientId, subject: '', category: '', priority: 'medium', body: '' };
     this.ntFile.set(null);
     this.errors.set({});
     if (!this.isClient()) this.billing.clients({ status: 'active' }).subscribe((r) => this.clients.set(r.data));

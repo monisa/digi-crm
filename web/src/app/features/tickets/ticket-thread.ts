@@ -1,6 +1,6 @@
 import { Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
 import { LeadsService } from '../../core/leads.service';
@@ -30,6 +30,8 @@ export class TicketThread {
   protected readonly canManage = computed(() => !this.isClient() && this.auth.can('tickets.edit'));
 
   protected readonly t = signal<Ticket | null>(null);
+  /** Opened from a client's profile: the back link returns there. */
+  protected readonly fromClient = inject(ActivatedRoute).snapshot.queryParamMap.get('from') === 'client';
   protected readonly error = signal('');
   protected readonly staff = signal<{ id: number; name: string }[]>([]);
   private work = inject(WorkService);

@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { KeyValuePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -11,12 +11,15 @@ import { ClientForm } from './client-form';
 import { Sheet } from '../../shared/sheet';
 import { ShareLink, formUrl } from '../../shared/share-link';
 import { Dialog } from '../../shared/dialog';
+import { Campaign, PortalService, TICKET_STATUS, Ticket } from '../../core/portal.service';
+import { CampaignSheet } from '../campaigns/campaign-sheet';
 
-type Tab = 'overview' | 'invoices';
+type Tab = 'overview' | 'campaigns' | 'tickets' | 'invoices';
+const TABS: Tab[] = ['overview', 'campaigns', 'tickets', 'invoices'];
 
 @Component({
   selector: 'app-client-profile',
-  imports: [FormsModule, RouterLink, ClientForm, KeyValuePipe, TitleCasePipe, Sheet, ShareLink],
+  imports: [FormsModule, RouterLink, ClientForm, KeyValuePipe, TitleCasePipe, Sheet, ShareLink, CampaignSheet],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',
 })
@@ -41,11 +44,39 @@ export class ClientProfile {
   protected readonly inviteError = signal('');
 
   private route = inject(ActivatedRoute);
+  private portal = inject(PortalService);
+  protected readonly Math = Math;
+  protected readonly ticketLabel = TICKET_STATUS;
+
+  // Campaigns tab
+  protected readonly campaigns = signal<Campaign[] | null>(null);
+  protected readonly platforms = signal<Record<string, string>>({});
+  protected readonly campaignOpen = signal<number | null>(null);
+  protected readonly campStats = computed(() => {
+    const l = this.campaigns() ?? [];
+    const leads = l.reduce((n, k) => n + (k.results.leads ?? 0), 0);
+    const spend = l.reduce((n, k) => n + (k.results.spend ?? 0), 0);
+    return { active: l.filter((k) => k.status === 'active').length, leads, spend, cpl: leads ? spend / leads : null };
+  });
+
+  // Tickets tab
+  protected readonly tickets = signal<Ticket[] | null>(null);
+  protected readonly ticketFilter = signal<'open' | 'all'>('open');
+  protected readonly openTickets = computed(() => (this.tickets() ?? []).filter((t) => !['resolved', 'closed'].includes(t.status)).length);
+  protected readonly shownTickets = computed(() => {
+    const l = this.tickets() ?? [];
+    return this.ticketFilter() === 'open' ? l.filter((t) => !['resolved', 'closed'].includes(t.status)) : l;
+  });
   protected readonly sharing = signal(false);
   protected readonly link = signal('');
 
   ngOnInit(): void {
     this.load();
+    // Counts on the tabs straight away; the lists are small per client.
+    if (this.auth.can('campaigns.view')) this.loadCampaigns();
+    if (this.auth.can('tickets.view')) this.portal.tickets({ client_id: +this.id(), status: 'all' }).subscribe((r) => this.tickets.set(r.data));
+    const t = this.route.snapshot.queryParamMap.get('tab') as Tab | null;
+    if (t && TABS.includes(t)) this.open(t);
     if (this.route.snapshot.queryParamMap.get('saved')) this.toast.show('Onboarding answers saved.');
   }
 
@@ -95,8 +126,24 @@ export class ClientProfile {
     });
   }
 
+  loadCampaigns(): void {
+    this.portal.campaigns({ client_id: +this.id() }).subscribe((r) => {
+      this.campaigns.set(r.data);
+      this.platforms.set(r.platforms);
+    });
+  }
+
+  ago(iso: string): string {
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 60) return `${Math.max(1, m)}m ago`;
+    if (m < 1440) return `${Math.round(m / 60)}h ago`;
+    return this.date(iso);
+  }
+
   open(t: Tab): void {
     this.tab.set(t);
+    // Remember the tab, so "Back" from a ticket or invoice returns here.
+    this.router.navigate([], { queryParams: { tab: t === 'overview' ? null : t }, queryParamsHandling: 'merge', replaceUrl: true });
     if (t === 'invoices' && !this.invoices()) this.api.invoices({ client_id: +this.id() }).subscribe((r) => this.invoices.set(r.data));
   }
 
