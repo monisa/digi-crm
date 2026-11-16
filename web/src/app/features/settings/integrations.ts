@@ -153,7 +153,7 @@ import { WaSettings, WhatsAppService } from '../../core/whatsapp.service';
   styles: `
     .head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; flex-wrap: wrap; }
     .head > div { flex: 1; min-width: 200px; }
-    .logo { width: 44px; height: 44px; border-radius: 12px; background: #1877f2; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 24px; font-family: Arial, sans-serif; }
+    .logo { width: 44px; height: 44px; border-radius: 12px; background: #1877f2; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 24px; }
     h3 { font-size: 16px; }
     h4 { font-size: 14px; margin-top: 18px; }
     .hint { color: var(--ink-3); font-size: 13px; }

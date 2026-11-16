@@ -1,6 +1,6 @@
 <div class="page">
   <header class="bar">
-    <img src="logo.png" alt="DigiFox Pro Solutions" />
+    <app-brand [size]="38" />
     @if (mode === 'self') { <button class="out" type="button" (click)="auth.logout()">Log out</button> }
     @if (mode === 'staff') { <button class="out" type="button" (click)="cancel()">← Back to client</button> }
   </header>

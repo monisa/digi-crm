@@ -1,3 +1,4 @@
+import { Brand } from '../../shared/brand';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BillingService } from '../../core/billing.service';
@@ -7,10 +8,10 @@ import { money } from '../../shared/format';
 /** Razorpay sends the customer back here after paying (or cancelling). */
 @Component({
   selector: 'app-pay-done',
-  imports: [RouterLink],
+  imports: [Brand, RouterLink],
   template: `
     <div class="page">
-      <header class="bar"><img src="logo.png" alt="DigiFox Pro Solutions" /></header>
+      <header class="bar"><app-brand [size]="38" /></header>
       <main class="card wrap">
         @switch (state()) {
           @case ('checking') { <div class="spin" aria-hidden="true"></div><h1>Confirming your payment…</h1><p class="sub">Please don’t close this page.</p> }

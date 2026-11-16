@@ -15,7 +15,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
   `,
   styles: `
     .box { display: grid; gap: 10px; }
-    .url { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font: 13px ui-monospace, monospace; color: var(--ink); }
+    .url { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-size: 13px; color: var(--ink); }
     .btns { display: flex; gap: 8px; flex-wrap: wrap; }
     .wa { background: #1fa855; text-decoration: none; }
     .wa:hover { background: #178a45; }
