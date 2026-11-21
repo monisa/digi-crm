@@ -25,6 +25,7 @@ import { IconName } from '../core/navigation';
         @case ('tasks') { <path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" /> }
         @case ('chat') { <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /><path d="M8.5 11h.01M12 11h.01M15.5 11h.01" /> }
         @case ('whatsapp') { <path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.6l-4.5.9z" /><path d="M9 8.5c0 3.6 2.9 6.5 6.5 6.5l1-1.6-2.1-1-1 .8a3.6 3.6 0 0 1-2.1-2.1l.8-1-1-2.1z" /> }
+        @case ('student') { <path d="M2 9l10-5 10 5-10 5-10-5z" /><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6" /> }
         @case ('clock') { <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /> }
         @case ('menu') { <path d="M4 6h16M4 12h16M4 18h16" /> }
         @case ('chevron-left') { <path d="M15 18l-6-6 6-6" /> }

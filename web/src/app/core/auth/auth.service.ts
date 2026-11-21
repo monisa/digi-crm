@@ -108,6 +108,7 @@ export class AuthService {
 
   /** Where a signed-in user should land. */
   homeUrl(): string {
+    if (this.user()?.role === 'student') return '/student';
     return this.user()?.needs_onboarding ? '/onboarding' : '/dashboard';
   }
 

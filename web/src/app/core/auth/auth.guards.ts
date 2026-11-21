@@ -12,6 +12,13 @@ export const authGuard: CanActivateFn = async () => {
   return true;
 };
 
+/** Students only have their attendance page (plus their notifications). */
+export const studentGuard: CanActivateFn = (_route, state) => {
+  const auth = inject(AuthService);
+  if (auth.user()?.role !== 'student') return true;
+  return /^\/(student|notifications)(\/|\?|$)/.test(state.url) ? true : inject(Router).parseUrl('/student');
+};
+
 /** Login/register pages: skip them when already signed in. */
 export const guestGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);

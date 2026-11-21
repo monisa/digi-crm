@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'employee' | 'client';
+export type Role = 'admin' | 'employee' | 'client' | 'student';
 export type Status = 'pending_onboarding' | 'pending_approval' | 'active' | 'inactive';
 
 export interface AuthUser {

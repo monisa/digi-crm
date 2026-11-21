@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, moduleGuard, onboardingGuard } from './core/auth/auth.guards';
+import { authGuard, guestGuard, moduleGuard, onboardingGuard, studentGuard } from './core/auth/auth.guards';
 import { AuthLayout } from './features/auth/auth-layout';
 import { Shell } from './layout/shell';
 
@@ -62,7 +62,20 @@ export const routes: Routes = [
     path: '',
     component: Shell,
     canActivate: [authGuard],
+    canActivateChild: [studentGuard],
     children: [
+      {
+        path: 'student',
+        title: T('Attendance'),
+        loadComponent: () => import('./features/student/student-home').then((m) => m.StudentHome),
+      },
+      {
+        path: 'students',
+        title: T('Students'),
+        canActivate: [moduleGuard],
+        data: { module: 'students' },
+        loadComponent: () => import('./features/students/students').then((m) => m.Students),
+      },
       {
         path: 'dashboard',
         title: T('Dashboard'),

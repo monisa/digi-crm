@@ -1,6 +1,6 @@
 export type IconName =
   | 'dashboard' | 'leads' | 'clients' | 'employees' | 'expenses' | 'bell' | 'settings' | 'menu' | 'chevron-left' | 'chevron-right'
-  | 'campaigns' | 'invoices' | 'tickets' | 'leave' | 'logout' | 'tasks' | 'clock' | 'chat' | 'whatsapp';
+  | 'campaigns' | 'invoices' | 'tickets' | 'leave' | 'logout' | 'tasks' | 'clock' | 'chat' | 'whatsapp' | 'student';
 
 export interface NavItem {
   label: string;
@@ -17,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Leads', path: '/leads', icon: 'leads', module: 'leads', section: 'Overview' },
   { label: 'Clients', path: '/clients', icon: 'clients', module: 'clients', section: 'Overview' },
   { label: 'Employees', short: 'Team', path: '/employees', icon: 'employees', module: 'employees', section: 'Overview' },
+  { label: 'Students', path: '/students', icon: 'student', module: 'students', section: 'Overview' },
   { label: 'Expenses', path: '/expenses', icon: 'expenses', module: 'expenses', section: 'Overview' },
   { label: 'Tasks', path: '/tasks', icon: 'tasks', module: 'tasks', section: 'My work' },
   { label: 'Attendance', path: '/attendance', icon: 'clock', module: 'attendance', section: 'My work' },
