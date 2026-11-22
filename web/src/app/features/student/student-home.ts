@@ -10,13 +10,13 @@ import { Toast } from '../../shared/toast.service';
 
 interface Cell { date: string; day: number; inMonth: boolean; future: boolean; tooOld: boolean; today: boolean; sunday: boolean; rec: StudentDay | null; notes: number }
 
-/** Student: a calendar of my days. Pick a day, send it to a manager, then download that day's notes once approved. */
+/** Student: a calendar of my days. Pick a day, send it to a mentor (and tell them on WhatsApp), then download that day's notes once approved. */
 @Component({
   selector: 'app-student-home',
   imports: [FormsModule, Sheet],
   template: `
     <div class="page-head">
-      <div><h1>Attendance</h1><p>Hi {{ first() }}! Tap a day you attended, choose a manager and send it. Once it’s approved you can download that day’s notes.</p></div>
+      <div><h1>Attendance</h1><p>Hi {{ first() }}! Tap a day you attended, choose your mentor and send it. Once it’s approved you can download that day’s notes.</p></div>
     </div>
 
     <div class="card cal">
@@ -55,15 +55,22 @@ interface Cell { date: string; day: number; inMonth: boolean; future: boolean; t
 
     @if (sel(); as c) {
       <app-sheet [title]="nice(c.date)" [subtitle]="c.rec ? label[c.rec.status] : 'Send for approval'" width="480px" (closed)="sel.set(null)">
-        @if (!c.rec || c.rec.status === 'rejected') {
+        @if (justSent(); as js) {
+          <div class="wait"><span class="big">✅</span><b>Sent to {{ js.name }}</b><small>{{ js.name.split(' ')[0] }} also gets an email. Let them know on WhatsApp too:</small></div>
+          <div class="form-actions">
+            <button type="button" class="btn-ghost" (click)="sel.set(null)">Done</button>
+            @if (waLink(js.id, c.date); as url) { <a class="btn wa" [href]="url" target="_blank" rel="noopener" (click)="sel.set(null)">💬 Message {{ js.name.split(' ')[0] }} on WhatsApp</a> }
+          </div>
+          @if (!waLink(js.id, c.date)) { <p class="hint">{{ js.name }} has no mobile number in the CRM, so WhatsApp can’t be opened. They’ll still get the email.</p> }
+        } @else if (!c.rec || c.rec.status === 'rejected') {
           @if (c.rec?.status === 'rejected') {
             <div class="alert error" style="margin-top:12px">{{ c.rec!.reviewer?.name }} did not approve this day@if (c.rec!.review_comment) {: “{{ c.rec!.review_comment }}”}. You can send it again.</div>
           }
           <form (ngSubmit)="send(c)">
             <div class="field" [class.invalid]="err()['reviewer_id']">
-              <label for="s-r">Send to (manager) <span class="req">*</span></label>
+              <label for="s-r">Send to (mentor) <span class="req">*</span></label>
               <select id="s-r" name="r" [(ngModel)]="reviewer">
-                <option [ngValue]="0" disabled>Choose a manager…</option>
+                <option [ngValue]="0" disabled>Choose your mentor…</option>
                 @for (p of data()?.reviewers ?? []; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
               </select>
               @if (err()['reviewer_id']) { <div class="err">{{ err()['reviewer_id'] }}</div> }
@@ -74,7 +81,11 @@ interface Cell { date: string; day: number; inMonth: boolean; future: boolean; t
           </form>
         } @else if (c.rec.status === 'pending') {
           <div class="wait"><span class="big">⏳</span><b>Waiting for {{ c.rec.reviewer?.name }}</b><small>Sent {{ when(c.rec.submitted_at) }}. You’ll get a notification when it’s checked.</small></div>
-          <div class="form-actions"><button class="btn-ghost danger" (click)="takeBack(c.rec)">Take back</button><button class="btn" (click)="sel.set(null)">OK</button></div>
+          <div class="form-actions">
+            <button class="btn-ghost danger" (click)="takeBack(c.rec)">Take back</button>
+            @if (waLink(c.rec.reviewer?.id ?? 0, c.date); as url) { <a class="btn wa" [href]="url" target="_blank" rel="noopener">💬 Remind on WhatsApp</a> }
+            @else { <button class="btn" (click)="sel.set(null)">OK</button> }
+          </div>
         } @else {
           <p class="ok">✓ Approved by {{ c.rec.reviewer?.name }}@if (c.rec.reviewed_at) { on {{ when(c.rec.reviewed_at) }} }@if (c.rec.review_comment) { · “{{ c.rec.review_comment }}” }</p>
           <h4>Notes for this day</h4>
@@ -127,6 +138,9 @@ interface Cell { date: string; day: number; inMonth: boolean; future: boolean; t
     .pre { white-space: pre-wrap; font-size: 14px; color: var(--ink-2); margin-top: 6px; line-height: 1.5; max-height: 260px; overflow: auto; }
     .nacts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; } .sm { padding: 7px 12px; font-size: 13px; }
     .btn-ghost.danger { color: #c0262d; }
+    .btn.wa { background: #1fa855; box-shadow: 0 8px 20px rgba(31, 168, 85, 0.28); text-decoration: none; }
+    .btn.wa:hover { background: #178a45; }
+    .form-actions .btn.wa { flex: 1; justify-content: center; }
     @media (max-width: 560px) { .grid { gap: 4px; } .day { border-radius: 9px; } .n { font-size: 13.5px; } .nt { top: 1px; right: 2px; font-size: 9px; } .st { font-size: 11px; } }
     @media (prefers-reduced-motion: reduce) { .day { transition: none; } }
   `,
@@ -144,6 +158,8 @@ export class StudentHome {
   protected readonly notes = signal<DayNote[]>([]);
   protected readonly notesLoading = signal(false);
   protected readonly busy = signal(false);
+  /** Shown right after sending: the mentor, so the student can tell them on WhatsApp. */
+  protected readonly justSent = signal<{ id: number; name: string } | null>(null);
   protected readonly err = signal<Record<string, string>>({});
   protected reviewer = 0;
   protected note = '';
@@ -207,6 +223,7 @@ export class StudentHome {
 
   open(c: Cell): void {
     this.err.set({});
+    this.justSent.set(null);
     this.note = '';
     const reviewers = this.data()?.reviewers ?? [];
     this.reviewer = c.rec?.reviewer?.id ?? (reviewers.length === 1 ? reviewers[0]!.id : this.reviewer);
@@ -224,8 +241,7 @@ export class StudentHome {
     this.api.submit(c.date, this.reviewer, this.note.trim()).subscribe({
       next: (r) => {
         this.busy.set(false);
-        this.sel.set(null);
-        this.toast.show(`Sent to ${r.reviewer?.name}. You’ll be notified when it’s checked.`);
+        this.justSent.set({ id: r.reviewer?.id ?? 0, name: r.reviewer?.name ?? 'your mentor' });
         this.load();
       },
       error: (e) => {
@@ -243,6 +259,14 @@ export class StudentHome {
       this.sel.set(null);
       this.load();
     });
+  }
+
+  /** Opens WhatsApp on this phone / laptop with the message already written to the mentor. */
+  waLink(mentorId: number, date: string): string | null {
+    const m = this.data()?.reviewers.find((r) => r.id === mentorId);
+    if (!m?.whatsapp) return null;
+    const text = `Hi ${m.name.split(' ')[0]}, this is ${this.auth.user()?.name}. I attended on ${this.nice(date)} and have sent it to you for approval in the DigiFox CRM. Please approve it here: ${location.origin}/students`;
+    return `https://wa.me/${m.whatsapp}?text=${encodeURIComponent(text)}`;
   }
 
   download(n: DayNote): void {

@@ -241,7 +241,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/', [StudentController::class, 'students'])->middleware('permission:students.edit');
         Route::post('/', [StudentController::class, 'addStudent'])->middleware('permission:students.edit');
         Route::patch('/{student}', [StudentController::class, 'updateStudent'])->middleware('permission:students.edit');
-        Route::put('/settings', [StudentController::class, 'saveSettings'])->middleware('permission:students.edit');
     });
 
     // WhatsApp Business: inbox and conversations with leads / clients.

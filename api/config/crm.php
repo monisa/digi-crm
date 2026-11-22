@@ -30,7 +30,7 @@ return [
         'chat' => ['Team chat', false],
         // WhatsApp Business: view = inbox and conversations; create = send messages.
         'whatsapp' => ['WhatsApp', false],
-        // Students: view = requests sent to me; edit = add students and upload day notes; approve = can be chosen as reviewer.
+        // Students: view = requests sent to me; edit = add students and upload day notes; approve = can be chosen as mentor.
         'students' => ['Students', false],
         'campaigns' => ['Campaigns', true],
         'invoices' => ['Invoices & Payments', true],

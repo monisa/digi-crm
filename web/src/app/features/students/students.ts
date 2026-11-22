@@ -3,15 +3,14 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { readErrors } from '../../core/http-errors';
-import { DayNote, Person, StudentDay, StudentRow, StudentService, WaState, saveBlob } from '../../core/student.service';
-import { WaTemplate, WhatsAppService } from '../../core/whatsapp.service';
+import { DayNote, Person, StudentDay, StudentRow, StudentService, saveBlob } from '../../core/student.service';
 import { Dialog } from '../../shared/dialog';
 import { Sheet } from '../../shared/sheet';
 import { Toast } from '../../shared/toast.service';
 
 type Tab = 'review' | 'notes' | 'students';
 
-/** Managers: approve students' days, upload notes per date, add students. */
+/** Mentors: approve students' days, upload notes per date, add students. */
 @Component({
   selector: 'app-students',
   imports: [FormsModule, RouterLink, Sheet],
@@ -40,9 +39,6 @@ type Tab = 'review' | 'notes' | 'students';
             <select class="select-sm" [(ngModel)]="scope" (ngModelChange)="loadReq()" aria-label="Whose"><option value="mine">Sent to me</option><option value="all">Everyone’s</option></select>
           }
         </div>
-        @if (wa() && !wa()!.ready && canEdit()) {
-          <div class="tip">📵 Managers get these by email and in the bell. To send them on <b>WhatsApp</b> too, @if (!wa()!.connected) { connect WhatsApp Business in <a routerLink="/settings" [queryParams]="{ tab: 'integrations' }">Settings → Integrations</a>, then }choose a template in <button class="linkish" (click)="go('students')">Students &amp; settings</button>.</div>
-        }
         <div class="card list">
           @for (r of reqs(); track r.id) {
             <div class="rq">
@@ -51,7 +47,6 @@ type Tab = 'review' | 'notes' | 'students';
                 <b>{{ r.student?.name }} · {{ nice(r.date) }}</b>
                 <small>@if (scope === 'all') { To {{ r.reviewer?.name }} · }Sent {{ when(r.submitted_at) }}@if (r.note) { · “{{ r.note }}” }</small>
                 @if (r.status !== 'pending') { <small class="dec" [attr.data-s]="r.status">{{ r.status === 'approved' ? '✓ Approved' : '✕ Not approved' }}@if (r.review_comment) { · “{{ r.review_comment }}” }</small> }
-                @if (r.whatsapp && r.whatsapp !== 'sent' && r.status === 'pending' && canEdit()) { <small class="wa" [title]="r.whatsapp_error ?? ''">WhatsApp not sent: {{ r.whatsapp_error }}</small> }
               </div>
               @if (r.status === 'pending' && (r.reviewer?.id === me() || isAdmin())) {
                 <div class="acts"><button class="btn-ghost sm" (click)="reject(r)">Reject</button><button class="btn sm" (click)="approve(r)">Approve</button></div>
@@ -96,27 +91,10 @@ type Tab = 'review' | 'notes' | 'students';
         </div>
 
         <div class="card set">
-          <h3>Managers students can choose</h3>
+          <h3>Mentors students can choose</h3>
           <p class="hint">Admins, plus anyone with <b>Students → Approve</b> in <a routerLink="/settings" [queryParams]="{ tab: 'users' }">Settings → Users &amp; access</a>.</p>
-          <div class="chips">@for (r of reviewers(); track r.id) { <span class="chip">{{ r.name }} @if (r.whatsapp) { <i title="Has a mobile number">📱</i> } @else { <i title="No mobile number: WhatsApp can’t reach them">⚠️</i> }</span> }</div>
-
-          <h3 class="mt">WhatsApp alert to the manager</h3>
-          @if (!wa()?.connected) {
-            <p class="hint">Connect WhatsApp Business first in <a routerLink="/settings" [queryParams]="{ tab: 'integrations' }">Settings → Integrations</a>. Until then managers get an email and a bell notification.</p>
-          } @else {
-            <p class="hint">WhatsApp only lets a business message someone first with an <b>approved template</b>. Create one in WhatsApp Manager (category <i>Utility</i>), for example:</p>
-            <pre class="tpl">{{ tplExample }}</pre>
-            <p class="hint">{{ tplLegend }} Fewer values are fine. Then choose it here:</p>
-            <div class="trow">
-              <select class="select-sm" [(ngModel)]="tpl" aria-label="WhatsApp template">
-                <option [ngValue]="null">Don’t send WhatsApp</option>
-                @for (t of templates(); track t.name) { <option [ngValue]="t.name">{{ t.name }} ({{ t.language }})</option> }
-              </select>
-              <button class="btn-ghost sm" (click)="loadTemplates(true)" title="Refresh from Meta">↻</button>
-              <button class="btn sm" (click)="saveTpl()">Save</button>
-            </div>
-            @if (wa()?.ready) { <p class="good">✓ Managers get a WhatsApp message on their mobile when a student sends a day.</p> }
-          }
+          <div class="chips">@for (r of reviewers(); track r.id) { <span class="chip">{{ r.name }} @if (r.whatsapp) { <i title="Has a mobile number: students can message them on WhatsApp">📱</i> } @else { <i title="No mobile number: students can’t message them on WhatsApp">⚠️</i> }</span> }</div>
+          <p class="hint mt">📱 = has a mobile number, so students can message them on WhatsApp after sending a day. ⚠️ = add their mobile (their login or employee record).</p>
         </div>
       }
     }
@@ -187,7 +165,6 @@ type Tab = 'review' | 'notes' | 'students';
 })
 export class Students {
   private api = inject(StudentService);
-  private waApi = inject(WhatsAppService);
   private toast = inject(Toast);
   private dialog = inject(Dialog);
   private auth = inject(AuthService);
@@ -200,7 +177,6 @@ export class Students {
   protected readonly reqs = signal<StudentDay[]>([]);
   protected readonly pending = signal(0);
   protected readonly seesAll = signal(false);
-  protected readonly wa = signal<WaState | null>(null);
   protected readonly loading = signal(true);
   // notes
   protected readonly notesMonth = signal(this.ym(new Date()));
@@ -211,10 +187,6 @@ export class Students {
   // students
   protected readonly students = signal<StudentRow[]>([]);
   protected readonly reviewers = signal<(Person & { whatsapp: boolean })[]>([]);
-  protected readonly templates = signal<WaTemplate[]>([]);
-  protected tpl: string | null = null;
-  protected readonly tplExample = 'Hi {{1}}, {{2}} marked attendance for {{3}} and is waiting for your approval. Open the CRM: {{4}}';
-  protected readonly tplLegend = '{{1}} = manager’s first name, {{2}} = student, {{3}} = date, {{4}} = link.';
   protected readonly adding = signal(false);
   protected ns = { name: '', email: '', phone: '' };
   protected readonly serr = signal<Record<string, string>>({});
@@ -237,7 +209,6 @@ export class Students {
       this.reqs.set(r.data);
       this.pending.set(r.counts.pending);
       this.seesAll.set(r.sees_all);
-      this.wa.set(r.whatsapp);
       this.loading.set(false);
     });
   }
@@ -328,28 +299,10 @@ export class Students {
     this.api.students().subscribe((r) => {
       this.students.set(r.data);
       this.reviewers.set(r.reviewers);
-      this.wa.set(r.whatsapp);
-      this.tpl = r.settings.wa_template;
-      if (r.whatsapp.connected && !this.templates().length) this.loadTemplates(false);
     });
   }
 
-  loadTemplates(fresh: boolean): void {
-    this.waApi.templates(fresh).subscribe({ next: (r) => this.templates.set(r.data), error: (e) => this.toast.show(readErrors(e).message || 'Could not load the WhatsApp templates.') });
-  }
 
-  saveTpl(): void {
-    this.api.saveSettings(this.tpl).subscribe({
-      next: () => {
-        this.toast.show(this.tpl ? 'Managers will get WhatsApp alerts.' : 'WhatsApp alerts switched off.');
-        this.loadStudents();
-      },
-      error: (e) => {
-        const r = readErrors(e);
-        this.toast.show(Object.values(r.fields)[0] || r.message || 'Could not save.');
-      },
-    });
-  }
 
   addStudent(): void {
     this.busy.set(true);
