@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\ClassNote;
 use App\Models\Employee;
-use App\Models\Setting;
 use App\Models\StudentAttendance;
 use App\Models\User;
 use App\Notifications\EmployeeInvite;
@@ -20,19 +19,19 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Students: pick a date, send it to a manager for approval; once approved they can
- * download that day's class notes. Managers approve, upload notes and add students.
+ * Students: pick a date, send it to a mentor for approval (and tell them on WhatsApp from their
+ * own phone); once approved they can download that day's class notes. Mentors approve, upload
+ * notes and add students.
  */
 class StudentController extends Controller
 {
     /** How far back a student may mark attendance. */
     private const BACKDATE_DAYS = 60;
 
-    public function __construct(private Notify $notify, private WhatsApp $wa) {}
+    public function __construct(private Notify $notify) {}
 
     // ---------- Student ----------
 
@@ -52,7 +51,8 @@ class StudentController extends Controller
             'month' => $month->format('Y-m'),
             'data' => $rows->map->toApiArray(),
             'notes' => $notes,
-            'reviewers' => $this->reviewers()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->values(),
+            // whatsapp = the mentor's mobile in international digits, for the "Message on WhatsApp" button.
+            'reviewers' => $this->reviewers()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'whatsapp' => $this->mobileOf($u)])->values(),
             'earliest' => today()->subDays(self::BACKDATE_DAYS)->toDateString(),
             'recent' => StudentAttendance::with('reviewer:id,name')->where('student_id', $me->id)->latest('date')->limit(10)->get()->map->toApiArray(),
         ]);
@@ -71,7 +71,7 @@ class StudentController extends Controller
         ]);
         $reviewer = $this->reviewers()->firstWhere('id', (int) $d['reviewer_id']);
         if (! $reviewer) {
-            throw ValidationException::withMessages(['reviewer_id' => 'Choose a manager from the list.']);
+            throw ValidationException::withMessages(['reviewer_id' => 'Choose a mentor from the list.']);
         }
         $row = StudentAttendance::where('student_id', $me->id)->whereDate('date', $d['date'])->first();
         if ($row && $row->status !== 'rejected') {
@@ -118,7 +118,7 @@ class StudentController extends Controller
         return Storage::disk('local')->download($note->file_path, $note->file_name, ['Content-Type' => 'application/octet-stream']);
     }
 
-    // ---------- Managers ----------
+    // ---------- Mentors ----------
 
     /** Requests to review: mine (everyone's for admins / Students-edit), by status. */
     public function requests(Request $request): JsonResponse
@@ -136,7 +136,6 @@ class StudentController extends Controller
             'counts' => ['pending' => (clone $base)->where('status', 'pending')->count()],
             'sees_all' => $seesAll,
             'can_edit' => $user->hasPermission('students.edit'),
-            'whatsapp' => $this->waReady(),
         ]);
     }
 
@@ -213,8 +212,6 @@ class StudentController extends Controller
                     'approved_days' => (int) ($stats[$u->id]->approved ?? 0), 'pending' => (int) ($stats[$u->id]->pending ?? 0),
                 ]),
             'reviewers' => $this->reviewers()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'whatsapp' => (bool) $this->mobileOf($u)])->values(),
-            'settings' => ['wa_template' => Setting::get('students', [])['wa_template'] ?? null],
-            'whatsapp' => $this->waReady(),
         ]);
     }
 
@@ -250,22 +247,6 @@ class StudentController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function saveSettings(Request $request): JsonResponse
-    {
-        $d = $request->validate(['wa_template' => ['nullable', 'string', 'max:120']]);
-        if (! empty($d['wa_template'])) {
-            $t = collect($this->safeTemplates())->firstWhere('name', $d['wa_template']);
-            if (! $t) {
-                throw ValidationException::withMessages(['wa_template' => 'That template is not approved in WhatsApp (yet).']);
-            }
-            if ($t['body_vars'] > 4 || $t['header_vars'] > 0) {
-                throw ValidationException::withMessages(['wa_template' => 'Use a template with up to 4 values in the text ({{1}} manager, {{2}} student, {{3}} date, {{4}} link) and no heading values.']);
-            }
-        }
-        Setting::put('students', ['wa_template' => $d['wa_template'] ?: null]);
-
-        return $this->students();
-    }
 
     // ---------- helpers ----------
 
@@ -277,7 +258,7 @@ class StudentController extends Controller
         return $u;
     }
 
-    /** Managers a student can send a day to: active staff with Students → approve (admins always). */
+    /** Mentors a student can send a day to: active staff with Students → approve (admins always). */
     private function reviewers()
     {
         return User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_EMPLOYEE])->where('status', User::STATUS_ACTIVE)->orderBy('name')
@@ -287,58 +268,22 @@ class StudentController extends Controller
     private function mustBeApproved(User $student, string $date): void
     {
         abort_unless(StudentAttendance::where('student_id', $student->id)->whereDate('date', $date)->where('status', 'approved')->exists(), 403,
-            'The notes open once a manager approves your attendance for that day.');
+            'The notes open once your mentor approves your attendance for that day.');
     }
 
-    /** The manager's WhatsApp number: their login's mobile, else their employee record's. */
+    /** The mentor's WhatsApp number: their login's mobile, else their employee record's. */
     private function mobileOf(User $u): ?string
     {
         return WhatsApp::phone($u->phone) ?? WhatsApp::phone(Employee::where('user_id', $u->id)->value('mobile'));
     }
 
-    private function waReady(): array
-    {
-        $template = Setting::get('students', [])['wa_template'] ?? null;
 
-        return ['connected' => $this->wa->configured(), 'template' => $template, 'ready' => $this->wa->configured() && (bool) $template];
-    }
 
-    private function safeTemplates(): array
-    {
-        try {
-            return $this->wa->templates();
-        } catch (RuntimeException) {
-            return [];
-        }
-    }
-
-    /** Bell + email always; WhatsApp to the manager's mobile when a template is chosen. */
+    /** The mentor gets a bell + email; the student messages them on WhatsApp from their own phone. */
     private function tellReviewer(StudentAttendance $row): void
     {
-        $reviewer = $row->reviewer;
-        $student = $row->student;
         $date = $row->date->format('D, j M Y');
-        $link = rtrim((string) config('app.frontend_url'), '/').'/students';
-        $this->notify->send($reviewer, 'student_review', $student->name.' marked attendance for '.$date,
-            ($row->note ? '“'.$row->note.'” ' : '').'Please approve or reject it in the CRM.', '/students', true, $student);
-
-        $wa = $this->waReady();
-        $mobile = $this->mobileOf($reviewer);
-        if (! $wa['ready'] || ! $mobile) {
-            $row->update(['wa_status' => 'off', 'wa_error' => ! $wa['connected'] ? 'WhatsApp Business is not connected.' : (! $wa['template'] ? 'No WhatsApp template chosen (Students → Settings).' : $reviewer->name.' has no mobile number in the CRM.')]);
-
-            return;
-        }
-        try {
-            $t = collect($this->wa->templates())->firstWhere('name', $wa['template']);
-            if (! $t) {
-                throw new RuntimeException('The chosen WhatsApp template is no longer approved.');
-            }
-            $values = array_slice([explode(' ', $reviewer->name)[0], $student->name, $date, $link], 0, $t['body_vars']);
-            $this->wa->sendTemplate($mobile, $t, [], $values);
-            $row->update(['wa_status' => 'sent', 'wa_error' => null]);
-        } catch (RuntimeException $e) {
-            $row->update(['wa_status' => 'failed', 'wa_error' => mb_substr($e->getMessage(), 0, 250)]);
-        }
+        $this->notify->send($row->reviewer, 'student_review', $row->student->name.' marked attendance for '.$date,
+            ($row->note ? '“'.$row->note.'” ' : '').'Please approve or reject it in the CRM.', '/students', true, $row->student);
     }
 }

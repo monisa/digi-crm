@@ -35,8 +35,6 @@ class StudentAttendance extends Model
             'reviewer' => $this->reviewer ? ['id' => $this->reviewer->id, 'name' => $this->reviewer->name] : null,
             'review_comment' => $this->review_comment,
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
-            'whatsapp' => $this->wa_status,
-            'whatsapp_error' => $this->wa_error,
             'submitted_at' => $this->created_at?->toIso8601String(),
         ];
     }

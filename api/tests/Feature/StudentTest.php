@@ -52,22 +52,6 @@ class StudentTest extends TestCase
         return User::find($id);
     }
 
-    private function connectWhatsApp(): void
-    {
-        Http::preventStrayRequests();
-        Http::fake([
-            'graph.facebook.com/*/111222333444?*' => Http::response(['display_phone_number' => '+91 90000 00000', 'verified_name' => 'DigiFox']),
-            'graph.facebook.com/*/555666777888/subscribed_apps' => Http::response(['success' => true]),
-            'graph.facebook.com/*/555666777888/message_templates*' => Http::response(['data' => [
-                ['name' => 'student_attendance', 'language' => 'en', 'status' => 'APPROVED', 'components' => [
-                    ['type' => 'BODY', 'text' => 'Hi {{1}}, {{2}} marked attendance for {{3}}. Please review: {{4}}'],
-                ]],
-            ]]),
-            'graph.facebook.com/*/111222333444/messages' => Http::response(['messages' => [['id' => 'wamid.S1']]]),
-        ]);
-        $this->as($this->admin)->postJson('/v1/integrations/whatsapp', ['phone_number_id' => '111222333444', 'waba_id' => '555666777888', 'access_token' => str_repeat('t', 40)])->assertOk();
-        $this->putJson('/v1/students/settings', ['wa_template' => 'student_attendance'])->assertOk()->assertJsonPath('whatsapp.ready', true);
-    }
 
     public function test_a_student_only_reaches_their_own_page(): void
     {
@@ -80,10 +64,14 @@ class StudentTest extends TestCase
         $this->as($this->manager)->getJson('/v1/student/attendance')->assertForbidden(); // staff don't use the student page
     }
 
-    public function test_submit_whatsapp_to_the_manager_approve_and_download_notes(): void
+    public function test_submit_to_a_mentor_approve_and_download_notes(): void
     {
-        $this->connectWhatsApp();
+        Http::preventStrayRequests(); // nothing is sent to WhatsApp by the CRM
         $s = $this->addStudent();
+
+        // The student gets each mentor's WhatsApp number for the "Message on WhatsApp" button.
+        $this->as($s)->getJson('/v1/student/attendance')->assertJsonPath('reviewers.1.name', 'Priya Raj')->assertJsonPath('reviewers.1.whatsapp', '919876543210')
+            ->assertJsonPath('reviewers.0.whatsapp', '919000011111');
 
         // Manager uploads notes for the 18th.
         $this->as($this->admin)->post('/v1/students/notes', ['date' => '2026-11-18', 'title' => 'SEO basics', 'body' => 'Keywords, titles, meta.',
@@ -93,11 +81,8 @@ class StudentTest extends TestCase
         // Student marks the 18th and chooses Priya; future days are refused.
         $this->as($s)->postJson('/v1/student/attendance', ['date' => '2026-11-25', 'reviewer_id' => $this->manager->id])->assertJsonValidationErrors('date');
         $id = $this->postJson('/v1/student/attendance', ['date' => '2026-11-18', 'reviewer_id' => $this->manager->id, 'note' => 'Attended the full class'])
-            ->assertCreated()->assertJsonPath('reviewer.name', 'Priya Raj')->assertJsonPath('whatsapp', 'sent')->json('id');
-        // WhatsApp went to Priya's mobile with the template values.
-        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/messages') && $r['to'] === '919876543210'
-            && $r['template']['components'][0]['parameters'][0]['text'] === 'Priya' && $r['template']['components'][0]['parameters'][1]['text'] === 'Anu Thomas'
-            && $r['template']['components'][0]['parameters'][2]['text'] === 'Wed, 18 Nov 2026');
+            ->assertCreated()->assertJsonPath('reviewer.name', 'Priya Raj')->json('id');
+        Http::assertNothingSent();
         $this->assertDatabaseHas('notifications', ['notifiable_id' => $this->manager->id, 'data->type' => 'student_review']);
         $this->postJson('/v1/student/attendance', ['date' => '2026-11-18', 'reviewer_id' => $this->manager->id])->assertJsonValidationErrors('date'); // already waiting
 
@@ -118,12 +103,11 @@ class StudentTest extends TestCase
         $this->getJson('/v1/student/attendance?month=2026-11')->assertJsonPath('notes.2026-11-18', 1);
     }
 
-    public function test_rejected_days_can_be_sent_again_and_whatsapp_falls_back_to_email(): void
+    public function test_rejected_days_can_be_sent_again(): void
     {
         $s = $this->addStudent();
-        // WhatsApp not connected: still saved, the manager gets the bell (and email); the reason is kept.
-        $id = $this->as($s)->postJson('/v1/student/attendance', ['date' => '2026-11-19', 'reviewer_id' => $this->manager->id])
-            ->assertCreated()->assertJsonPath('whatsapp', 'off')->assertJsonPath('whatsapp_error', 'WhatsApp Business is not connected.')->json('id');
+        $id = $this->as($s)->postJson('/v1/student/attendance', ['date' => '2026-11-19', 'reviewer_id' => $this->manager->id])->assertCreated()->json('id');
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $this->manager->id, 'data->type' => 'student_review']);
         $this->as($this->manager)->postJson("/v1/students/requests/$id/reject")->assertJsonValidationErrors('comment');
         $this->postJson("/v1/students/requests/$id/reject", ['comment' => 'You left at 11 am'])->assertOk();
         $this->as($s)->postJson('/v1/student/attendance', ['date' => '2026-11-19', 'reviewer_id' => $this->admin->id])->assertCreated()->assertJsonPath('status', 'pending');

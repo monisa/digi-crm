@@ -13,8 +13,6 @@ export interface StudentDay {
   reviewer: { id: number; name: string } | null;
   review_comment: string | null;
   reviewed_at: string | null;
-  whatsapp: 'sent' | 'failed' | 'off' | null;
-  whatsapp_error: string | null;
   submitted_at: string;
 }
 export interface Person { id: number; name: string }
@@ -22,7 +20,8 @@ export interface MyMonth {
   month: string;
   data: StudentDay[];
   notes: Record<string, number>;
-  reviewers: Person[];
+  /** whatsapp = the mentor's mobile (international digits) for the WhatsApp button, if known. */
+  reviewers: (Person & { whatsapp: string | null })[];
   earliest: string;
   recent: StudentDay[];
 }
@@ -31,7 +30,6 @@ export interface DayNote {
   file: { name: string; size: number; mime: string } | null; by: string | null; at: string;
 }
 export interface StudentRow { id: number; name: string; email: string; phone: string | null; status: string; last_login_at: string | null; approved_days: number; pending: number }
-export interface WaState { connected: boolean; template: string | null; ready: boolean }
 
 @Injectable({ providedIn: 'root' })
 export class StudentService {
@@ -55,8 +53,8 @@ export class StudentService {
   }
 
   // Managers
-  requests(status: string, scope: string): Observable<{ data: StudentDay[]; counts: { pending: number }; sees_all: boolean; can_edit: boolean; whatsapp: WaState }> {
-    return this.http.get<{ data: StudentDay[]; counts: { pending: number }; sees_all: boolean; can_edit: boolean; whatsapp: WaState }>(`${API_BASE}/students/requests`, { params: { status, scope } });
+  requests(status: string, scope: string): Observable<{ data: StudentDay[]; counts: { pending: number }; sees_all: boolean; can_edit: boolean }> {
+    return this.http.get<{ data: StudentDay[]; counts: { pending: number }; sees_all: boolean; can_edit: boolean }>(`${API_BASE}/students/requests`, { params: { status, scope } });
   }
   decide(id: number, decision: 'approve' | 'reject', comment = ''): Observable<StudentDay> {
     return this.http.post<StudentDay>(`${API_BASE}/students/requests/${id}/${decision}`, comment ? { comment } : {});
@@ -70,17 +68,14 @@ export class StudentService {
   deleteNote(id: number): Observable<unknown> {
     return this.http.delete(`${API_BASE}/students/notes/${id}`);
   }
-  students(): Observable<{ data: StudentRow[]; reviewers: (Person & { whatsapp: boolean })[]; settings: { wa_template: string | null }; whatsapp: WaState }> {
-    return this.http.get<{ data: StudentRow[]; reviewers: (Person & { whatsapp: boolean })[]; settings: { wa_template: string | null }; whatsapp: WaState }>(`${API_BASE}/students`);
+  students(): Observable<{ data: StudentRow[]; reviewers: (Person & { whatsapp: boolean })[] }> {
+    return this.http.get<{ data: StudentRow[]; reviewers: (Person & { whatsapp: boolean })[] }>(`${API_BASE}/students`);
   }
   addStudent(d: { name: string; email: string; phone: string }): Observable<Person> {
     return this.http.post<Person>(`${API_BASE}/students`, d);
   }
   updateStudent(id: number, d: Partial<{ name: string; phone: string; status: string }>): Observable<unknown> {
     return this.http.patch(`${API_BASE}/students/${id}`, d);
-  }
-  saveSettings(wa_template: string | null): Observable<unknown> {
-    return this.http.put(`${API_BASE}/students/settings`, { wa_template });
   }
 }
 
