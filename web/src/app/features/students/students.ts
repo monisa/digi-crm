@@ -17,8 +17,12 @@ type Tab = 'review' | 'notes' | 'students';
   template: `
     <div class="page-head">
       <div><h1>Students</h1><p>Approve students’ attendance, upload each day’s notes, and add students.</p></div>
-      @if (tab() === 'notes' && canEdit()) { <div class="actions"><button class="btn" (click)="startNote()">+ Add day notes</button></div> }
-      @if (tab() === 'students' && canEdit()) { <div class="actions"><button class="btn" (click)="adding.set(true)">+ Add student</button></div> }
+      @if (canEdit()) {
+        <div class="actions">
+          @if (tab() === 'notes') { <button class="btn-ghost" (click)="startNote()">+ Add day notes</button> }
+          <button class="btn" (click)="adding.set(true)">+ Add student</button>
+        </div>
+      }
     </div>
 
     <div class="tabs2" role="tablist">
@@ -313,7 +317,7 @@ export class Students {
         this.adding.set(false);
         this.ns = { name: '', email: '', phone: '' };
         this.toast.show(`${s.name} added. An email with a password link was sent.`);
-        this.loadStudents();
+        if (this.tab() === 'students') this.loadStudents();
       },
       error: (e) => {
         this.busy.set(false);
