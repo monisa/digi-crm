@@ -21,6 +21,7 @@ use App\Http\Controllers\Hr\SalaryController;
 use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Leads\MetaController;
 use App\Http\Controllers\WhatsApp\WhatsAppController;
+use App\Http\Controllers\Students\StudentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OnboardingController;
@@ -220,6 +221,27 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('permission:campaigns.delete');
         Route::post('/campaigns/{campaign}/files', [CampaignController::class, 'upload'])->middleware('permission:campaigns.edit');
         Route::delete('/campaign-files/{file}', [CampaignController::class, 'deleteFile'])->middleware('permission:campaigns.edit');
+    });
+
+    // Students: their own attendance page (checked by role in the controller) ...
+    Route::prefix('student')->group(function () {
+        Route::get('/attendance', [StudentController::class, 'mine']);
+        Route::post('/attendance', [StudentController::class, 'submit'])->middleware('throttle:30,1');
+        Route::delete('/attendance/{attendance}', [StudentController::class, 'cancel']);
+        Route::get('/notes/{date}', [StudentController::class, 'notes'])->where('date', '\d{4}-\d{2}-\d{2}');
+    });
+    Route::get('/class-notes/{note}/file', [StudentController::class, 'download']);
+    // ... and the managers' side.
+    Route::middleware(['staff', 'permission:students.view'])->prefix('students')->group(function () {
+        Route::get('/requests', [StudentController::class, 'requests']);
+        Route::post('/requests/{attendance}/{decision}', [StudentController::class, 'decide'])->middleware('permission:students.approve')->where('decision', 'approve|reject');
+        Route::get('/notes', [StudentController::class, 'noteList']);
+        Route::post('/notes', [StudentController::class, 'addNote'])->middleware('permission:students.edit');
+        Route::delete('/notes/{note}', [StudentController::class, 'deleteNote'])->middleware('permission:students.edit');
+        Route::get('/', [StudentController::class, 'students'])->middleware('permission:students.edit');
+        Route::post('/', [StudentController::class, 'addStudent'])->middleware('permission:students.edit');
+        Route::patch('/{student}', [StudentController::class, 'updateStudent'])->middleware('permission:students.edit');
+        Route::put('/settings', [StudentController::class, 'saveSettings'])->middleware('permission:students.edit');
     });
 
     // WhatsApp Business: inbox and conversations with leads / clients.

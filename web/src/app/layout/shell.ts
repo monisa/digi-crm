@@ -45,6 +45,10 @@ export class Shell {
   /** Menu items this user may see, grouped by section. */
   protected readonly sections = computed(() => {
     this.auth.profile(); // re-evaluate when permissions change
+    // Students see one menu item: their attendance.
+    if (this.auth.user()?.role === 'student') {
+      return [{ name: 'Student', items: [{ label: 'Attendance', path: '/student', icon: 'clock', module: 'student', section: 'My work' } as NavItem] }];
+    }
     const visible = NAV_ITEMS.filter((i) => this.auth.canView(i.module));
     const groups = new Map<string, NavItem[]>();
     for (const item of visible) groups.set(item.section, [...(groups.get(item.section) ?? []), item]);

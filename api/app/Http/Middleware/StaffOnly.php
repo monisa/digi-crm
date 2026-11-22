@@ -11,7 +11,7 @@ class StaffOnly
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->isClient()) {
+        if ($request->user()?->isClient() || $request->user()?->isStudent()) {
             return response()->json(['message' => 'This action is for DigiFox staff only.', 'code' => 'FORBIDDEN'], 403);
         }
 

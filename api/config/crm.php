@@ -7,7 +7,7 @@
 | so changes the admin makes in Settings are never overwritten.
 */
 return [
-    'roles' => ['admin', 'employee', 'client'],
+    'roles' => ['admin', 'employee', 'client', 'student'],
 
     'statuses' => ['pending_onboarding', 'pending_approval', 'active', 'inactive'],
 
@@ -30,6 +30,8 @@ return [
         'chat' => ['Team chat', false],
         // WhatsApp Business: view = inbox and conversations; create = send messages.
         'whatsapp' => ['WhatsApp', false],
+        // Students: view = requests sent to me; edit = add students and upload day notes; approve = can be chosen as reviewer.
+        'students' => ['Students', false],
         'campaigns' => ['Campaigns', true],
         'invoices' => ['Invoices & Payments', true],
         'tickets' => ['Tickets', true],
@@ -72,6 +74,8 @@ return [
         'leave_requested' => ['Leave request to approve', 'leave', 'staff'],
         'leave_decided' => ['My leave was approved or rejected', 'leave', 'staff'],
         'payment_claim' => ['Client says they have paid', 'billing', 'staff'],
+        'student_review' => ['A student asks me to approve their attendance', 'students', 'staff'],
+        'student_decided' => ['My attendance was approved or rejected', 'students', 'student'],
         'whatsapp_in' => ['A WhatsApp message from my lead / client', 'whatsapp', 'staff'],
         'chat_mention' => ['Someone @mentions me in team chat', 'chat', 'staff'],
         'task_assigned' => ['A task is assigned to me', 'tasks', 'staff'],
@@ -117,6 +121,8 @@ return [
 
     // Admins always have every permission; these are the starting points for the other roles.
     'role_defaults' => [
+        // Students only see their own attendance page (handled by role, not permissions).
+        'student' => [],
         'employee' => [
             'dashboard.view',
             'employees.view',   // own profile, payslips

@@ -59,7 +59,7 @@ class NotificationController extends Controller
     private function prefs(Request $request): array
     {
         $user = $request->user();
-        $audience = $user->isClient() ? 'client' : 'staff';
+        $audience = $user->isClient() ? 'client' : ($user->isStudent() ? 'student' : 'staff');
 
         return ['types' => collect(config('crm.notification_types'))
             ->filter(fn ($t) => $t[2] === $audience)

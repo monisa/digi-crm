@@ -25,6 +25,7 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
     public const ROLE_EMPLOYEE = 'employee';
     public const ROLE_CLIENT = 'client';
+    public const ROLE_STUDENT = 'student';
 
     public const STATUS_PENDING_ONBOARDING = 'pending_onboarding';
     public const STATUS_PENDING_APPROVAL = 'pending_approval';
@@ -63,6 +64,11 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->role === self::ROLE_STUDENT;
     }
 
     public function isClient(): bool
