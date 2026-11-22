@@ -63,6 +63,10 @@ $COMPOSER install --no-dev --optimize-autoloader --no-interaction --no-progress 
 $PHP artisan package:discover --ansi
 
 echo "==> Database"
+# Drop the previous release's cached settings first, so the migrations and the permission
+# seeder see this release's config (new modules such as Students get their permissions now,
+# not one deploy later). The caches are rebuilt below.
+$PHP artisan config:clear >/dev/null
 $PHP artisan migrate --force
 $PHP artisan db:seed --class=PermissionSeeder --force
 
